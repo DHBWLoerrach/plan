@@ -2,13 +2,13 @@
 
 ## Blockplan
 
-Eine gemeinsam verwaltete und veröffentlichte Planungseinheit für die Abfolge von Theorie- und Praxisphasen sowie die zugehörigen prüfungsrelevanten Termine eines oder mehrerer Kurse desselben Jahrgangs. Ein Blockplan gehört genau einem Bereich und enthält ausschließlich Kurse aus dessen Studiengängen; gemeinsame und abweichende zeitliche Verläufe werden innerhalb desselben Plans abgebildet.
+Eine gemeinsam verwaltete und veröffentlichte Planungseinheit für die Abfolge von Theorie- und Praxisphasen sowie die zugehörigen prüfungsrelevanten Termine eines oder mehrerer Kurse desselben Jahrgangs. Ein Blockplan besitzt eine unveränderliche systemische Identität und eine erforderliche, innerhalb seines Bereichs und Jahrgangs eindeutige Bezeichnung, gehört genau einem Bereich und enthält ausschließlich Kurse aus dessen Studiengängen; innerhalb eines Bereichs und Jahrgangs darf es mehrere Blockpläne geben.
 
 ## Kurs
 
-Eine Gruppe von Studierenden eines Studiengangs und Jahrgangs, die vom Studienbeginn bis zum Studienende zusammenbleibt. Ein Kurs gehört genau einem Blockplan; Kurse mit vollständig oder teilweise gemeinsamem zeitlichem Verlauf dürfen demselben Blockplan angehören. Die Kurskennung ist eine verpflichtende, systemweit eindeutige Kennung und verbindet Studiengang, Jahrgang und parallele Kursgruppe, zum Beispiel `TIF24A` oder `WDS24A`. Studiengang, Studienbeginn und Studienende sind zusätzlich verpflichtende eigene Angaben; die Kennung hat im MVP kein erzwungenes Format. „Kohorte“ ist kein kanonischer Begriff der Anwendung.
+Eine Gruppe von Studierenden eines Studiengangs und Jahrgangs, die vom Studienbeginn bis zum Studienende zusammenbleibt. Ein Kurs wird ausschließlich innerhalb eines Blockplans angelegt und gehört während seines gesamten Lebenszyklus genau diesem Blockplan; Kurse mit vollständig oder teilweise gemeinsamem zeitlichem Verlauf dürfen demselben Blockplan angehören. Die Kurskennung ist eine verpflichtende, systemweit eindeutige Kennung und verbindet Studiengang, Jahrgang und parallele Kursgruppe, zum Beispiel `TIF24A` oder `WDS24A`. Studiengang, Studienbeginn und Studienende sind zusätzlich verpflichtende eigene Angaben; die Kennung hat im MVP kein erzwungenes Format. „Kohorte“ ist kein kanonischer Begriff der Anwendung.
 
-Kurse werden von Studiengangsleitung und Studiengangsmanagement im eigenen Bereich angelegt und gepflegt.
+Ein Kurs gilt als erstmals veröffentlicht, sobald er in mindestens einer veröffentlichten Fassung seines Blockplans enthalten war; eine spätere Zurücknahme hebt dies nicht auf. Ab diesem Zeitpunkt ist seine Kurskennung unveränderlich und der Kurs wird weder gelöscht noch einem anderen Blockplan zugeordnet. Kurse werden von Studiengangsleitung und Studiengangsmanagement im eigenen Bereich angelegt und gepflegt.
 
 ## Jahrgang
 
@@ -16,7 +16,11 @@ Das Kalenderjahr, in dem das Studium eines Kurses beginnt. Alle Kurse eines Bloc
 
 ## Studienzeitraum
 
-Der einschließlich beider Grenztage geltende Zeitraum vom verpflichtenden Studienbeginn bis zum verpflichtenden Studienende eines Kurses; dabei gilt Studienbeginn < Studienende. In einer veröffentlichten Fassung decken die Kursphasen jeden Kalendertag dieses Zeitraums genau einmal ab, auch Wochenenden, Feiertage und vorlesungsfreie Tage.
+Der einschließlich beider Grenztage geltende Zeitraum vom verpflichtenden Studienbeginn bis zum verpflichtenden Studienende eines Kurses; dabei gilt Studienbeginn < Studienende. In einer veröffentlichten Fassung decken die Kursphasen jeden Kalendertag dieses Zeitraums genau einmal ab, auch Wochenenden, Feiertage und vorlesungsfreie Tage. Solche Tage bilden keine eigene Phasenart und sind nicht automatisch Praxis, sondern tragen den Typ der sie abdeckenden Blockphase.
+
+## Kalendertag und Ortszeit
+
+Start- und Enddaten sind zeitzonenlose Kalendertage im gregorianischen Kalender. Optionale Uhrzeiten prüfungsrelevanter Termine gelten in der Ortszeit `Europe/Berlin`; eine technische Umrechnung darf den zugehörigen Kalendertag nicht verändern.
 
 ## Bereich
 
@@ -24,7 +28,7 @@ Die organisatorische Einheit, für die interne Mitarbeitende Kurse und deren Blo
 
 ## Studienzentrum
 
-Ein Bereich, der mehrere Studiengänge zusammenfasst, zum Beispiel das Studienzentrum IT-Management & Informatik (SZI) mit Informatik und Wirtschaftsinformatik. Eine spätere Funktion soll Blockpläne seiner Studiengänge in einer Darstellung und als PDF zusammenfassen.
+Ein Bereich, der mehrere Studiengänge zusammenfasst, zum Beispiel das Studienzentrum IT-Management & Informatik (SZI) mit Informatik und Wirtschaftsinformatik.
 
 ## Studiengangsleitung und Studiengangsmanagement
 
@@ -64,7 +68,7 @@ Eine bearbeitbare, nicht öffentlich sichtbare Fassung eines Blockplans. Ein noc
 
 ## Veröffentlichte Fassung
 
-Die bewusst freigegebene Fassung eines Blockplans, die externe Nutzende sehen. Während Änderungen an einem Entwurf erfolgen, bleibt sie sichtbar. Eine neue Veröffentlichung ersetzt sie; frühere veröffentlichte Revisionen werden im MVP weder angezeigt noch wiederhergestellt. Ein bereits veröffentlichter Blockplan wird im MVP nicht gelöscht. Eine Veröffentlichung ist nur möglich, wenn alle fachlichen Datenregeln erfüllt sind; Entwürfe dürfen dagegen unvollständig sein.
+Die bewusst freigegebene Fassung eines Blockplans, die externe Nutzende sehen und mindestens einen Kurs enthält. Während Änderungen an einem Entwurf erfolgen, bleibt sie sichtbar. Eine neue Veröffentlichung ersetzt sie; frühere veröffentlichte Revisionen werden im MVP weder angezeigt noch wiederhergestellt. Ein bereits veröffentlichter Blockplan wird im MVP nicht gelöscht. Eine Veröffentlichung ist nur möglich, wenn alle fachlichen Datenregeln erfüllt sind; Entwürfe dürfen dagegen unvollständig sein.
 
 Unveröffentlichte Entwürfe sind nur für die fachlichen Rollen des zugeordneten Bereichs sowie für die Systemadministration sichtbar.
 
@@ -74,24 +78,24 @@ Ein Blockplan, dessen veröffentlichte Fassung von Studiengangsleitung oder Syst
 
 ## Auditspur
 
-Die interne Nachvollziehbarkeit eines Blockplans. Sie hält die Erstellung, die letzte Änderung sowie jede Veröffentlichung und Zurücknahme jeweils mit Zeitpunkt und handelndem Konto fest; sie ist kein wiederherstellbares Revisionsarchiv.
+Die interne Nachvollziehbarkeit fachlicher und administrativer Aktionen mit Zeitpunkt und handelndem Konto. Sie umfasst bei Blockplänen Erstellung, letzte Änderung, Veröffentlichung und Zurücknahme sowie bei Konten deren Anlage, Aktivierung, Deaktivierung und Reaktivierung, Änderungen von Rollen oder Bereichszuordnungen und die Erzeugung von Aktivierungs- oder Reset-Links; geheime Linkinhalte werden nicht erfasst und die Auditspur ist kein wiederherstellbares Revisionsarchiv.
 
 ## Blockphase
 
 Ein einmal erfasster Zeitblock innerhalb eines Blockplans mit Start- und Enddatum, genau einem Semester und dem Typ Theorie oder Praxis. Eine Blockphase darf mehreren Kursen auch über Studiengangsgrenzen hinweg gemeinsam zugeordnet sein; unterscheiden sich Zeitraum, Semester oder Typ, handelt es sich um verschiedene Blockphasen. „Phase“ und „Urlaubsphase“ sind keine kanonischen Begriffe.
 
-Eine Blockphase überschreitet keine Semestergrenze; ein fachlich längerer Zeitraum wird an der Grenze geteilt. Für jede Blockphase gilt Startdatum < Enddatum; gleichartige Blockphasen dürfen unmittelbar aufeinander folgen.
+Eine Blockphase ist einschließlich beider Grenztage gültig; für sie gilt Startdatum ≤ Enddatum, sodass sie auch genau einen Kalendertag umfassen kann. Gleichartige Blockphasen dürfen unmittelbar aufeinander folgen. In einer veröffentlichten Fassung ist jede Blockphase mindestens einer Kursphase zugeordnet; ein Entwurf darf vorübergehend verwaiste Blockphasen enthalten.
 
 ## Kursphase
 
-Die Zuordnung genau eines Kurses zu genau einer Blockphase. Sie enthält keine eigene Kopie von Zeitraum, Semester oder Phasentyp; Vorlesungen dürfen ausschließlich für Kursphasen geplant werden, deren Blockphase vom Typ Theorie ist.
+Die Zuordnung genau eines Kurses zu genau einer Blockphase. Sie enthält keine eigene Kopie von Zeitraum, Semester oder Phasentyp. Vorlesungen gehören nicht zum MVP; in einer späteren Vorlesungsplanung dürfen sie ausschließlich Kursphasen zugeordnet werden, deren Blockphase vom Typ Theorie ist.
 
-In einer veröffentlichten Fassung schließen die Kursphasen eines Kurses lückenlos aneinander an und überlappen sich nicht; auf das Enddatum der zugeordneten Blockphase folgt als Startdatum der nächsten zugeordneten Blockphase der nächste Kalendertag. Ein Entwurf darf diese Regel vorübergehend verletzen.
+In einer veröffentlichten Fassung schließen die Kursphasen eines Kurses lückenlos aneinander an und überlappen sich nicht; auf das Enddatum der zugeordneten Blockphase folgt als Startdatum der nächsten zugeordneten Blockphase der nächste Kalendertag. Ihre Semesternummern sind entlang der Zeitachse monoton nicht fallend, und alle Kursphasen desselben Semesters bilden einen zusammenhängenden Abschnitt. Ein Entwurf darf diese Regeln vorübergehend verletzen.
 
 ## Semester
 
-Die fortlaufende Studienperiode einer Blockphase. Ein Blockplan hat ausschließlich die Semester 1 bis 6. Das Studienjahr wird aus dem Semester abgeleitet: Semester 1 und 2 gehören zu Studienjahr 1, Semester 3 und 4 zu Studienjahr 2 sowie Semester 5 und 6 zu Studienjahr 3.
+Die fortlaufende Studienperiode einer Blockphase. Ein veröffentlichter Kursverlauf enthält die Semester 1 bis 6 jeweils mindestens einmal und in dieser Reihenfolge; eine Blockphase gehört vollständig zu genau einem Semester. Das Studienjahr wird aus dem Semester abgeleitet: Semester 1 und 2 gehören zu Studienjahr 1, Semester 3 und 4 zu Studienjahr 2 sowie Semester 5 und 6 zu Studienjahr 3.
 
 ## Prüfungsrelevanter Termin
 
-Ein Termin oder Zeitraum mit Titel, optionaler Beschreibung, Pflichtkategorie und Geltungsbereich für mindestens einen Kurs, der innerhalb eines Blockplans veröffentlicht wird. Die Kategorien sind Anmeldung, Abgabe, Präsentation, Prüfung und Sonstiges. Ein Termin ist nicht zwingend einer Blockphase oder einem Semester zugeordnet, muss aber vollständig innerhalb des Studienzeitraums jedes betroffenen Kurses liegen. Seine strukturierte Zeitangabe ist entweder ein genaues Datum (optional mit Uhrzeit), ein Datumsbereich oder Monat/Jahr; jede Angabe kann als vorläufig markiert werden.
+Eine Planangabe mit Titel, optionaler Beschreibung, Pflichtkategorie und Geltungsbereich für mindestens einen Kurs desselben Blockplans. Ein Blockplan darf keinen, einen oder mehrere prüfungsrelevante Termine enthalten. Die Kategorien sind Anmeldung, Abgabe, Präsentation, Prüfung und Sonstiges. Ein Termin ist nicht zwingend einer Blockphase oder einem Semester zugeordnet, muss aber vollständig innerhalb des Studienzeitraums jedes betroffenen Kurses liegen. Seine strukturierte Zeitangabe ist entweder ein genaues Datum mit optionaler Uhrzeit, ein beidseitig inklusiver Datumsbereich oder ein vollständiger Kalendermonat vom ersten bis zum letzten Tag; jede Angabe kann als vorläufig markiert werden.

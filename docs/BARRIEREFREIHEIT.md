@@ -4,6 +4,8 @@ Die öffentliche Planmatrix und der interne Editor werden als barrierefreiheitsr
 
 Vor Go-live wird mit der zuständigen DHBW-Stelle geklärt, ob die Erklärung zur Barrierefreiheit und der Rückmeldeweg zentral oder innerhalb der Anwendung bereitgestellt werden. Geltungsbereich, Verantwortlichkeit, Rückmeldekanal und Aktualisierungsprozess sind verbindlich festzulegen.
 
+Impressum, Datenschutzhinweise und Erklärung zur Barrierefreiheit sind in allen öffentlichen und internen Ansichten an einer konsistenten Stelle per Tastatur und Screenreader erreichbar. Verweise auf zentrale DHBW-Seiten sind nur zulässig, soweit deren Inhalt die Anwendung tatsächlich abdeckt.
+
 ## Öffentliche Planmatrix
 
 - Die Matrix ist eine echte Datentabelle mit `caption`, Kopfzellen und programmatisch bestimmbaren Zeilen- und Spaltenbezügen.
@@ -16,13 +18,13 @@ Vor Go-live wird mit der zuständigen DHBW-Stelle geklärt, ob die Erklärung zu
 
 - Jede Eingabe besitzt ein sichtbares und programmatisch verknüpftes Label. Pflichtangaben und zulässige Formate sind vor der Eingabe erklärt.
 - Validierungsfehler erscheinen am Feld und zusätzlich in einer Fehlerübersicht; bekannte Korrekturmöglichkeiten werden genannt.
-- Gespeicherte Entwürfe, aktualisierte Vorschauen sowie erfolgreiche oder fehlgeschlagene Veröffentlichungen werden als zugängliche Statusmeldungen ausgegeben.
+- Gespeicherte Entwürfe, aktualisierte Vorschauen, erfolgreiche oder fehlgeschlagene Veröffentlichungen und Konflikte wegen eines zwischenzeitlich geänderten Entwurfs werden als zugängliche Statusmeldungen ausgegeben. Ein Bearbeitungskonflikt erscheint zusätzlich in der Fehlerübersicht, erhält sinnvoll den Fokus und erklärt, dass vor einem erneuten Speichern die aktuelle Fassung geladen werden muss.
 - Jede Bearbeitungsfunktion funktioniert ohne Maus. Falls Phasen visuell sortiert werden, existieren gleichwertige Verschiebe-Schaltflächen; Drag-and-drop ist nie erforderlich.
 - Dialoge, Menüs und Bestätigungen besitzen korrekte Fokusführung, Escape-Verhalten und Fokus-Rückkehr. Die Vorschau erfüllt dieselben semantischen Regeln wie die öffentliche Matrix.
 
 ## Nachweis vor Abnahme
 
-- Automatisierte Scans ergänzen manuelle Prüfungen aller wesentlichen Abläufe: Plan suchen und lesen, Kurs wechseln, Phasen und Termine bearbeiten, speichern, veröffentlichen und zurücknehmen.
+- Automatisierte Scans ergänzen manuelle Prüfungen aller wesentlichen Abläufe: Plan suchen und lesen, Kurs wechseln, Phasen und Termine bearbeiten, speichern, einen Bearbeitungskonflikt behandeln, veröffentlichen und zurücknehmen.
 - Tastaturtest mit Tab, Shift+Tab, Enter, Leertaste und Escape: sichtbarer Fokus, sinnvolle Reihenfolge, keine Fokusfalle.
 - Screenreader-Test mindestens mit VoiceOver/Safari sowie einem zweiten unterstützten Browser-Screenreader-Gespann, insbesondere für Matrix, Fehler, Dialoge und Statusmeldungen.
 - Visueller Test von Text- und Nichttextkontrast, 200 % Textvergrößerung, 400 % Zoom und schmaler mobiler Breite. Fehler, Veröffentlichung und Phasentypen sind nie nur farblich unterscheidbar.
