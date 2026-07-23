@@ -97,6 +97,8 @@ Ein Blockplan besitzt durchgehend einen Entwurf und höchstens eine veröffentli
 - Er führt, wann und durch welches interne Konto er zuletzt geändert wurde.
 - Änderungen an Blockphasen, Kursphasen und Terminen verändern ausschließlich den Entwurf, bis erneut veröffentlicht wird.
 
+Als Änderung des bearbeitbaren Planungsstands gelten außerdem Änderungen an der aktuellen Blockplanbezeichnung, an seinen Kurszuordnungen und an den vier Angaben eines zugeordneten Kurses. Sie aktualisieren ebenfalls, wann und durch welches interne Konto der Entwurf zuletzt geändert wurde. Veröffentlichen und Zurücknehmen verändern diese Angaben nicht.
+
 ### Veröffentlichung und Zurücknahme
 
 - Veröffentlichen prüft alle Struktur- und Veröffentlichungsregeln und ersetzt die bisherige veröffentlichte oder zurückgenommene Fassung atomar durch eine Kopie des aktuellen Entwurfs.
