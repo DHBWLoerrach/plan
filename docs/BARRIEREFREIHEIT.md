@@ -9,7 +9,7 @@ Impressum, Datenschutzhinweise und Erklärung zur Barrierefreiheit sind in allen
 ## Öffentliche Planmatrix
 
 - Die Matrix ist eine echte Datentabelle mit `caption`, Kopfzellen und programmatisch bestimmbaren Zeilen- und Spaltenbezügen.
-- Theorie, Praxis und Veröffentlichungszustände sind immer auch textlich benannt; Farbe, Symbol oder Position sind nur Ergänzungen.
+- Theorie, Praxis und vorläufige Zeitangaben prüfungsrelevanter Termine sind immer auch textlich benannt; Farbe, Symbol oder Position sind nur Ergänzungen. Veröffentlichungszustände treten hier nicht auf, da die öffentliche Ansicht ausschließlich veröffentlichte Fassungen zeigt.
 - Die Inhalte bleiben bei 320 CSS-Pixeln Breite, 200 % Textvergrößerung und 400 % Browser-Zoom vollständig verfügbar. Notwendiges horizontales Scrollen ist erkennbar, per Tastatur erreichbar und frei von Fokusfallen.
 - Alle Funktionen sind per Tastatur erreichbar; Fokus ist sichtbar, sinnvoll angeordnet und alle Bedienelemente sind eindeutig benannt.
 - Dynamische Status- und Filteränderungen werden verständlich angekündigt.
@@ -20,6 +20,7 @@ Impressum, Datenschutzhinweise und Erklärung zur Barrierefreiheit sind in allen
 - Validierungsfehler erscheinen am Feld und zusätzlich in einer Fehlerübersicht; bekannte Korrekturmöglichkeiten werden genannt.
 - Gespeicherte Entwürfe, aktualisierte Vorschauen, erfolgreiche oder fehlgeschlagene Veröffentlichungen und Konflikte wegen eines zwischenzeitlich geänderten Entwurfs werden als zugängliche Statusmeldungen ausgegeben. Ein Bearbeitungskonflikt erscheint zusätzlich in der Fehlerübersicht, erhält sinnvoll den Fokus und erklärt, dass vor einem erneuten Speichern die aktuelle Fassung geladen werden muss.
 - Jede Bearbeitungsfunktion funktioniert ohne Maus. Falls Phasen visuell sortiert werden, existieren gleichwertige Verschiebe-Schaltflächen; Drag-and-drop ist nie erforderlich.
+- Der Veröffentlichungszustand eines Blockplans — Entwurf, veröffentlicht, zurückgenommen — ist immer auch textlich benannt, in Listen ebenso wie in der Detailansicht; Farbe, Symbol oder Position sind nur Ergänzungen.
 - Dialoge, Menüs und Bestätigungen besitzen korrekte Fokusführung, Escape-Verhalten und Fokus-Rückkehr. Die Vorschau erfüllt dieselben semantischen Regeln wie die öffentliche Matrix.
 
 ## Nachweis vor Abnahme
@@ -27,7 +28,7 @@ Impressum, Datenschutzhinweise und Erklärung zur Barrierefreiheit sind in allen
 - Automatisierte Scans ergänzen manuelle Prüfungen aller wesentlichen Abläufe: Plan suchen und lesen, Kurs wechseln, Phasen und Termine bearbeiten, speichern, einen Bearbeitungskonflikt behandeln, veröffentlichen und zurücknehmen.
 - Tastaturtest mit Tab, Shift+Tab, Enter, Leertaste und Escape: sichtbarer Fokus, sinnvolle Reihenfolge, keine Fokusfalle.
 - Screenreader-Test mindestens mit VoiceOver/Safari sowie einem zweiten unterstützten Browser-Screenreader-Gespann, insbesondere für Matrix, Fehler, Dialoge und Statusmeldungen.
-- Visueller Test von Text- und Nichttextkontrast, 200 % Textvergrößerung, 400 % Zoom und schmaler mobiler Breite. Fehler, Veröffentlichung und Phasentypen sind nie nur farblich unterscheidbar.
+- Visueller Test von Text- und Nichttextkontrast, 200 % Textvergrößerung, 400 % Zoom und schmaler mobiler Breite. Fehler, Phasentypen und vorläufige Zeitangaben sind nie nur farblich unterscheidbar; im internen Editor gilt dasselbe für den Veröffentlichungszustand.
 
 ## Quellen
 

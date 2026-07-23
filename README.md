@@ -15,6 +15,7 @@ begonnen — der Code ist unverändertes `create-next-app`-Gerüst
 - [`docs/MVP-SPEZIFIKATION.md`](docs/MVP-SPEZIFIKATION.md) — Zielumfang, Rollen, Ansichten
 - [`docs/ARCHITEKTUR_UND_BETRIEB.md`](docs/ARCHITEKTUR_UND_BETRIEB.md) — Anwendungsschnitt, Auth, Datenhaltung, Betrieb
 - [`docs/BARRIEREFREIHEIT.md`](docs/BARRIEREFREIHEIT.md) — verbindliche Gestaltungs- und Abnahmekriterien
+- [`docs/adr/`](docs/adr/) — Architekturentscheidungen mit Begründung
 
 ## Entwicklung
 
