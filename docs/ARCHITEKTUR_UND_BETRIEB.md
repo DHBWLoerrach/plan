@@ -26,6 +26,10 @@ Ein Zähler je Blockplan statt feinerer Granularität ist bewusst gewählt: Beze
 
 Zuordnen und Lösen eines Kurses berühren beide Objekte: Sie erwarten Kurs- und Blockplanversion und erhöhen beide in derselben Transaktion. Andernfalls bemerkt eine Person, die gerade am Entwurf arbeitet, nicht, dass ein Kurs hinzugekommen oder verschwunden ist.
 
+Das Anlegen eines Blockplans ist eine zusammengesetzte Operation: Blockplan erzeugen und ersten Kurs zuordnen laufen in einer Transaktion, weil ein Blockplan ohne Kurs nicht existieren darf. Erwartet wird dabei nur die Kursversion — eine Blockplanversion gibt es noch nicht. Die Operation schreibt zwei Auditereignisse, die Erstellung des Blockplans und die Zuordnung des Kurses; ein einzelnes Ereignis würde ausgerechnet die erste Zuordnung eines Kurses unprotokolliert lassen.
+
+Die Eindeutigkeit der Blockplanbezeichnung je Bereich liegt als `UNIQUE`-Constraint in der Datenbank. Der Jahrgang gehört bewusst nicht zum Constraint: Er wird aus den Kursen abgeleitet und nicht gespeichert, wäre also nicht indizierbar.
+
 Veröffentlichen und Zurücknehmen prüfen neben der Version den Zustand: Zurücknehmen setzt eine derzeit veröffentlichte Fassung voraus. Das fängt den Doppelklick-Fall ab, den ein Versionszähler allein nicht abdeckt.
 
 ## Authentifizierung und Sitzungen
