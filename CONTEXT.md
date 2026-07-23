@@ -18,9 +18,9 @@ Ein Studienangebot innerhalb genau eines Bereichs, zum Beispiel Informatik oder 
 
 Die **Anzahl Semester** ist eine verpflichtende Angabe des Studiengangs und gilt für alle seine Kurse und Jahrgänge. Im MVP ist sie 6 oder 7; Architektur ist der einzige siebensemestrige Studiengang.
 
-Anzahl Semester und Bereich dürfen nur geändert werden, solange noch kein Kurs vom Studiengang abhängt. Blockpläne hängen nicht unmittelbar an Studiengängen, sondern über ihre Kurse; ohne Kurse des Studiengangs ist also auch kein Blockplan betroffen.
+Anzahl Semester und Bereich dürfen nur geändert werden, solange noch kein Kurs vom Studiengang abhängt; danach sind sie unveränderlich. Blockpläne hängen nicht unmittelbar an Studiengängen, sondern über ihre Kurse; ohne Kurse des Studiengangs ist also auch kein Blockplan betroffen.
 
-Der Wächter ist bei der Anzahl Semester bewusst streng, weil laufende Jahrgänge ihre Länge behalten müssen: Eine Studienordnungsänderung von sechs auf sieben Semester ist keine Korrektur des bestehenden Studiengangs, sondern verlangt einen neuen Studiengang für die neuen Jahrgänge oder eine gesonderte, auditierte Datenmigration.
+Eine spätere Korrektur, etwa bei geänderter Studienordnung, erfordert eine gesonderte, auditierte Datenmigration, weil sie die Verlaufslänge bereits geplanter Jahrgänge berührt.
 
 ## Studienzentrum
 
@@ -112,7 +112,7 @@ Ein veröffentlichter Kursverlauf enthält die Semester 1 bis zur Anzahl Semeste
 
 Eine Planangabe innerhalb einer Fassung eines Blockplans mit Titel, optionaler Beschreibung, Pflichtkategorie und einem Geltungsbereich von mindestens einem Kurs desselben Blockplans. Ein Blockplan darf beliebig viele — auch keine — prüfungsrelevanten Termine enthalten.
 
-Seine Zeitangabe ist entweder ein genaues Datum mit optionaler Uhrzeit, ein beidseitig inklusiver Datumsbereich oder ein vollständiger Kalendermonat. Sie kann als **vorläufig** markiert werden; eine vorläufige Zeitangabe ist gültig und veröffentlichbar und kennzeichnet gegenüber externen Nutzenden, dass sich das Datum noch ändern kann.
+Seine Zeitangabe ist entweder ein genaues Datum mit optionaler Uhrzeit, ein beidseitig inklusiver Datumsbereich mit Startdatum ≤ Enddatum oder ein vollständiger Kalendermonat. Sie kann als **vorläufig** markiert werden; eine vorläufige Zeitangabe ist gültig und veröffentlichbar und kennzeichnet gegenüber externen Nutzenden, dass sich das Datum noch ändern kann.
 
 In einer veröffentlichten Fassung liegt ein Termin vollständig innerhalb des Studienzeitraums jedes betroffenen Kurses.
 
