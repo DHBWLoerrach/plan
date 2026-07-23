@@ -18,9 +18,13 @@ Die Fachvalidierung liegt in einer gemeinsamen serverseitigen Regelbibliothek. J
 
 Das Schema versioniert nur, was `CONTEXT.md` einer Fassung zuordnet — Blockphasen, Kursphasen und prüfungsrelevante Termine; Identität, Bereich, Jahrgang, Bezeichnung und Kurszuordnungen liegen unversioniert am Blockplan (siehe [ADR 0001](adr/0001-versionsgrenze-blockplan.md)). Veröffentlichung, Austausch der Fassung und Audit-Eintrag erfolgen in einer SQLite-Transaktion; danach entsteht wieder ein bearbeitbarer Entwurf, und die abgelöste Fassung ist nicht wiederherstellbar.
 
-Jeder Entwurf und jeder Kurs besitzt einen monoton steigenden Versionszähler. Jede Mutation enthält die erwartete Version des betroffenen Objekts und erhöht sie atomar; stimmt sie nicht mehr mit der gespeicherten Version überein, antwortet die Fachlogik mit einem strukturierten Bearbeitungskonflikt und schreibt keine Daten. Die Oberfläche lädt anschließend den aktuellen Stand und unterstützt die Person dabei, ihre Änderung erneut einzubringen.
+Jeder Blockplan und jeder Kurs besitzt für die Nebenläufigkeitsprüfung einen monoton steigenden Versionszähler; er hat nichts mit der Unterscheidung von Entwurf und veröffentlichter Fassung zu tun. Der Blockplanzähler deckt alles ab, was zu diesem Blockplan gehört: Bezeichnung, Kurszuordnungen, den gesamten Entwurfsinhalt sowie Veröffentlichen und Zurücknehmen. Jede Mutation enthält die erwartete Version des betroffenen Objekts und erhöht sie atomar; stimmt sie nicht mehr mit der gespeicherten Version überein, antwortet die Fachlogik mit einem strukturierten Bearbeitungskonflikt und schreibt keine Daten. Die Oberfläche lädt anschließend den aktuellen Stand und unterstützt die Person dabei, ihre Änderung erneut einzubringen.
 
-Zuordnen und Lösen eines Kurses berühren beide Objekte: Sie erwarten die Kursversion, erhöhen sie und erhöhen in derselben Transaktion zusätzlich den Versionszähler des betroffenen Entwurfs. Andernfalls bemerkt eine Person, die gerade am Entwurf arbeitet, nicht, dass ein Kurs hinzugekommen oder verschwunden ist.
+Ein Zähler je Blockplan statt feinerer Granularität ist bewusst gewählt: Bezeichnung, Phasen und Termine sind dieselbe Planungsarbeit derselben Personen, und bei höchstens fünf gleichzeitigen Schreibvorgängen bringt eine feinere Aufteilung keinen Gewinn. Der Preis sind gelegentliche Konflikte zwischen sachlich unabhängigen Änderungen, etwa einer Umbenennung während laufender Phasenbearbeitung.
+
+Zuordnen und Lösen eines Kurses berühren beide Objekte: Sie erwarten Kurs- und Blockplanversion und erhöhen beide in derselben Transaktion. Andernfalls bemerkt eine Person, die gerade am Entwurf arbeitet, nicht, dass ein Kurs hinzugekommen oder verschwunden ist.
+
+Veröffentlichen und Zurücknehmen prüfen neben der Version den Zustand: Zurücknehmen setzt eine derzeit veröffentlichte Fassung voraus. Das fängt den Doppelklick-Fall ab, den ein Versionszähler allein nicht abdeckt.
 
 ## Authentifizierung und Sitzungen
 

@@ -39,13 +39,13 @@ Ein neuer Blockplan beginnt als Entwurf. Die Veröffentlichung prüft Struktur- 
 
 ## Gleichzeitige Bearbeitung
 
-Schreibvorgänge auf einem Entwurf und auf einem Kurs verwenden optimistisches Locking: Bei einem Konflikt wird nichts überschrieben, und die bearbeitende Person muss den aktuellen Stand laden, bevor sie ihre Änderung erneut einbringt. Stilles Last-write-wins ist für beide ausgeschlossen — auch beim Zuordnen und Lösen, wo ein stiller Verlust bedeuten würde, dass ein Kurs unbemerkt im fremden Blockplan landet.
+Schreibvorgänge auf einem Blockplan und auf einem Kurs verwenden optimistisches Locking: Bei einem Konflikt wird nichts überschrieben, und die bearbeitende Person muss den aktuellen Stand laden, bevor sie ihre Änderung erneut einbringt. Beim Blockplan gilt das für Bezeichnung, Entwurfsinhalt, Kurszuordnungen sowie Veröffentlichen und Zurücknehmen. Stilles Last-write-wins ist überall ausgeschlossen — insbesondere beim Zuordnen und Lösen, wo ein stiller Verlust bedeuten würde, dass ein Kurs unbemerkt im fremden Blockplan landet.
 
 ## Referenzintegrität
 
 Wird ein noch nie veröffentlichter Blockplan gelöscht, entfallen seine Blockphasen, Kursphasen und prüfungsrelevanten Termine mit ihm.
 
-Bereiche und Studiengänge, auf die Kurse oder Blockpläne verweisen, werden deaktiviert statt gelöscht. Ein Wechsel des Bereichs eines Studiengangs mit bestehenden Abhängigkeiten erfordert eine gesonderte, auditierte Datenmigration.
+Bereiche und Studiengänge, auf die Kurse oder Blockpläne verweisen, werden deaktiviert statt gelöscht. Bereich und Anzahl Semester eines Studiengangs mit bestehenden Kursen zu ändern, erfordert eine gesonderte, auditierte Datenmigration.
 
 ## Oberflächen
 

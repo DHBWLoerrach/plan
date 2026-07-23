@@ -18,7 +18,9 @@ Ein Studienangebot innerhalb genau eines Bereichs, zum Beispiel Informatik oder 
 
 Die **Anzahl Semester** ist eine verpflichtende Angabe des Studiengangs und gilt für alle seine Kurse und Jahrgänge. Im MVP ist sie 6 oder 7; Architektur ist der einzige siebensemestrige Studiengang.
 
-Ein Studiengang darf nur dann einem anderen Bereich zugeordnet werden, wenn noch kein Kurs von ihm abhängt. Blockpläne hängen nicht unmittelbar an Studiengängen, sondern über ihre Kurse; ohne Kurse des Studiengangs ist also auch kein Blockplan betroffen.
+Anzahl Semester und Bereich dürfen nur geändert werden, solange noch kein Kurs vom Studiengang abhängt. Blockpläne hängen nicht unmittelbar an Studiengängen, sondern über ihre Kurse; ohne Kurse des Studiengangs ist also auch kein Blockplan betroffen.
+
+Der Wächter ist bei der Anzahl Semester bewusst streng, weil laufende Jahrgänge ihre Länge behalten müssen: Eine Studienordnungsänderung von sechs auf sieben Semester ist keine Korrektur des bestehenden Studiengangs, sondern verlangt einen neuen Studiengang für die neuen Jahrgänge oder eine gesonderte, auditierte Datenmigration.
 
 ## Studienzentrum
 
