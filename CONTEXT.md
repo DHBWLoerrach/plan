@@ -6,9 +6,15 @@ Eine gemeinsam verwaltete und veröffentlichte Planungseinheit für die Abfolge 
 
 ## Kurs
 
-Eine Gruppe von Studierenden eines Studiengangs und Jahrgangs, die vom Studienbeginn bis zum Studienende zusammenbleibt. Ein Kurs wird ausschließlich innerhalb eines Blockplans angelegt und gehört während seines gesamten Lebenszyklus genau diesem Blockplan; Kurse mit vollständig oder teilweise gemeinsamem zeitlichem Verlauf dürfen demselben Blockplan angehören. Die Kurskennung ist eine verpflichtende, systemweit eindeutige Kennung und verbindet Studiengang, Jahrgang und parallele Kursgruppe, zum Beispiel `TIF24A` oder `WDS24A`. Studiengang, Studienbeginn und Studienende sind zusätzlich verpflichtende eigene Angaben; die Kennung hat im MVP kein erzwungenes Format. „Kohorte“ ist kein kanonischer Begriff der Anwendung.
+Eine Gruppe von Studierenden eines Studiengangs und Jahrgangs, die vom Studienbeginn bis zum Studienende zusammenbleibt. Ein Kurs ist eine eigenständige fachliche Einheit und höchstens einem Blockplan zugeordnet; Kurse mit vollständig oder teilweise gemeinsamem zeitlichem Verlauf dürfen in demselben Blockplan geplant werden. Die Kurskennung ist eine verpflichtende, systemweit eindeutige Kennung und verbindet Studiengang, Jahrgang und parallele Kursgruppe, zum Beispiel `TIF24A` oder `WDS24A`. Studiengang, Studienbeginn und Studienende sind zusätzlich verpflichtende eigene Angaben und während des gesamten Lebenszyklus eines Kurses unveränderlich; die Kennung hat im MVP kein erzwungenes Format. „Kohorte“ ist kein kanonischer Begriff der Anwendung.
 
-Ein Kurs gilt als erstmals veröffentlicht, sobald er in mindestens einer veröffentlichten Fassung seines Blockplans enthalten war; eine spätere Zurücknahme hebt dies nicht auf. Ab diesem Zeitpunkt ist seine Kurskennung unveränderlich und der Kurs wird weder gelöscht noch einem anderen Blockplan zugeordnet. Kurse werden von Studiengangsleitung und Studiengangsmanagement im eigenen Bereich angelegt und gepflegt.
+Kurse werden von Studiengangsleitung und Studiengangsmanagement im eigenen Bereich angelegt und gepflegt; der verwaltende Bereich eines Kurses ist keine eigene Angabe am Kurs, sondern ergibt sich aus dem Bereich seines Studiengangs; er gilt auch für einen Kurs ohne Blockplanzuordnung.
+
+Solange ein Kurs kein veröffentlichter Kurs ist, darf er einem Blockplan zugeordnet und wieder von ihm gelöst werden. Eine Zuordnung ist nur zulässig, wenn der Studiengang des Kurses zu einem Studiengang des Bereichs gehört, dem der Blockplan zugeordnet ist, und der Jahrgang des Kurses dem Jahrgang des Blockplans entspricht. Beim Lösen entfallen die Kursphasen dieses Kurses sowie seine Zuordnungen zu den prüfungsrelevanten Terminen desselben Blockplans; jeder verbleibende Termin muss weiterhin mindestens einen Kurs betreffen.
+
+## Veröffentlichter Kurs
+
+Ein Kurs, der in mindestens einer veröffentlichten Fassung eines Blockplans enthalten war. Ein Kurs wird nie selbst veröffentlicht; veröffentlicht wird ausschließlich der Blockplan, und der Zustand des Kurses leitet sich daraus ab. Eine spätere Zurücknahme hebt ihn nicht auf. Bei einem veröffentlichten Kurs ist die Kurskennung unveränderlich; er wird weder gelöscht noch von seinem Blockplan gelöst oder einem anderen Blockplan zugeordnet.
 
 ## Jahrgang
 

@@ -11,7 +11,8 @@ Die fachlichen Begriffe, Entitäten und Validierungsregeln sind verbindlich in [
 | Funktion | Studiengangsmanagement | Studiengangsleitung | Systemadministration | Externe Nutzende |
 | --- | --- | --- | --- | --- |
 | Kurse anlegen und bearbeiten | eigene Bereiche | eigene Bereiche | alle Bereiche | – |
-| Noch nie veröffentlichte Kurse entfernen | – | eigene Bereiche | alle Bereiche | – |
+| Noch nicht veröffentlichte Kurse entfernen | – | eigene Bereiche | alle Bereiche | – |
+| Noch nicht veröffentlichte Kurse einem Blockplan zuordnen oder von ihm lösen | eigene Bereiche | eigene Bereiche | alle Bereiche | – |
 | Blockplanentwürfe anlegen und bearbeiten | eigene Bereiche | eigene Bereiche | alle Bereiche | – |
 | Noch nie veröffentlichte Blockpläne löschen | – | eigene Bereiche | alle Bereiche | – |
 | Veröffentlichen und zurücknehmen | – | eigene Bereiche | alle Bereiche | – |
@@ -48,7 +49,9 @@ Jeder Entwurf besitzt einen Versionsstand. Schreibvorgänge übermitteln den gel
 
 ## Lebenszyklus und Referenzintegrität
 
-Ein Kurs wird ausschließlich innerhalb eines Blockplans angelegt und hat deshalb zu keinem Zeitpunkt einen Zustand ohne Blockplan. Ein noch nie veröffentlichter Kurs kann entfernt werden, wenn in derselben Operation seine Kursphasen und Terminzuordnungen entfernt oder neu zugeordnet werden; jeder verbleibende prüfungsrelevante Termin muss weiterhin mindestens einen Kurs betreffen. Für erstmals veröffentlichte Kurse gelten dauerhaft die Lösch-, Zuordnungs- und Kennungsregeln aus `CONTEXT.md`.
+Ein Kurs wird unabhängig von einem Blockplan angelegt und kann ohne Blockplan bestehen; er darf höchstens einem Blockplan zugeordnet sein. Ein Kurs, der noch kein veröffentlichter Kurs im Sinne von `CONTEXT.md` ist, kann entfernt werden, wenn in derselben Operation seine Kursphasen und Terminzuordnungen entfernt oder neu zugeordnet werden; jeder verbleibende prüfungsrelevante Termin muss weiterhin mindestens einen Kurs betreffen. Sobald ein Kurs in einer veröffentlichten Fassung enthalten war, gelten dauerhaft die Lösch-, Zuordnungs- und Kennungsregeln aus `CONTEXT.md`; dort stehen auch die Bedingungen, unter denen ein noch nicht veröffentlichter Kurs einem Blockplan zugeordnet oder von ihm gelöst wird.
+
+Wird ein noch nie veröffentlichter Blockplan gelöscht, bleiben die ihm zugeordneten Kurse als eigenständige, blockplanlose Kurse bestehen. Seine Blockphasen, die zugehörigen Kursphasen und seine prüfungsrelevanten Termine entfallen mit ihm.
 
 Bereiche und Studiengänge, auf die Kurse oder Blockpläne verweisen, werden nicht gelöscht, sondern deaktiviert. Ein Studiengang darf nur dann einem anderen Bereich zugeordnet werden, wenn noch kein Kurs und kein Blockplan von ihm abhängt; andernfalls ist eine gesonderte, auditierte Datenmigration erforderlich.
 
