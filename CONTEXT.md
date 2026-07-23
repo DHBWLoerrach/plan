@@ -28,7 +28,7 @@ Die an der DHBW Lörrach übliche Bezeichnung für einen Bereich mit mehreren St
 
 ## Jahrgang
 
-Das Kalenderjahr, in dem das Studium beginnt. Beim Kurs ist der Jahrgang keine eigene Angabe, sondern das Kalenderjahr seines Studienbeginns; beim Blockplan ist er eine eigene verpflichtende Angabe, die bei der Anlage gesetzt wird und danach unveränderlich ist. Alle Kurse eines Blockplans gehören demselben Jahrgang an.
+Das Kalenderjahr, in dem das Studium beginnt. Er ist nirgends eine eigene Angabe: Beim Kurs ist er das Kalenderjahr seines Studienbeginns, beim Blockplan der übereinstimmende Jahrgang seiner Kurse. Alle Kurse eines Blockplans gehören demselben Jahrgang an.
 
 ## Kurs
 
@@ -38,11 +38,13 @@ Ein Kurs besitzt eine unveränderliche systemische Identität und vier verpflich
 
 Solange ein Kurs kein veröffentlichter Kurs ist, sind alle vier Angaben änderbar und er darf zugeordnet, gelöst und gelöscht werden. Studiengang und Studienbeginn dürfen sich nur ändern, wenn eine bestehende Blockplanzuordnung danach gültig bleibt.
 
-Eine Zuordnung setzt voraus, dass der Studiengang des Kurses zum Bereich des Blockplans gehört, die Jahrgänge übereinstimmen und seine Anzahl Semester der der bereits zugeordneten Kurse entspricht. Beim Lösen wie beim Löschen entfallen die Kursphasen des Kurses und seine Zuordnungen zu prüfungsrelevanten Terminen desselben Blockplans; jeder verbleibende Termin muss weiterhin mindestens einen Kurs betreffen. Beträfe ein Termin danach keinen Kurs mehr, wird die Operation abgelehnt und die betroffenen Termine werden benannt. Termine werden nie automatisch mitgelöscht.
+Eine Zuordnung setzt voraus, dass der Studiengang des Kurses zum Bereich des Blockplans gehört und dass Jahrgang und Anzahl Semester mit denen der bereits zugeordneten Kurse übereinstimmen. Ein Kurs wird nicht gelöst, wenn er der letzte des Blockplans ist. Beim Lösen wie beim Löschen entfallen die Kursphasen des Kurses und seine Zuordnungen zu prüfungsrelevanten Terminen desselben Blockplans; jeder verbleibende Termin muss weiterhin mindestens einen Kurs betreffen. Beträfe ein Termin danach keinen Kurs mehr, wird die Operation abgelehnt und die betroffenen Termine werden benannt. Termine werden nie automatisch mitgelöscht.
 
 ## Veröffentlichter Kurs
 
 Ein Kurs, für den mindestens eine Kursphase Bestandteil einer veröffentlichten Fassung war. Maßgeblich sind die Kursphasen, nicht die Zuordnung: Diese gehört dem Blockplan und nicht einer Fassung, ein bloß zugeordneter Kurs ohne veröffentlichte Kursphasen ist also kein veröffentlichter Kurs. Veröffentlicht wird stets nur der Blockplan; der Zustand des Kurses leitet sich daraus ab und wird durch eine spätere Zurücknahme nicht aufgehoben.
+
+Der Zustand wird bei der Veröffentlichung dauerhaft am Kurs vermerkt und nie zurückgesetzt. Er ist damit auch dann noch erkennbar, wenn die betreffende Fassung längst durch eine spätere ersetzt wurde, in der dieser Kurs keine Kursphasen mehr hat — die abgelöste Fassung wird gelöscht und trüge den Nachweis sonst mit sich fort.
 
 Bei einem veröffentlichten Kurs sind alle vier Angaben unveränderlich; er wird weder gelöscht noch von seinem Blockplan gelöst noch einem anderen zugeordnet.
 
@@ -60,11 +62,13 @@ Start- und Enddaten sind zeitzonenlose Kalendertage im gregorianischen Kalender.
 
 Eine gemeinsam verwaltete und veröffentlichte Planungseinheit für die Abfolge von Theorie- und Praxisphasen sowie die prüfungsrelevanten Termine eines oder mehrerer Kurse desselben Jahrgangs. Ein Blockplan ist strukturierte, bearbeitbare Anwendungsdaten, kein Dokument.
 
-Er besitzt eine unveränderliche systemische Identität, eine erforderliche und innerhalb seines Bereichs und Jahrgangs eindeutige Bezeichnung, genau einen Bereich und genau einen Jahrgang. Er enthält ausschließlich Kurse aus den Studiengängen seines Bereichs; innerhalb eines Bereichs und Jahrgangs darf es mehrere Blockpläne geben.
+Er besitzt als eigene Angaben nur eine unveränderliche systemische Identität, genau einen Bereich und eine erforderliche, innerhalb seines Bereichs und Jahrgangs eindeutige Bezeichnung. Er enthält ausschließlich Kurse aus den Studiengängen seines Bereichs; innerhalb eines Bereichs und Jahrgangs darf es mehrere Blockpläne geben.
+
+Ein Blockplan hat jederzeit mindestens einen Kurs — bereits bei der Anlage. Jahrgang und Anzahl Semester sind deshalb keine eigenen Angaben, sondern die übereinstimmenden Werte seiner Kurse. Der letzte Kurs kann nicht gelöst werden; stattdessen wird der Blockplan gelöscht.
 
 Studiengangsübergreifend wird nur bei gleicher Semesterzahl geplant: Alle Kurse eines Blockplans gehören Studiengängen mit derselben Anzahl Semester an. Damit hat jeder Blockplan eine einheitliche Verlaufslänge, und die Planmatrix stellt nie Kurse unterschiedlicher Dauer nebeneinander.
 
-Ein Blockplan hat einen Entwurf und höchstens eine veröffentlichte Fassung. Identität, Bereich, Jahrgang, Bezeichnung und Kurszuordnungen gehören dem Blockplan selbst und wirken sofort; Blockphasen, Kursphasen und prüfungsrelevante Termine gehören je einer Fassung. Ein Kurs kann daher zugeordnet sein, ohne in der veröffentlichten Fassung Kursphasen zu besitzen — die öffentliche Ansicht zeigt nur Kurse, die dort Kursphasen haben.
+Ein Blockplan hat einen Entwurf und höchstens eine veröffentlichte Fassung. Identität, Bereich, Bezeichnung und Kurszuordnungen gehören dem Blockplan selbst und wirken sofort; Blockphasen, Kursphasen und prüfungsrelevante Termine gehören je einer Fassung. Ein Kurs kann daher zugeordnet sein, ohne in der veröffentlichten Fassung Kursphasen zu besitzen — die öffentliche Ansicht zeigt nur Kurse, die dort Kursphasen haben.
 
 ## Entwurf
 

@@ -1,6 +1,6 @@
 # Versionsgrenze: Kurszuordnungen gehören zum Blockplan, nicht zur Fassung
 
-Ein Blockplan existiert gleichzeitig als Entwurf und als höchstens eine veröffentlichte Fassung, also braucht jede Angabe eine Zuordnung zu einer der beiden Ebenen. Wir versionieren nur Blockphasen, Kursphasen und prüfungsrelevante Termine; Identität, Bereich, Jahrgang, Bezeichnung und Kurszuordnungen hängen am Blockplan selbst.
+Ein Blockplan existiert gleichzeitig als Entwurf und als höchstens eine veröffentlichte Fassung, also braucht jede Angabe eine Zuordnung zu einer der beiden Ebenen. Wir versionieren nur Blockphasen, Kursphasen und prüfungsrelevante Termine; Identität, Bereich, Bezeichnung und Kurszuordnungen hängen am Blockplan selbst, ebenso der aus den Kursen abgeleitete Jahrgang.
 
 ## Verworfene Alternative
 
