@@ -10,7 +10,7 @@ Die Kopie ist nur möglich, weil nichts von außerhalb einer Fassung auf eine Bl
 
 ## Ablauf und Lebensdauer
 
-Veröffentlichen, Ersetzen der bisherigen Fassung und Audit-Eintrag laufen in einer Transaktion. Die abgelöste Fassung wird dabei gelöscht, nicht aufbewahrt — zusätzlich zum Entwurf existiert pro Blockplan zu jedem Zeitpunkt genau null oder eine veröffentlichte beziehungsweise zurückgenommene Fassung.
+Veröffentlichen und Ersetzen der bisherigen Fassung laufen in einer Transaktion. Die abgelöste Fassung wird dabei gelöscht, nicht aufbewahrt — zusätzlich zum Entwurf existiert pro Blockplan zu jedem Zeitpunkt genau null oder eine veröffentlichte beziehungsweise zurückgenommene Fassung.
 
 Es gibt genau **einen** Veröffentlichungsweg, unabhängig davon, ob der Blockplan noch nie, gerade oder zuletzt zurückgenommen veröffentlicht war: Der aktuelle Entwurf wird geprüft und abgelegt. Eine Zurücknahme entfernt nur die öffentliche Sichtbarkeit; die zurückgenommene Fassung bleibt unsichtbar liegen, bis die nächste Veröffentlichung sie ersetzt. Ein gesondertes Wiederherstellen der zurückgenommenen Fassung gibt es nicht.
 

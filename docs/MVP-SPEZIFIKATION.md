@@ -18,8 +18,6 @@ Abgeleitete Übersicht; normativ ist der Abschnitt [Berechtigungen](FACHLICHE_RE
 | Blockplanentwürfe anlegen und bearbeiten | eigene Bereiche | eigene Bereiche | alle Bereiche | – |
 | Noch nie veröffentlichte Blockpläne löschen | – | eigene Bereiche | alle Bereiche | – |
 | Veröffentlichen und zurücknehmen | – | eigene Bereiche | alle Bereiche | – |
-| Auditspur zu Blockplänen und Kursen einsehen | eigene Bereiche | eigene Bereiche | alle Bereiche | – |
-| Auditspur zu internen Konten einsehen | – | – | systemweit | – |
 | Bereiche, Studiengänge, Konten und Rechte verwalten | – | – | systemweit | – |
 | Veröffentlichte Blockpläne lesen | ja | ja | ja | ja |
 
@@ -49,7 +47,7 @@ Das MVP verwendet für Blockpläne und Kurse keinen allgemeinen Versionszähler.
 
 Die nicht gespeicherte Eingabe bleibt erhalten. „Trotzdem speichern“ bestätigt ausschließlich die einzelne beabsichtigte Operation für genau den in der Warnung genannten Stand. Hat sich der Entwurf nochmals geändert, erscheint eine neue Warnung. Die Bestätigung überstimmt niemals Berechtigungen, Existenzprüfungen, Strukturregeln oder andere Zustandsvoraussetzungen; ein zwischenzeitlich gelöschtes Objekt wird insbesondere nicht wiederhergestellt. Es gibt keine Hintergrundprüfung, automatische Zusammenführung, Gegenüberstellung vollständiger Stände oder Revisionshistorie (siehe [ADR 0004](adr/0004-aenderungswarnung-statt-versionszaehler.md)).
 
-Seltene gleichzeitige Änderungen derselben Kursangabe verwenden bewusst Last-write-wins. Beim Zuordnen und Lösen eines Kurses prüfen kurze Transaktionen dagegen stets den aktuellen Datenbankstand und alle Zuordnungsregeln; Datenbank-Constraints schließen widersprüchliche Zuordnungen zusätzlich aus. Interne Konten, Bereiche und Studiengänge prüfen ihre Strukturregeln, Zustandsvoraussetzungen und Eindeutigkeiten ebenfalls innerhalb jeder Transaktion gegen den aktuellen Datenbankstand; Kontoänderungen werden zusätzlich vollständig auditiert.
+Seltene gleichzeitige Änderungen derselben Kursangabe verwenden bewusst Last-write-wins. Beim Zuordnen und Lösen eines Kurses prüfen kurze Transaktionen dagegen stets den aktuellen Datenbankstand und alle Zuordnungsregeln; Datenbank-Constraints schließen widersprüchliche Zuordnungen zusätzlich aus. Interne Konten, Bereiche und Studiengänge prüfen ihre Strukturregeln, Zustandsvoraussetzungen und Eindeutigkeiten ebenfalls innerhalb jeder Transaktion gegen den aktuellen Datenbankstand.
 
 Veröffentlichen vergleicht sowohl den zuletzt gesehenen Änderungszeitpunkt des Entwurfs als auch die zuletzt gesehene veröffentlichte oder zurückgenommene Fassung. Hat sich einer dieser Stände geändert, lässt sich die Prüfung nicht überstimmen: Die Anwendung lädt die aktuelle Vorschau und den aktuellen Veröffentlichungszustand, von denen aus die Person erneut veröffentlichen kann. Zurücknehmen adressiert immer die konkret angezeigte veröffentlichte Fassung; wurde sie inzwischen ersetzt oder bereits zurückgenommen, bleibt der aktuelle Zustand unverändert und wird neu geladen.
 
@@ -57,7 +55,7 @@ Veröffentlichen vergleicht sowohl den zuletzt gesehenen Änderungszeitpunkt des
 
 Wird ein noch nie veröffentlichter Blockplan gelöscht, entfallen seine Blockphasen, Kursphasen und prüfungsrelevanten Termine mit ihm.
 
-Bereiche und Studiengänge, auf die Kurse oder Blockpläne verweisen, werden deaktiviert statt gelöscht. Bereich und Anzahl Semester eines Studiengangs mit bestehenden Kursen zu ändern, erfordert eine gesonderte, auditierte Datenmigration.
+Bereiche und Studiengänge, auf die Kurse oder Blockpläne verweisen, werden deaktiviert statt gelöscht. Bereich und Anzahl Semester eines Studiengangs mit bestehenden Kursen zu ändern, erfordert eine gesonderte, außerhalb der Anwendung manuell dokumentierte Datenmigration.
 
 ## Oberflächen
 
@@ -75,11 +73,11 @@ Prüfungsrelevante Termine werden in einem eigenen Editorabschnitt verwaltet. Vo
 
 ## Interne Informationsarchitektur
 
-Nach der Anmeldung zeigt die Startseite die zugeordneten Bereiche, zuletzt bearbeitete Blockpläne und Hinweise auf unvollständige Entwürfe. Die Hauptnavigation fachlicher Rollen umfasst **Blockpläne**, **Kurse** und **Auditspur**; für die Systemadministration kommen **Bereiche**, **Studiengänge** und **Konten** hinzu. Nicht erlaubte Einträge werden ausgeblendet, ohne die erneute Berechtigungsprüfung auf jeder Zielseite und in jeder Serveroperation zu ersetzen.
+Nach der Anmeldung zeigt die Startseite die zugeordneten Bereiche, zuletzt bearbeitete Blockpläne und Hinweise auf unvollständige Entwürfe. Die Hauptnavigation fachlicher Rollen umfasst **Blockpläne** und **Kurse**; für die Systemadministration kommen **Bereiche**, **Studiengänge** und **Konten** hinzu. Nicht erlaubte Einträge werden ausgeblendet, ohne die erneute Berechtigungsprüfung auf jeder Zielseite und in jeder Serveroperation zu ersetzen.
 
 Alle internen Listen verwenden URL-basierte Filter, reproduzierbare Sortierung und serverseitig 25 Einträge pro Seite. Die Blockplanliste filtert nach Bereich, Jahrgang, Kurskennung und Veröffentlichungszustand; die Kursliste nach Bereich, Studiengang, Jahrgang und Zuordnungszustand. Ein Blockplan kann aus der Blockplanliste oder unmittelbar aus einem geeigneten blockplanlosen Kurs angelegt werden, wobei Blockplananlage und erste Kurszuordnung dieselbe Transaktion bilden.
 
-Die Auditliste filtert nach Zeitraum, Bereich, Entität und Ereignisart innerhalb des erlaubten Sichtbarkeitsumfangs. Die Kontoliste unterscheidet und filtert die Zustände „Passwortvergabe ausstehend“, „Aktiv“ und „Gesperrt“. Löschungen, Deaktivierungen, Kontosperrungen, Zurücknahmen, Rechteänderungen und die Ausstellung neuer Passwortlinks verlangen eine Bestätigung, die konkrete Folgen und betroffene Objekte nennt.
+Die Kontoliste unterscheidet und filtert die Zustände „Passwortvergabe ausstehend“, „Aktiv“ und „Gesperrt“. Löschungen, Deaktivierungen, Kontosperrungen, Zurücknahmen, Rechteänderungen und die Ausstellung neuer Passwortlinks verlangen eine Bestätigung, die konkrete Folgen und betroffene Objekte nennt.
 
 ## Dimensionierungs- und Leistungsannahmen
 
@@ -97,3 +95,4 @@ Feld- und Mengengrenzen sind als Strukturregeln in [`FACHLICHE_REGELN.md`](FACHL
 - Studienverläufe mit einer anderen Dauer als 6 oder 7 Semestern.
 - Blockplanübergreifende Gesamtansichten, etwa ein bereichsweiter Gantt über mehrere Jahrgänge — öffentlich über die veröffentlichten Fassungen, intern zusätzlich über die Entwürfe. Ein späterer Ausbau; das Datenmodell trägt ihn bereits, und die Zeitachse einer solchen Ansicht erlaubt anders als die semesterspaltige Planmatrix auch Kurse mit unterschiedlicher Semesterzahl nebeneinander. Innerhalb eines Blockplans ist die studiengangsübergreifende Darstellung dagegen Kernfunktion und nicht ausgeschlossen.
 - Eine persönliche kursbezogene Blockband-Ansicht; sie bleibt eine mögliche spätere Studierendenansicht.
+- Eine fachliche oder administrative Auditspur. Außer Zeitpunkt und internem Konto der letzten Entwurfsänderung speichert die Anwendung keine Änderungshistorie; eine spätere Protokollierung beginnt ohne rückwirkende Rekonstruktion ab ihrem Einführungsstichtag (siehe [ADR 0005](adr/0005-keine-auditspur-im-mvp.md)).

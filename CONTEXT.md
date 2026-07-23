@@ -62,15 +62,13 @@ _Avoid_: Aktivierungslink, Reset-Link, Anmeldelink
 
 **Aktives internes Konto**: Ein internes Konto mit freigegebenem Zugang, das sich über das aktuell vorgesehene Anmeldeverfahren anmelden kann.
 
-**Gesperrtes internes Konto**: Ein internes Konto, dessen Zugang die Systemadministration gesperrt hat. Seine fachlichen Zuordnungen und seine Identität in der Auditspur bleiben erhalten.
+**Gesperrtes internes Konto**: Ein internes Konto, dessen Zugang die Systemadministration gesperrt hat. Seine fachlichen Zuordnungen bleiben erhalten.
 _Avoid_: Deaktiviertes Konto, anonymisiertes Konto
 
 **Studiengangsmanagement**: Die fachliche Rolle für die laufende Kurs- und Entwurfsbearbeitung in zugeordneten Bereichen.
 
 **Studiengangsleitung**: Die fachliche Rolle, die in zugeordneten Bereichen zusätzlich löschen, veröffentlichen und Veröffentlichungen zurücknehmen darf.
 
-**Systemadministration**: Die globale Berechtigung für fachliche Superuser-Aufgaben, Stammdaten, Konten und die vollständige Auditspur.
+**Systemadministration**: Die globale Berechtigung für fachliche Superuser-Aufgaben, Stammdaten und Konten.
 
 **Externe Nutzende**: Nicht angemeldete oder nicht intern berechtigte Personen, die ausschließlich veröffentlichte Fassungen lesen.
-
-**Auditspur**: Die nur ergänzbare interne Folge fachlicher und administrativer Ereignisse. Sie ist kein Revisionsarchiv der einzelnen Entwurfsänderungen.

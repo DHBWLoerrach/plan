@@ -47,7 +47,7 @@ Werte werden bei einer Überschreitung abgelehnt und niemals abgeschnitten.
 
 - Ein Studiengang besitzt eine unveränderliche systemische Identität, eine erforderliche Bezeichnung, ein erforderliches Kürzel, genau einen Bereich und eine Anzahl Semester von 6 oder 7.
 - Bezeichnung und Kürzel dürfen geändert werden. Bereich und Anzahl Semester dürfen nur geändert werden, solange noch kein Kurs vom Studiengang abhängt.
-- Eine spätere Korrektur von Bereich oder Semesterzahl bei bestehenden Kursen erfordert eine gesonderte, auditierte Datenmigration.
+- Eine spätere Korrektur von Bereich oder Semesterzahl bei bestehenden Kursen erfordert eine gesonderte, außerhalb der Anwendung manuell dokumentierte Datenmigration.
 - Ein neuer Kurs setzt einen aktiven Studiengang voraus.
 - Ein deaktivierter Studiengang nimmt keine neuen Kurse auf. Bestehende Kurse bleiben bearbeitbar und dürfen weiterhin bestehenden Blockplänen zugeordnet oder von ihnen gelöst werden.
 
@@ -74,7 +74,7 @@ Eine Kurszuordnung setzt voraus:
 
 Beim Lösen oder Löschen eines zugeordneten Kurses entfallen seine Kursphasen und seine Zuordnungen zu prüfungsrelevanten Terminen im Entwurf dieses Blockplans. Ein verbleibender Termin muss weiterhin mindestens einen Kurs betreffen; andernfalls wird die Operation unter Nennung der betroffenen Termine abgelehnt. Termine werden nie automatisch gelöscht.
 
-Ein veröffentlichter Kurs bleibt dauerhaft seinem Blockplan zugeordnet, besitzt unveränderliche Kursangaben und muss in jeder späteren Veröffentlichung wieder einen vollständigen Verlauf haben. Die Kursmenge eines einmal veröffentlichten Blockplans kann deshalb nur wachsen. Eine Korrektur dieser Bindung ist im MVP nur durch eine gesonderte, auditierte Datenmigration möglich.
+Ein veröffentlichter Kurs bleibt dauerhaft seinem Blockplan zugeordnet, besitzt unveränderliche Kursangaben und muss in jeder späteren Veröffentlichung wieder einen vollständigen Verlauf haben. Die Kursmenge eines einmal veröffentlichten Blockplans kann deshalb nur wachsen. Eine Korrektur dieser Bindung ist im MVP nur durch eine gesonderte, außerhalb der Anwendung manuell dokumentierte Datenmigration möglich.
 
 ## Blockplan und Fassungen
 
@@ -172,7 +172,7 @@ Ein internes Konto befindet sich genau in einem Zustand:
 
 - **Passwortvergabe ausstehend**: Konto, Berechtigungen und Bereiche bestehen, aber es besitzt kein gültiges lokales Passwort; eine Anmeldung ist nicht möglich.
 - **Aktiv**: Das Konto besitzt ein gültiges lokales Passwort und kann sich anmelden.
-- **Gesperrt**: Die Anmeldung ist gesperrt. Fachliche Zuordnungen und Referenzen der Auditspur bleiben erhalten.
+- **Gesperrt**: Die Anmeldung ist gesperrt. Fachliche Zuordnungen bleiben erhalten.
 
 Ein neues Konto wartet auf die Passwortvergabe. Ein Passwortlink ist zufällig, einmal verwendbar, serverseitig nur gehasht gespeichert und sieben Tage gültig. Er kann ausschließlich für ein Konto mit ausstehender Passwortvergabe erzeugt werden; eine Neuausstellung macht einen vorherigen Passwortlink dieses Kontos ungültig. Das erfolgreiche Setzen eines Passworts versetzt das Konto in den aktiven Zustand.
 
@@ -202,8 +202,7 @@ Das **Studiengangsmanagement** darf in seinen Bereichen:
 
 - Kurse anlegen und bearbeiten;
 - noch nicht veröffentlichte Kurse Blockplänen zuordnen und von ihnen lösen;
-- Blockplanentwürfe anlegen und bearbeiten;
-- Blockplan- und Kursereignisse der Auditspur einsehen.
+- Blockplanentwürfe anlegen und bearbeiten.
 
 Die **Studiengangsleitung** darf dort zusätzlich:
 
@@ -214,24 +213,6 @@ Die **Studiengangsleitung** darf dort zusätzlich:
 Die **Systemadministration** besitzt die Rechte der Studiengangsleitung in allen Bereichen und darf zusätzlich:
 
 - Bereiche und Studiengänge anlegen, pflegen, deaktivieren und reaktivieren;
-- interne Konten anlegen, E-Mail-Adressen, Rollen und Bereichszuordnungen ändern, Passwortlinks ausstellen sowie Konten sperren und freigeben;
-- die vollständige Auditspur einschließlich Konto-, Bereichs- und Studiengangsereignissen einsehen.
+- interne Konten anlegen, E-Mail-Adressen, Rollen und Bereichszuordnungen ändern, Passwortlinks ausstellen sowie Konten sperren und freigeben.
 
 Externe Nutzende dürfen ausschließlich veröffentlichte Fassungen einsehen.
-
-## Auditspur
-
-Auditeinträge werden nur angefügt und weder verändert noch gelöscht. Sie enthalten Zeitpunkt, auslösendes internes Konto beziehungsweise das System, Ereignisart und betroffene Entität. Geheimnisse wie Tokenwerte oder Passwörter werden nie erfasst.
-
-Bei nicht personenbezogenen Stammdatenänderungen enthält das Ereignis betroffene Felder sowie alte und neue Werte. Kontoereignisse enthalten keine früheren E-Mail-Adressen oder anderen personenbezogenen Werte.
-
-Erfasst werden:
-
-- bei Blockplänen Erstellung, Änderung der Bezeichnung, Veröffentlichung, Zurücknahme und Löschung eines nie veröffentlichten Blockplans;
-- bei Kursen Erstellung, Änderung der vier Kursangaben, Zuordnung, Lösung und Löschung;
-- bei Bereichen und Studiengängen Erstellung, Stammdatenänderung, Deaktivierung und Reaktivierung;
-- bei Konten Anlage, Passwortvergabe, Passwort-Reset, Sperrung, Freigabe, Änderungen von E-Mail-Adresse, Rolle oder Bereichen sowie Ausstellung eines Passwortlinks.
-
-Änderungen an Blockphasen, Kursphasen und Terminen sind keine eigenen Auditereignisse. Sie erscheinen als „zuletzt geändert“ am Entwurf und werden erst durch die Veröffentlichung zu einem Auditereignis.
-
-Jedes Blockplan- und Kursereignis speichert seinen fachlichen Bereich zum Ereigniszeitpunkt als Sichtbarkeitsbereich. Bei einem Bereichswechsel eines Kurses trägt das Änderungsereignis Ausgangs- und Zielbereich und ist in beiden Auditansichten sichtbar; frühere Ereignisse verbleiben in ihrem damaligen Bereich. Konto-, Bereichs- und Studiengangsereignisse sieht nur die Systemadministration.
