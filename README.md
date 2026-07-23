@@ -2,12 +2,21 @@
 
 Webanwendung zur Verwaltung und Veröffentlichung von Blockplänen der DHBW Lörrach:
 Theorie- und Praxisphasen sowie prüfungsrelevante Termine je Kurs und Jahrgang.
+Die Blockplanverwaltung ist der erste Baustein einer breiter angelegten Anwendung
+für den Studienbetrieb.
 
 ## Stand
 
 Die fachliche Spezifikation ist abgeschlossen, die Implementierung hat noch nicht
 begonnen — der Code ist unverändertes `create-next-app`-Gerüst
 (Next.js 16, React 19, TypeScript, Tailwind CSS 4).
+
+## Ausblick
+
+Nach dem MVP soll die Anwendung über die Blockplanung hinaus wachsen — etwa um
+Studienverlauf und Curricula, Vorlesungsplanung und Dozierendenmanagement. Diese
+Bereiche sind bewusst noch nicht spezifiziert; die kanonische Domänensprache in
+[`CONTEXT.md`](CONTEXT.md) umfasst ausschließlich die Blockplanverwaltung.
 
 ## Dokumentation
 
