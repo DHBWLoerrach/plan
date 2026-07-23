@@ -18,13 +18,15 @@ Die Fachvalidierung liegt in einer gemeinsamen serverseitigen Regelbibliothek. J
 
 Das Schema versioniert nur, was `CONTEXT.md` einer Fassung zuordnet — Blockphasen, Kursphasen und prüfungsrelevante Termine; Identität, Bereich, Jahrgang, Bezeichnung und Kurszuordnungen liegen unversioniert am Blockplan (siehe [ADR 0001](adr/0001-versionsgrenze-blockplan.md)). Veröffentlichung, Austausch der Fassung und Audit-Eintrag erfolgen in einer SQLite-Transaktion; danach entsteht wieder ein bearbeitbarer Entwurf, und die abgelöste Fassung ist nicht wiederherstellbar.
 
-Jeder Entwurf besitzt einen monoton steigenden Versionszähler. Jede Mutation enthält die erwartete Version und erhöht sie atomar; stimmt sie nicht mehr mit der gespeicherten Version überein, antwortet die Fachlogik mit einem strukturierten Bearbeitungskonflikt und schreibt keine Daten. Die Oberfläche lädt anschließend die aktuelle Fassung und unterstützt die Person dabei, ihre Änderung erneut einzubringen.
+Jeder Entwurf und jeder Kurs besitzt einen monoton steigenden Versionszähler. Jede Mutation enthält die erwartete Version des betroffenen Objekts und erhöht sie atomar; stimmt sie nicht mehr mit der gespeicherten Version überein, antwortet die Fachlogik mit einem strukturierten Bearbeitungskonflikt und schreibt keine Daten. Die Oberfläche lädt anschließend den aktuellen Stand und unterstützt die Person dabei, ihre Änderung erneut einzubringen.
+
+Zuordnen und Lösen eines Kurses berühren beide Objekte: Sie erwarten die Kursversion, erhöhen sie und erhöhen in derselben Transaktion zusätzlich den Versionszähler des betroffenen Entwurfs. Andernfalls bemerkt eine Person, die gerade am Entwurf arbeitet, nicht, dass ein Kurs hinzugekommen oder verschwunden ist.
 
 ## Authentifizierung und Sitzungen
 
 Für die Übergangszeit bis Keycloak/OIDC dient Better Auth mit Drizzle-/SQLite-Adapter. Selbstregistrierung ist deaktiviert. Better Auth verwendet einen eigenen Argon2id-Passwort-Hasher, datenbankgestützte Sitzungen ohne Cookie-Cache und deaktiviertes IP-Tracking.
 
-- Passwörter haben mindestens 15 Zeichen; Eingaben mit mindestens 64 Zeichen müssen vollständig akzeptiert werden. Passwortmanager und Einfügen sind zulässig. Es gibt keine Zeichenklassen- oder Wechselpflicht, aber eine lokale Sperrliste häufiger bzw. kompromittierter Werte.
+- Passwörter sind mindestens 15 und höchstens 128 Zeichen lang. Die Obergrenze begrenzt den Rechenaufwand des Hashers und liegt bewusst über den von NIST geforderten 64 Zeichen, damit Passphrasen und von Passwortmanagern erzeugte Werte vollständig verarbeitet werden. Eine zu lange Eingabe wird abgelehnt, niemals stillschweigend gekürzt. Passwortmanager und Einfügen sind zulässig. Es gibt keine Zeichenklassen- oder Wechselpflicht, aber eine lokale Sperrliste häufiger bzw. kompromittierter Werte.
 - Fehlgeschlagene Anmeldungen werden rate-limitiert, aber Konten nicht dauerhaft gesperrt.
 - Aktivierungs- und Reset-Tokens sind zufällig, einmalig, serverseitig gehasht und 72 Stunden gültig. Eine Neuausstellung macht vorherige Tokens desselben Kontos ungültig.
 - Sitzungen enden nach zwei Stunden Inaktivität oder beim Schließen des Browsers. Logout, Deaktivierung sowie Änderungen an Rolle oder Bereichszuordnung machen sie sofort ungültig.

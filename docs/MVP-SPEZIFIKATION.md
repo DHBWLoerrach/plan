@@ -39,7 +39,7 @@ Ein neuer Blockplan beginnt als Entwurf. Die Veröffentlichung prüft Struktur- 
 
 ## Gleichzeitige Bearbeitung
 
-Schreibvorgänge auf einem Entwurf verwenden optimistisches Locking: Bei einem Konflikt wird nichts überschrieben, und die bearbeitende Person muss die aktuelle Fassung laden, bevor sie ihre Änderung erneut einbringt. Stilles Last-write-wins ist ausgeschlossen.
+Schreibvorgänge auf einem Entwurf und auf einem Kurs verwenden optimistisches Locking: Bei einem Konflikt wird nichts überschrieben, und die bearbeitende Person muss den aktuellen Stand laden, bevor sie ihre Änderung erneut einbringt. Stilles Last-write-wins ist für beide ausgeschlossen — auch beim Zuordnen und Lösen, wo ein stiller Verlust bedeuten würde, dass ein Kurs unbemerkt im fremden Blockplan landet.
 
 ## Referenzintegrität
 
@@ -64,6 +64,6 @@ Das MVP ist für höchstens 200 aktive interne Konten, bis zu 20 gleichzeitig ak
 - DHBW-Keycloak/OIDC-SSO und Studierenden-Logins.
 - Curriculum- bzw. Studienverlaufsverwaltung sowie Vorlesungs-, Dozierenden- und Raumplanung.
 - Bereichsübergreifendes Kopieren, gemeinsames Bearbeiten oder Synchronisieren von Blockplänen. Synchronisierte Bereiche führen im MVP eigene Pläne.
-- Studienverläufe mit anderer Dauer als drei Studienjahren beziehungsweise den Semestern 1 bis 6.
-- Studiengangsübergreifende PDF- oder Gesamtansichten innerhalb eines Studienzentrums.
+- Studienverläufe mit einer anderen Dauer als 6 oder 7 Semestern.
+- Blockplanübergreifende Gesamtansichten, etwa ein bereichsweiter Gantt über mehrere Jahrgänge — öffentlich über die veröffentlichten Fassungen, intern zusätzlich über die Entwürfe. Ein späterer Ausbau; das Datenmodell trägt ihn bereits, und die Zeitachse einer solchen Ansicht erlaubt anders als die semesterspaltige Planmatrix auch Kurse mit unterschiedlicher Semesterzahl nebeneinander. Innerhalb eines Blockplans ist die studiengangsübergreifende Darstellung dagegen Kernfunktion und nicht ausgeschlossen.
 - Eine persönliche kursbezogene Blockband-Ansicht; sie bleibt eine mögliche spätere Studierendenansicht.

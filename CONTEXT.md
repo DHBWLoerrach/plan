@@ -16,7 +16,9 @@ Die organisatorische Einheit, für die interne Mitarbeitende Kurse und deren Blo
 
 Ein Studienangebot innerhalb genau eines Bereichs, zum Beispiel Informatik oder Wirtschaftsinformatik. Ein Studiengang besitzt eine unveränderliche systemische Identität, eine erforderliche Bezeichnung und ein erforderliches Kürzel wie `TIF` oder `WDS`. Das Kürzel ist systemweit eindeutig, weil die öffentliche Ansicht darüber filtert.
 
-Ein Studiengang darf nur dann einem anderen Bereich zugeordnet werden, wenn noch kein Kurs und kein Blockplan von ihm abhängt.
+Die **Anzahl Semester** ist eine verpflichtende Angabe des Studiengangs und gilt für alle seine Kurse und Jahrgänge. Im MVP ist sie 6 oder 7; Architektur ist der einzige siebensemestrige Studiengang.
+
+Ein Studiengang darf nur dann einem anderen Bereich zugeordnet werden, wenn noch kein Kurs von ihm abhängt. Blockpläne hängen nicht unmittelbar an Studiengängen, sondern über ihre Kurse; ohne Kurse des Studiengangs ist also auch kein Blockplan betroffen.
 
 ## Studienzentrum
 
@@ -34,11 +36,11 @@ Ein Kurs besitzt eine unveränderliche systemische Identität und vier verpflich
 
 Solange ein Kurs kein veröffentlichter Kurs ist, sind alle vier Angaben änderbar und er darf zugeordnet, gelöst und gelöscht werden. Studiengang und Studienbeginn dürfen sich nur ändern, wenn eine bestehende Blockplanzuordnung danach gültig bleibt.
 
-Eine Zuordnung setzt voraus, dass der Studiengang des Kurses zum Bereich des Blockplans gehört und die Jahrgänge übereinstimmen. Beim Lösen wie beim Löschen entfallen die Kursphasen des Kurses und seine Zuordnungen zu prüfungsrelevanten Terminen desselben Blockplans; jeder verbleibende Termin muss weiterhin mindestens einen Kurs betreffen.
+Eine Zuordnung setzt voraus, dass der Studiengang des Kurses zum Bereich des Blockplans gehört, die Jahrgänge übereinstimmen und seine Anzahl Semester der der bereits zugeordneten Kurse entspricht. Beim Lösen wie beim Löschen entfallen die Kursphasen des Kurses und seine Zuordnungen zu prüfungsrelevanten Terminen desselben Blockplans; jeder verbleibende Termin muss weiterhin mindestens einen Kurs betreffen.
 
 ## Veröffentlichter Kurs
 
-Ein Kurs, der in mindestens einer veröffentlichten Fassung eines Blockplans enthalten war. Veröffentlicht wird stets nur der Blockplan; der Zustand des Kurses leitet sich daraus ab und wird durch eine spätere Zurücknahme nicht aufgehoben.
+Ein Kurs, für den mindestens eine Kursphase Bestandteil einer veröffentlichten Fassung war. Maßgeblich sind die Kursphasen, nicht die Zuordnung: Diese gehört dem Blockplan und nicht einer Fassung, ein bloß zugeordneter Kurs ohne veröffentlichte Kursphasen ist also kein veröffentlichter Kurs. Veröffentlicht wird stets nur der Blockplan; der Zustand des Kurses leitet sich daraus ab und wird durch eine spätere Zurücknahme nicht aufgehoben.
 
 Bei einem veröffentlichten Kurs sind alle vier Angaben unveränderlich; er wird weder gelöscht noch von seinem Blockplan gelöst noch einem anderen zugeordnet.
 
@@ -46,7 +48,7 @@ Bei einem veröffentlichten Kurs sind alle vier Angaben unveränderlich; er wird
 
 Der einschließlich beider Grenztage geltende Zeitraum vom Studienbeginn bis zum Studienende eines Kurses; dabei gilt Studienbeginn < Studienende.
 
-In einer veröffentlichten Fassung decken die Kursphasen jeden Kalendertag dieses Zeitraums genau einmal ab, auch Wochenenden, Feiertage und vorlesungsfreie Tage.
+In einer veröffentlichten Fassung decken die Kursphasen jeden Kalendertag dieses Zeitraums genau einmal ab, auch Wochenenden, Feiertage und vorlesungsfreie Tage, und keine Kursphase liegt ganz oder teilweise außerhalb davon. Die erste Kursphase beginnt damit am Studienbeginn und die letzte endet am Studienende; eine geteilte erste oder letzte Blockphase setzt entsprechend übereinstimmende Grenztage der beteiligten Kurse voraus.
 
 ## Kalendertag und Ortszeit
 
@@ -57,6 +59,8 @@ Start- und Enddaten sind zeitzonenlose Kalendertage im gregorianischen Kalender.
 Eine gemeinsam verwaltete und veröffentlichte Planungseinheit für die Abfolge von Theorie- und Praxisphasen sowie die prüfungsrelevanten Termine eines oder mehrerer Kurse desselben Jahrgangs. Ein Blockplan ist strukturierte, bearbeitbare Anwendungsdaten, kein Dokument.
 
 Er besitzt eine unveränderliche systemische Identität, eine erforderliche und innerhalb seines Bereichs und Jahrgangs eindeutige Bezeichnung, genau einen Bereich und genau einen Jahrgang. Er enthält ausschließlich Kurse aus den Studiengängen seines Bereichs; innerhalb eines Bereichs und Jahrgangs darf es mehrere Blockpläne geben.
+
+Studiengangsübergreifend wird nur bei gleicher Semesterzahl geplant: Alle Kurse eines Blockplans gehören Studiengängen mit derselben Anzahl Semester an. Damit hat jeder Blockplan eine einheitliche Verlaufslänge, und die Planmatrix stellt nie Kurse unterschiedlicher Dauer nebeneinander.
 
 Ein Blockplan hat einen Entwurf und höchstens eine veröffentlichte Fassung. Identität, Bereich, Jahrgang, Bezeichnung und Kurszuordnungen gehören dem Blockplan selbst und wirken sofort; Blockphasen, Kursphasen und prüfungsrelevante Termine gehören je einer Fassung. Ein Kurs kann daher zugeordnet sein, ohne in der veröffentlichten Fassung Kursphasen zu besitzen — die öffentliche Ansicht zeigt nur Kurse, die dort Kursphasen haben.
 
@@ -70,7 +74,7 @@ Ein noch nie veröffentlichter Entwurf kann gelöscht werden; die zugeordneten K
 
 Die bewusst freigegebene Fassung eines Blockplans, die externe Nutzende sehen. Sie bleibt während der Arbeit am Entwurf sichtbar; eine neue Veröffentlichung ersetzt sie. Frühere Revisionen werden im MVP weder angezeigt noch wiederhergestellt, und ein bereits veröffentlichter Blockplan wird nicht gelöscht.
 
-Eine Veröffentlichung ist nur möglich, wenn alle Struktur- und Veröffentlichungsregeln erfüllt sind. Sie setzt insbesondere mindestens einen Kurs voraus sowie einen über alle sechs Semester vollständig geplanten Verlauf jedes enthaltenen Kurses; ein nur teilweise geplanter Verlauf bleibt Entwurf.
+Eine Veröffentlichung ist nur möglich, wenn alle Struktur- und Veröffentlichungsregeln erfüllt sind. Sie setzt insbesondere mindestens einen Kurs voraus sowie einen über alle Semester des jeweiligen Studiengangs vollständig geplanten Verlauf jedes enthaltenen Kurses; ein nur teilweise geplanter Verlauf bleibt Entwurf.
 
 ## Zurückgenommene Veröffentlichung
 
@@ -80,7 +84,7 @@ Ein Blockplan, dessen veröffentlichte Fassung aus der öffentlichen Ansicht ent
 
 Ein einmal erfasster Zeitblock innerhalb einer Fassung eines Blockplans mit Start- und Enddatum, genau einem Semester und genau einem Phasentyp. Eine Blockphase darf mehreren Kursen auch über Studiengangsgrenzen hinweg gemeinsam zugeordnet sein; unterscheiden sich Zeitraum, Semester oder Phasentyp, handelt es sich um verschiedene Blockphasen. „Phase“ und „Urlaubsphase“ sind keine kanonischen Begriffe.
 
-Sie ist einschließlich beider Grenztage gültig; für sie gilt Startdatum ≤ Enddatum, sodass sie auch einen einzelnen Kalendertag umfassen kann. Gleichartige Blockphasen dürfen unmittelbar aufeinander folgen.
+Sie ist einschließlich beider Grenztage gültig; für sie gilt Startdatum ≤ Enddatum, sodass sie auch einen einzelnen Kalendertag umfassen kann. Gleichartige Blockphasen dürfen unmittelbar aufeinander folgen. Ihr Semester überschreitet die Anzahl Semester der Studiengänge ihres Blockplans nicht.
 
 In einer veröffentlichten Fassung ist jede Blockphase mindestens einer Kursphase zugeordnet; ein Entwurf darf verwaiste Blockphasen enthalten.
 
@@ -98,17 +102,19 @@ In einer veröffentlichten Fassung schließen die Kursphasen eines Kurses lücke
 
 ## Semester
 
-Die fortlaufende Studienperiode einer Blockphase; eine Blockphase gehört vollständig zu genau einem Semester. Das Studienjahr wird abgeleitet: Semester 1 und 2 bilden Studienjahr 1, Semester 3 und 4 Studienjahr 2, Semester 5 und 6 Studienjahr 3.
+Die fortlaufende Studienperiode einer Blockphase, angegeben als ganze Zahl ab 1; eine Blockphase gehört vollständig zu genau einem Semester. Das Studienjahr wird daraus abgeleitet, indem die Semesternummer halbiert und aufgerundet wird: Semester 1 und 2 bilden Studienjahr 1, Semester 3 und 4 Studienjahr 2, Semester 5 und 6 Studienjahr 3, Semester 7 das nur halbe Studienjahr 4.
 
-Ein veröffentlichter Kursverlauf enthält die Semester 1 bis 6 jeweils mindestens einmal und in dieser Reihenfolge.
+Ein veröffentlichter Kursverlauf enthält die Semester 1 bis zur Anzahl Semester seines Studiengangs jeweils mindestens einmal und in dieser Reihenfolge.
 
 ## Prüfungsrelevanter Termin
 
-Eine Planangabe innerhalb einer Fassung eines Blockplans mit Titel, optionaler Beschreibung, Pflichtkategorie und einem Geltungsbereich von mindestens einem Kurs desselben Blockplans. Ein Blockplan darf beliebig viele — auch keine — prüfungsrelevanten Termine enthalten. Ein Termin ist nicht zwingend einer Blockphase oder einem Semester zugeordnet.
+Eine Planangabe innerhalb einer Fassung eines Blockplans mit Titel, optionaler Beschreibung, Pflichtkategorie und einem Geltungsbereich von mindestens einem Kurs desselben Blockplans. Ein Blockplan darf beliebig viele — auch keine — prüfungsrelevanten Termine enthalten.
 
 Seine Zeitangabe ist entweder ein genaues Datum mit optionaler Uhrzeit, ein beidseitig inklusiver Datumsbereich oder ein vollständiger Kalendermonat. Sie kann als **vorläufig** markiert werden; eine vorläufige Zeitangabe ist gültig und veröffentlichbar und kennzeichnet gegenüber externen Nutzenden, dass sich das Datum noch ändern kann.
 
 In einer veröffentlichten Fassung liegt ein Termin vollständig innerhalb des Studienzeitraums jedes betroffenen Kurses.
+
+Ein Termin trägt weder ein eigenes Semester noch eine eigene Blockphase. Sein Semester wird je betroffenem Kurs aus der Kursphase abgeleitet, die den ersten Tag seiner Zeitangabe abdeckt — bei einem genauen Datum dieser Tag, bei einem Datumsbereich dessen Beginn, bei einem Kalendermonat der Monatserste. Weil die Kursphasen einer veröffentlichten Fassung den Studienzeitraum lückenlos und überlappungsfrei abdecken und der Termin vollständig darin liegt, ist das Semester dort stets eindeutig; es darf sich zwischen den betroffenen Kursen unterscheiden. Ein Termin, der einen Semesterwechsel überspannt, gehört zum Semester seines Beginns.
 
 Die Kategorien sind:
 
