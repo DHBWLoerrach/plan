@@ -49,13 +49,21 @@ _Avoid_: Phase, Urlaubsphase
 
 **Veröffentlichungsregel**: Eine zusätzliche Invariante für die Freigabe eines Entwurfs als veröffentlichte Fassung.
 
-**Deaktivierung**: Das reversible Stilllegen eines Bereichs, Studiengangs oder internen Kontos für eine geordnete Auslaufphase.
-
-**Anonymisiertes Konto**: Die endgültige, nicht reaktivierbare und nicht mehr einer Person zuordenbare Kontohülle, die Referenzen der Auditspur erhält.
+**Deaktivierung**: Das reversible Stilllegen eines Bereichs oder Studiengangs für eine geordnete Auslaufphase.
 
 ## Nutzende und Berechtigungen
 
-**Internes Konto**: Das von der Systemadministration angelegte Konto einer internen Person, das fachliche Rollen und/oder Systemadministration tragen kann.
+**Internes Konto**: Die anbieterunabhängige fachliche Identität einer internen Person mit unveränderlicher interner ID. Es kann fachliche Rollen und/oder Systemadministration tragen; sein Bestand hängt nicht vom jeweils verwendeten Anmeldeverfahren ab.
+
+**Passwortvergabe ausstehend**: Der Zustand eines internen Kontos, das noch kein gültiges lokales Passwort besitzt. Die Person kann über einen ausgegebenen Passwortlink ein Passwort setzen.
+
+**Passwortlink**: Ein systemseitig erzeugter, einmal verwendbarer und zeitlich begrenzter Link, über den eine interne Person ein lokales Passwort setzt. Er dient sowohl dem erstmaligen Zugang als auch dem Zurücksetzen eines vergessenen Passworts.
+_Avoid_: Aktivierungslink, Reset-Link, Anmeldelink
+
+**Aktives internes Konto**: Ein internes Konto mit freigegebenem Zugang, das sich über das aktuell vorgesehene Anmeldeverfahren anmelden kann.
+
+**Gesperrtes internes Konto**: Ein internes Konto, dessen Zugang die Systemadministration gesperrt hat. Seine fachlichen Zuordnungen und seine Identität in der Auditspur bleiben erhalten.
+_Avoid_: Deaktiviertes Konto, anonymisiertes Konto
 
 **Studiengangsmanagement**: Die fachliche Rolle für die laufende Kurs- und Entwurfsbearbeitung in zugeordneten Bereichen.
 

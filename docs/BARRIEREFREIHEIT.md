@@ -17,7 +17,7 @@ Vor Go-live wird mit der zuständigen DHBW-Stelle geklärt, ob Erklärung zur Ba
 
 ## Interner Editor
 
-- Anmeldung, Aktivierung und Passwort-Reset erlauben Passwortmanager, Autofill und Einfügen und verlangen keine kognitive Aufgabe wie das Abschreiben oder Erinnern zusätzlicher Inhalte.
+- Anmeldung und Passwortvergabe erlauben Passwortmanager, Autofill und Einfügen und verlangen keine kognitive Aufgabe wie das Abschreiben oder Erinnern zusätzlicher Inhalte.
 - Jede Eingabe besitzt ein sichtbares und programmatisch verknüpftes Label. Pflichtangaben und zulässige Formate sind vor der Eingabe erklärt.
 - Validierungsfehler erscheinen am Feld und zusätzlich in einer Fehlerübersicht; bekannte Korrekturmöglichkeiten werden genannt.
 - Gespeicherte Entwürfe, aktualisierte Vorschauen, erfolgreiche oder fehlgeschlagene Veröffentlichungen und Konflikte wegen eines zwischenzeitlich geänderten Blockplans oder Kurses werden als zugängliche Statusmeldungen ausgegeben. Ein Bearbeitungskonflikt erscheint zusätzlich in der Fehlerübersicht, erhält sinnvoll den Fokus und erklärt, dass vor einem erneuten Speichern der aktuelle Stand geladen werden muss.
@@ -26,7 +26,7 @@ Vor Go-live wird mit der zuständigen DHBW-Stelle geklärt, ob Erklärung zur Ba
 - Jede Bearbeitungsfunktion funktioniert ohne Maus. Falls Phasen visuell sortiert werden, existieren gleichwertige Verschiebe-Schaltflächen; Drag-and-drop ist nie erforderlich.
 - Der Veröffentlichungszustand eines Blockplans — noch nie veröffentlicht, veröffentlicht, zurückgenommen — ist immer auch textlich benannt, in Listen ebenso wie in der Detailansicht; Farbe, Symbol oder Position sind nur Ergänzungen. Der Entwurf ist kein Zustand dieser Reihe, sondern existiert in allen dreien.
 - Dialoge, Menüs und Bestätigungen besitzen korrekte Fokusführung, Escape-Verhalten und Fokus-Rückkehr. Die Vorschau erfüllt dieselben semantischen Regeln wie die öffentliche Matrix.
-- Bestätigungen für Löschung, Deaktivierung, Zurücknahme, Rechteänderung und Link-Neuausstellung benennen Aktion, Ziel und Folgen im zugänglichen Namen beziehungsweise in der zugeordneten Beschreibung; eine generische Schaltfläche „OK“ genügt nicht.
+- Bestätigungen für Löschung, Deaktivierung, Kontosperrung, Zurücknahme, Rechteänderung und die Ausstellung eines neuen Passwortlinks benennen Aktion, Ziel und Folgen im zugänglichen Namen beziehungsweise in der zugeordneten Beschreibung; eine generische Schaltfläche „OK“ genügt nicht.
 - Die Gegenüberstellung bei einem Bearbeitungskonflikt besitzt aussagekräftige Überschriften für gespeicherten Stand und abgelehnten Änderungsversuch; Unterschiede bleiben auch linearisiert verständlich.
 
 ## Nachweis vor Abnahme

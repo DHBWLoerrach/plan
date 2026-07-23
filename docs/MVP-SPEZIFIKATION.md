@@ -33,9 +33,11 @@ Jeder veröffentlichte Blockplan ist über eine stabile, von seinem angezeigten 
 
 ## Lokale Konten im MVP
 
-Das initiale Systemadministrationskonto wird beim Deployment eingerichtet; danach legt allein die Systemadministration Konten in der Administrationsoberfläche an. Ein neues oder reaktiviertes Konto wartet auf Aktivierung und kann sich erst anmelden, nachdem über einen Aktivierungslink ein Passwort gesetzt wurde. Aktivierungs- und Reset-Links werden in der Administrationsoberfläche erzeugt, genau einmal vollständig angezeigt, kopiert und manuell weitergegeben — einen automatischen E-Mail-Versand gibt es nicht. Nach Verlassen der Bestätigung ist nur eine Neuausstellung möglich.
+Das initiale Systemadministrationskonto wird beim Deployment über einen Befehl im Anwendungscontainer eingerichtet; danach legt allein die Systemadministration Konten in der Administrationsoberfläche an. Ein neues oder freigegebenes Konto wartet auf die Passwortvergabe und kann sich erst anmelden, nachdem über einen Passwortlink ein Passwort gesetzt wurde. Passwortlinks werden genau einmal vollständig angezeigt, kopiert und manuell weitergegeben — einen automatischen E-Mail-Versand gibt es nicht. Nach Verlassen der Bestätigung ist nur eine Neuausstellung möglich.
 
-Keycloak/OIDC und Studierenden-Logins sind ein späterer Ausbau; sie dürfen die fachlichen Konten-, Rollen- und Bereichsbeziehungen nicht verändern.
+Vergisst eine Person ihr Passwort, setzt die Systemadministration den Zugang zurück und erhält einen neuen Passwortlink. Das bisherige Passwort und alle Sitzungen werden dabei sofort ungültig. Mitarbeitende können ihr Passwort nicht selbst ändern oder zurücksetzen.
+
+Keycloak/OIDC und Studierenden-Logins sind ein späterer Ausbau. Das MVP implementiert dafür noch keine Integration; der spätere Wechsel darf die fachlichen Konten-, Rollen- und Bereichsbeziehungen nicht verändern.
 
 ## Veröffentlichung
 
@@ -43,9 +45,9 @@ Ein neuer Blockplan beginnt als Entwurf. Die Veröffentlichung prüft Struktur- 
 
 ## Gleichzeitige Bearbeitung
 
-Schreibvorgänge auf einem Blockplan, einem Kurs oder einem internen Konto verwenden optimistisches Locking: Bei einem Konflikt wird nichts überschrieben, und die bearbeitende Person muss den aktuellen Stand laden, bevor sie ihre Änderung erneut einbringt. Beim Blockplan gilt das für Bezeichnung, Entwurfsinhalt, Kurszuordnungen sowie Veröffentlichen und Zurücknehmen; beim Konto für E-Mail-Adresse, Status, Rolle, Administrationsmerkmal und Bereichszuordnungen. Insbesondere beim Zuordnen und Lösen eines Kurses ist stilles Last-write-wins ausgeschlossen, weil ein verlorenes Update bedeuten würde, dass ein Kurs unbemerkt im falschen Blockplan landet.
+Schreibvorgänge auf einem Blockplan oder Kurs verwenden optimistisches Locking: Bei einem Konflikt wird nichts überschrieben, und die bearbeitende Person muss den aktuellen Stand laden, bevor sie ihre Änderung erneut einbringt. Beim Blockplan gilt das für Bezeichnung, Entwurfsinhalt, Kurszuordnungen sowie Veröffentlichen und Zurücknehmen. Insbesondere beim Zuordnen und Lösen eines Kurses ist stilles Last-write-wins ausgeschlossen, weil ein verlorenes Update bedeuten würde, dass ein Kurs unbemerkt im falschen Blockplan landet.
 
-Bereiche und Studiengänge verwenden wegen ihrer seltenen administrativen Änderung kein optimistisches Locking. Ihre Strukturregeln, Zustandsvoraussetzungen und Eindeutigkeiten werden innerhalb jeder Transaktion gegen den aktuellen Datenbankstand geprüft.
+Interne Konten, Bereiche und Studiengänge verwenden wegen ihrer seltenen administrativen Änderung kein optimistisches Locking. Ihre Strukturregeln, Zustandsvoraussetzungen und Eindeutigkeiten werden innerhalb jeder Transaktion gegen den aktuellen Datenbankstand geprüft; Kontoänderungen werden zusätzlich vollständig auditiert.
 
 ## Referenzintegrität
 
@@ -73,7 +75,7 @@ Nach der Anmeldung zeigt die Startseite die zugeordneten Bereiche, zuletzt bearb
 
 Alle internen Listen verwenden URL-basierte Filter, reproduzierbare Sortierung und serverseitig 25 Einträge pro Seite. Die Blockplanliste filtert nach Bereich, Jahrgang, Kurskennung und Veröffentlichungszustand; die Kursliste nach Bereich, Studiengang, Jahrgang und Zuordnungszustand. Ein Blockplan kann aus der Blockplanliste oder unmittelbar aus einem geeigneten blockplanlosen Kurs angelegt werden, wobei Blockplananlage und erste Kurszuordnung dieselbe Transaktion bilden.
 
-Die Auditliste filtert nach Zeitraum, Bereich, Entität und Ereignisart innerhalb des erlaubten Sichtbarkeitsumfangs. Die Kontoliste unterscheidet und filtert die Zustände „Aktivierung ausstehend“, „Aktiv“, „Deaktiviert“ und „Anonymisiert“. Löschungen, Deaktivierungen, Zurücknahmen, Rechteänderungen und Link-Neuausstellungen verlangen eine Bestätigung, die konkrete Folgen und betroffene Objekte nennt.
+Die Auditliste filtert nach Zeitraum, Bereich, Entität und Ereignisart innerhalb des erlaubten Sichtbarkeitsumfangs. Die Kontoliste unterscheidet und filtert die Zustände „Passwortvergabe ausstehend“, „Aktiv“ und „Gesperrt“. Löschungen, Deaktivierungen, Kontosperrungen, Zurücknahmen, Rechteänderungen und die Ausstellung neuer Passwortlinks verlangen eine Bestätigung, die konkrete Folgen und betroffene Objekte nennt.
 
 ## Dimensionierungs- und Leistungsannahmen
 

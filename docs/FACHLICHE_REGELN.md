@@ -94,7 +94,7 @@ Ein Blockplan besitzt durchgehend einen Entwurf und höchstens eine veröffentli
 ### Entwurf
 
 - Der Entwurf ist nur für berechtigte fachliche Rollen seines Bereichs und die Systemadministration sichtbar.
-- Er führt, wann und durch welches aktive oder inzwischen anonymisierte Konto er zuletzt geändert wurde.
+- Er führt, wann und durch welches interne Konto er zuletzt geändert wurde.
 - Änderungen an Blockphasen, Kursphasen und Terminen verändern ausschließlich den Entwurf, bis erneut veröffentlicht wird.
 
 ### Veröffentlichung und Zurücknahme
@@ -168,30 +168,31 @@ Eine Veröffentlichung ist nur möglich, wenn zusätzlich folgende Regeln erfül
 
 Ein internes Konto befindet sich genau in einem Zustand:
 
-- **Aktivierung ausstehend**: Konto, Berechtigungen und Bereiche bestehen, aber es wurde noch kein Passwort gesetzt; eine Anmeldung ist nicht möglich.
-- **Aktiv**: Der Aktivierungslink wurde eingelöst und ein Passwort gesetzt; eine Anmeldung ist möglich.
-- **Deaktiviert**: Anmeldung, Sitzungen und offene Aktivierungs- oder Reset-Links sind gesperrt. Das Konto bleibt zwölf Monate reaktivierbar.
-- **Anonymisiert**: endgültiger, nicht reaktivierbarer Zustand nach zwölf Monaten fortbestehender Deaktivierung.
+- **Passwortvergabe ausstehend**: Konto, Berechtigungen und Bereiche bestehen, aber es besitzt kein gültiges lokales Passwort; eine Anmeldung ist nicht möglich.
+- **Aktiv**: Das Konto besitzt ein gültiges lokales Passwort und kann sich anmelden.
+- **Gesperrt**: Die Anmeldung ist gesperrt. Fachliche Zuordnungen und Referenzen der Auditspur bleiben erhalten.
 
-Eine Reaktivierung führt immer zu „Aktivierung ausstehend“ und verwirft bisherige Passwortdaten. Bei der Anonymisierung werden E-Mail-Adresse, Passwortdaten, Tokens, Sitzungen, Rolle und Bereichszuordnungen irreversibel entfernt. Nur Konto-ID und Anonymisierungszeitpunkt bleiben erhalten; die Oberfläche zeigt „Ehemaliges Konto“.
+Ein neues Konto wartet auf die Passwortvergabe. Ein Passwortlink ist zufällig, einmal verwendbar, serverseitig nur gehasht gespeichert und sieben Tage gültig. Er kann ausschließlich für ein Konto mit ausstehender Passwortvergabe erzeugt werden; eine Neuausstellung macht einen vorherigen Passwortlink dieses Kontos ungültig. Das erfolgreiche Setzen eines Passworts versetzt das Konto in den aktiven Zustand.
+
+Setzt die Systemadministration das Passwort eines aktiven Kontos zurück, werden das bisherige Passwort und alle Sitzungen sofort ungültig, das Konto wartet wieder auf die Passwortvergabe und ein neuer Passwortlink wird ausgegeben. Mitarbeitende können ihr Passwort nicht selbst ändern oder zurücksetzen.
+
+Eine Sperrung entfernt Passwort, Sitzungen und offene Passwortlinks. Die Freigabe eines gesperrten Kontos führt zur ausstehenden Passwortvergabe und gibt einen neuen Passwortlink aus. Gesperrte Konten werden im MVP weder automatisch anonymisiert noch gelöscht.
 
 Ändert die Systemadministration die E-Mail-Adresse:
 
-- bleibt ein ausstehendes Konto ausstehend und verliert offene Aktivierungslinks;
-- fällt ein aktives Konto auf „Aktivierung ausstehend“ zurück und verliert Passwortdaten, Sitzungen und offene Links;
-- bleibt ein deaktiviertes Konto deaktiviert.
-
-Aktivierungslinks werden nur für ausstehende, Reset-Links nur für aktive Konten erzeugt. Eine Neuausstellung macht ältere Links desselben Kontos und Zwecks ungültig.
+- bleibt ein Konto mit ausstehender Passwortvergabe in diesem Zustand, verliert offene Passwortlinks und erhält einen neuen;
+- fällt ein aktives Konto auf „Passwortvergabe ausstehend“ zurück, verliert Passwort und Sitzungen und erhält einen neuen Passwortlink;
+- bleibt ein gesperrtes Konto gesperrt.
 
 ### Rollen und gültige Kombinationen
 
-- Ein nicht anonymisiertes Konto trägt höchstens eine fachliche Rolle: Studiengangsmanagement oder Studiengangsleitung.
+- Ein internes Konto trägt höchstens eine fachliche Rolle: Studiengangsmanagement oder Studiengangsleitung.
 - Die fachliche Rolle gilt einheitlich in allen zugeordneten Bereichen und setzt mindestens einen Bereich voraus.
 - Unabhängig davon kann das Konto Systemadministration besitzen.
 - Ein reines Systemadministrationskonto benötigt weder fachliche Rolle noch Bereich.
-- Jedes nicht anonymisierte Konto besitzt mindestens eine fachliche Rolle oder Systemadministration.
+- Jedes interne Konto besitzt mindestens eine fachliche Rolle oder Systemadministration.
 - Rolle, Systemadministration und Bereichszuordnungen werden bei jeder Änderung gemeinsam validiert.
-- Nach der ersten Bootstrap-Aktivierung besteht jederzeit mindestens ein aktives Systemadministrationskonto. Eine Änderung, die diesen Zustand verletzen würde, wird abgelehnt.
+- Nach der ersten Passwortvergabe des initialen Systemadministrationskontos muss jede Änderung über die Anwendung mindestens ein aktives Systemadministrationskonto erhalten. Der ausschließlich im Anwendungscontainer verfügbare Notfall-Reset des letzten Systemadministrationskontos ist die einzige Ausnahme und darf dieses Konto vorübergehend auf „Passwortvergabe ausstehend“ setzen.
 
 ### Berechtigungen
 
@@ -211,14 +212,14 @@ Die **Studiengangsleitung** darf dort zusätzlich:
 Die **Systemadministration** besitzt die Rechte der Studiengangsleitung in allen Bereichen und darf zusätzlich:
 
 - Bereiche und Studiengänge anlegen, pflegen, deaktivieren und reaktivieren;
-- interne Konten anlegen, E-Mail-Adressen, Rollen und Bereichszuordnungen ändern sowie Konten deaktivieren und reaktivieren;
+- interne Konten anlegen, E-Mail-Adressen, Rollen und Bereichszuordnungen ändern, Passwortlinks ausstellen sowie Konten sperren und freigeben;
 - die vollständige Auditspur einschließlich Konto-, Bereichs- und Studiengangsereignissen einsehen.
 
 Externe Nutzende dürfen ausschließlich veröffentlichte Fassungen einsehen.
 
 ## Auditspur
 
-Auditeinträge werden nur angefügt und weder verändert noch gelöscht. Sie enthalten Zeitpunkt, auslösendes aktives oder inzwischen anonymisiertes Konto beziehungsweise das System, Ereignisart und betroffene Entität. Geheimnisse wie Tokenwerte oder Passwörter werden nie erfasst.
+Auditeinträge werden nur angefügt und weder verändert noch gelöscht. Sie enthalten Zeitpunkt, auslösendes internes Konto beziehungsweise das System, Ereignisart und betroffene Entität. Geheimnisse wie Tokenwerte oder Passwörter werden nie erfasst.
 
 Bei nicht personenbezogenen Stammdatenänderungen enthält das Ereignis betroffene Felder sowie alte und neue Werte. Kontoereignisse enthalten keine früheren E-Mail-Adressen oder anderen personenbezogenen Werte.
 
@@ -227,7 +228,7 @@ Erfasst werden:
 - bei Blockplänen Erstellung, Änderung der Bezeichnung, Veröffentlichung, Zurücknahme und Löschung eines nie veröffentlichten Blockplans;
 - bei Kursen Erstellung, Änderung der vier Kursangaben, Zuordnung, Lösung und Löschung;
 - bei Bereichen und Studiengängen Erstellung, Stammdatenänderung, Deaktivierung und Reaktivierung;
-- bei Konten Anlage, Aktivierung, Deaktivierung, Reaktivierung, Anonymisierung, Änderungen von E-Mail-Adresse, Rolle oder Bereichen sowie Erzeugung von Aktivierungs- oder Reset-Links.
+- bei Konten Anlage, Passwortvergabe, Passwort-Reset, Sperrung, Freigabe, Änderungen von E-Mail-Adresse, Rolle oder Bereichen sowie Ausstellung eines Passwortlinks.
 
 Änderungen an Blockphasen, Kursphasen und Terminen sind keine eigenen Auditereignisse. Sie erscheinen als „zuletzt geändert“ am Entwurf und werden erst durch die Veröffentlichung zu einem Auditereignis.
 
