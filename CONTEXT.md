@@ -38,7 +38,7 @@ Ein Kurs besitzt eine unveränderliche systemische Identität und vier verpflich
 
 Solange ein Kurs kein veröffentlichter Kurs ist, sind alle vier Angaben änderbar und er darf zugeordnet, gelöst und gelöscht werden. Studiengang und Studienbeginn dürfen sich nur ändern, wenn eine bestehende Blockplanzuordnung danach gültig bleibt.
 
-Eine Zuordnung setzt voraus, dass der Studiengang des Kurses zum Bereich des Blockplans gehört, die Jahrgänge übereinstimmen und seine Anzahl Semester der der bereits zugeordneten Kurse entspricht. Beim Lösen wie beim Löschen entfallen die Kursphasen des Kurses und seine Zuordnungen zu prüfungsrelevanten Terminen desselben Blockplans; jeder verbleibende Termin muss weiterhin mindestens einen Kurs betreffen.
+Eine Zuordnung setzt voraus, dass der Studiengang des Kurses zum Bereich des Blockplans gehört, die Jahrgänge übereinstimmen und seine Anzahl Semester der der bereits zugeordneten Kurse entspricht. Beim Lösen wie beim Löschen entfallen die Kursphasen des Kurses und seine Zuordnungen zu prüfungsrelevanten Terminen desselben Blockplans; jeder verbleibende Termin muss weiterhin mindestens einen Kurs betreffen. Beträfe ein Termin danach keinen Kurs mehr, wird die Operation abgelehnt und die betroffenen Termine werden benannt. Termine werden nie automatisch mitgelöscht.
 
 ## Veröffentlichter Kurs
 
@@ -74,13 +74,13 @@ Ein noch nie veröffentlichter Entwurf kann gelöscht werden; die zugeordneten K
 
 ## Veröffentlichte Fassung
 
-Die bewusst freigegebene Fassung eines Blockplans, die externe Nutzende sehen. Sie bleibt während der Arbeit am Entwurf sichtbar; eine neue Veröffentlichung ersetzt sie. Frühere Revisionen werden im MVP weder angezeigt noch wiederhergestellt, und ein bereits veröffentlichter Blockplan wird nicht gelöscht.
+Die bewusst freigegebene Fassung eines Blockplans, die externe Nutzende sehen. Sie entsteht als Kopie des Entwurfs, der dabei unverändert bestehen bleibt; danach entwickeln sich beide unabhängig. Sie bleibt während der Arbeit am Entwurf sichtbar; eine neue Veröffentlichung ersetzt sie. Frühere Revisionen werden im MVP weder angezeigt noch wiederhergestellt, und ein bereits veröffentlichter Blockplan wird nicht gelöscht.
 
 Eine Veröffentlichung ist nur möglich, wenn alle Struktur- und Veröffentlichungsregeln erfüllt sind. Sie setzt insbesondere mindestens einen Kurs voraus sowie einen über alle Semester des jeweiligen Studiengangs vollständig geplanten Verlauf jedes enthaltenen Kurses; ein nur teilweise geplanter Verlauf bleibt Entwurf.
 
 ## Zurückgenommene Veröffentlichung
 
-Ein Blockplan, dessen veröffentlichte Fassung aus der öffentlichen Ansicht entfernt wurde. Seine Daten und sein Entwurf bleiben intern erhalten und können erneut veröffentlicht werden.
+Ein Blockplan, dessen veröffentlichte Fassung aus der öffentlichen Ansicht entfernt wurde. Seine Daten und sein Entwurf bleiben intern erhalten. Eine erneute Veröffentlichung gibt den aktuellen Entwurf frei — die zurückgenommene Fassung wird nicht wiederhergestellt, sondern ersetzt.
 
 ## Blockphase
 

@@ -35,7 +35,7 @@ Keycloak/OIDC und Studierenden-Logins sind ein späterer Ausbau; sie dürfen die
 
 ## Veröffentlichung
 
-Ein neuer Blockplan beginnt als Entwurf. Die Veröffentlichung prüft Struktur- und Veröffentlichungsregeln und ersetzt die bisherige öffentliche Fassung atomar; danach steht wieder ein bearbeitbarer Entwurf bereit.
+Ein neuer Blockplan beginnt als Entwurf. Die Veröffentlichung prüft Struktur- und Veröffentlichungsregeln und ersetzt die bisherige öffentliche Fassung atomar durch eine Kopie des Entwurfs; der Entwurf bleibt unverändert bearbeitbar. Auch nach einer Zurücknahme gibt es nur diesen einen Veröffentlichungsweg — die zurückgenommene Fassung wird nicht wiederhergestellt.
 
 ## Gleichzeitige Bearbeitung
 
