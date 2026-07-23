@@ -25,7 +25,7 @@ Abgeleitete Übersicht; normativ sind die Rollenabschnitte in `CONTEXT.md`.
 
 ## Öffentliche Auffindbarkeit
 
-Die öffentliche Anwendung bietet Filter nach Bereich, Studiengang, Jahrgang und Kurskennung. Jeder veröffentlichte Blockplan ist über eine stabile, von seiner veränderbaren Bezeichnung unabhängige URL erreichbar. Veröffentlichte Pläne bleiben für vergangene, aktuelle und zukünftige Jahrgänge auffindbar.
+Die öffentliche Anwendung bietet Filter nach Bereich, Studiengang, Jahrgang und Kurskennung. Jeder veröffentlichte Blockplan ist über eine stabile, von seinem angezeigten Namen unabhängige URL erreichbar — der Name ändert sich, wenn eine Bezeichnung vergeben wird oder sich die Kursmenge ändert. Veröffentlichte Pläne bleiben für vergangene, aktuelle und zukünftige Jahrgänge auffindbar.
 
 ## Lokale Konten im MVP
 

@@ -62,7 +62,9 @@ Start- und Enddaten sind zeitzonenlose Kalendertage im gregorianischen Kalender.
 
 Eine gemeinsam verwaltete und veröffentlichte Planungseinheit für die Abfolge von Theorie- und Praxisphasen sowie die prüfungsrelevanten Termine eines oder mehrerer Kurse desselben Jahrgangs. Ein Blockplan ist strukturierte, bearbeitbare Anwendungsdaten, kein Dokument.
 
-Er besitzt als eigene Angaben nur eine unveränderliche systemische Identität, genau einen Bereich und eine erforderliche, innerhalb seines Bereichs eindeutige Bezeichnung. Die Eindeutigkeit gilt bewusst über Jahrgänge hinweg: Eine Bezeichnung, die sich jährlich wiederholt, wäre in einer über viele Jahrgänge wachsenden Planliste nicht unterscheidbar. Ein Blockplan enthält ausschließlich Kurse aus den Studiengängen seines Bereichs; innerhalb eines Bereichs und Jahrgangs darf es mehrere Blockpläne geben.
+Er besitzt als eigene Angaben nur eine unveränderliche systemische Identität, genau einen Bereich und eine optionale Bezeichnung. Ein Blockplan enthält ausschließlich Kurse aus den Studiengängen seines Bereichs; innerhalb eines Bereichs und Jahrgangs darf es mehrere Blockpläne geben.
+
+Ohne vergebene Bezeichnung wird der Name aus Bereich, Jahrgang und den Kurskennungen abgeleitet, etwa „SZI 2026 · TIF26A, WIN26A“. Er ist eindeutig durch Konstruktion, weil jeder Blockplan mindestens einen Kurs hat und ein Kurs höchstens einem Blockplan angehört — die Kursmengen zweier Blockpläne sind also nie leer und nie gleich. Eine vergebene Bezeichnung ersetzt den abgeleiteten Namen und ist innerhalb ihres Bereichs eindeutig; die Kurskennungen bleiben in Listen dennoch immer sichtbar, sodass ein selbst gewählter Name nie verdeckt, welche Kurse zum Plan gehören.
 
 Ein Blockplan hat jederzeit mindestens einen Kurs — bereits bei der Anlage. Jahrgang und Anzahl Semester sind deshalb keine eigenen Angaben, sondern die übereinstimmenden Werte seiner Kurse. Der letzte Kurs kann nicht gelöst werden; stattdessen wird der Blockplan gelöscht.
 
