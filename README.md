@@ -11,7 +11,8 @@ begonnen — der Code ist unverändertes `create-next-app`-Gerüst
 
 ## Dokumentation
 
-- [`CONTEXT.md`](CONTEXT.md) — Domänensprache und fachliche Datenregeln
+- [`CONTEXT.md`](CONTEXT.md) — kanonische Domänensprache
+- [`docs/FACHLICHE_REGELN.md`](docs/FACHLICHE_REGELN.md) — Invarianten, Lebenszyklen und Berechtigungen
 - [`docs/MVP-SPEZIFIKATION.md`](docs/MVP-SPEZIFIKATION.md) — Zielumfang, Rollen, Ansichten
 - [`docs/ARCHITEKTUR_UND_BETRIEB.md`](docs/ARCHITEKTUR_UND_BETRIEB.md) — Anwendungsschnitt, Auth, Datenhaltung, Betrieb
 - [`docs/BARRIEREFREIHEIT.md`](docs/BARRIEREFREIHEIT.md) — verbindliche Gestaltungs- und Abnahmekriterien

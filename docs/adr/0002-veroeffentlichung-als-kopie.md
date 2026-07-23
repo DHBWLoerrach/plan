@@ -1,6 +1,6 @@
 # Veröffentlichung kopiert den Entwurf in eine eigenständige Fassung
 
-Ein Blockplan hat durchgehend einen Entwurf und höchstens eine veröffentlichte Fassung, die nebeneinander existieren und sich unabhängig entwickeln. Veröffentlichen liest den Entwurf, prüft ihn und legt seinen Inhalt als **Kopie** ab: Blockphasen, Kursphasen und prüfungsrelevante Termine der veröffentlichten Fassung sind eigene Zeilen mit eigenen Identitäten. Der Entwurf bleibt dabei unverändert und weiter bearbeitbar.
+Ein Blockplan hat durchgehend einen Entwurf und höchstens eine veröffentlichte oder zurückgenommene Fassung, die nebeneinander existieren und sich unabhängig entwickeln. Veröffentlichen liest den Entwurf, prüft ihn und legt seinen Inhalt als **Kopie** ab: Blockphasen, Kursphasen und prüfungsrelevante Termine der veröffentlichten Fassung sind eigene Zeilen mit eigenen Identitäten. Zusätzlich werden die zu diesem Zeitpunkt geltenden öffentlichen Anzeigenamen von Blockplan, Bereich und Studiengängen als Snapshots übernommen; die öffentlich sichtbare Kursmenge ergibt sich aus den kopierten Kursphasen. Der Entwurf bleibt dabei unverändert und weiter bearbeitbar.
 
 ## Verworfene Alternative
 
@@ -10,7 +10,7 @@ Die Kopie ist nur möglich, weil nichts von außerhalb einer Fassung auf eine Bl
 
 ## Ablauf und Lebensdauer
 
-Veröffentlichen, Ersetzen der bisherigen Fassung und Audit-Eintrag laufen in einer Transaktion. Die abgelöste Fassung wird dabei gelöscht, nicht aufbewahrt — zu jedem Zeitpunkt existiert pro Blockplan genau null oder eine Fassung.
+Veröffentlichen, Ersetzen der bisherigen Fassung und Audit-Eintrag laufen in einer Transaktion. Die abgelöste Fassung wird dabei gelöscht, nicht aufbewahrt — zusätzlich zum Entwurf existiert pro Blockplan zu jedem Zeitpunkt genau null oder eine veröffentlichte beziehungsweise zurückgenommene Fassung.
 
 Es gibt genau **einen** Veröffentlichungsweg, unabhängig davon, ob der Blockplan noch nie, gerade oder zuletzt zurückgenommen veröffentlicht war: Der aktuelle Entwurf wird geprüft und abgelegt. Eine Zurücknahme entfernt nur die öffentliche Sichtbarkeit; die zurückgenommene Fassung bleibt unsichtbar liegen, bis die nächste Veröffentlichung sie ersetzt. Ein gesondertes Wiederherstellen der zurückgenommenen Fassung gibt es nicht.
 

@@ -4,11 +4,11 @@
 
 Die DHBW Lörrach erhält eine Webanwendung, in der berechtigte Mitarbeitende strukturierte Blockpläne für die Kurse ihrer Bereiche erstellen, bearbeiten und veröffentlichen. Externe Nutzende lesen ausschließlich veröffentlichte Pläne.
 
-Begriffe, Entitäten, Datenregeln und Rechte sind verbindlich in [`../CONTEXT.md`](../CONTEXT.md) definiert. Dieses Dokument legt Umfang, Oberflächen und Betriebsannahmen fest und wiederholt die dortigen Regeln nicht.
+Die kanonischen Begriffe stehen in [`../CONTEXT.md`](../CONTEXT.md), die verbindlichen Invarianten, Lebenszyklen und Rechte in [`FACHLICHE_REGELN.md`](FACHLICHE_REGELN.md). Dieses Dokument legt Umfang, Oberflächen und Betriebsannahmen fest.
 
 ## Rollen und Sichtbarkeit
 
-Abgeleitete Übersicht; normativ sind die Rollenabschnitte in `CONTEXT.md`.
+Abgeleitete Übersicht; normativ ist der Abschnitt [Berechtigungen](FACHLICHE_REGELN.md#berechtigungen).
 
 | Funktion | Studiengangsmanagement | Studiengangsleitung | Systemadministration | Externe Nutzende |
 | --- | --- | --- | --- | --- |
@@ -25,11 +25,15 @@ Abgeleitete Übersicht; normativ sind die Rollenabschnitte in `CONTEXT.md`.
 
 ## Öffentliche Auffindbarkeit
 
-Die öffentliche Anwendung bietet Filter nach Bereich, Studiengang, Jahrgang und Kurskennung. Jeder veröffentlichte Blockplan ist über eine stabile, von seinem angezeigten Namen unabhängige URL erreichbar — der Name ändert sich, wenn eine Bezeichnung vergeben wird oder sich die Kursmenge ändert. Veröffentlichte Pläne bleiben für vergangene, aktuelle und zukünftige Jahrgänge auffindbar.
+Die öffentliche Anwendung bietet Filter nach Bereich, Studiengang, Jahrgang und Kurskennung. Alle Filterzustände und die Ergebnisseite stehen in der URL und sind teilbar sowie per Vor-/Zurück-Navigation reproduzierbar; mehrere gesetzte Filter werden mit UND verknüpft. Ein Blockplan erfüllt den Studiengangsfilter, wenn mindestens ein öffentlich sichtbarer Kurs seiner veröffentlichten Fassung diesem Studiengang angehört. Der Kursfilter sucht ohne Beachtung der Groß-/Kleinschreibung am Anfang der Kurskennung, sodass etwa `tif24` sowohl `TIF24A` als auch `TIF24B` findet.
+
+Bereichs-, Studiengangs- und Jahrgangsoptionen werden ausschließlich aus den Stammdaten-Snapshots vorhandener veröffentlichter Fassungen gebildet. Dadurch bleiben Pläne deaktivierter oder später umbenannter Bereiche und Studiengänge unter den tatsächlich veröffentlichten Bezeichnungen auffindbar, ohne leere Optionen anzubieten. Ohne Filter erscheinen alle veröffentlichten Pläne in den Gruppen aktuell laufend, zukünftig und vergangen. Aktuell bedeutet, dass der heutige Kalendertag im Studienzeitraum mindestens eines öffentlich sichtbaren Kurses liegt. Aktuelle Pläne werden nach Jahrgang absteigend, zukünftige nach Jahrgang aufsteigend und vergangene nach Jahrgang absteigend sortiert; bei gleichem Jahrgang folgt der veröffentlichte Anzeigename aufsteigend. Ergebnisse werden serverseitig mit 25 Plänen pro Seite paginiert. Zurückgenommene Fassungen erscheinen nirgends öffentlich.
+
+Jeder veröffentlichte Blockplan ist über eine stabile, von seinem angezeigten Namen unabhängige URL erreichbar — der Name ändert sich bei einer neuen Veröffentlichung, wenn eine Bezeichnung vergeben wurde oder sich die öffentlich sichtbare Kursmenge geändert hat. Veröffentlichte Pläne bleiben für vergangene, aktuelle und zukünftige Jahrgänge auffindbar.
 
 ## Lokale Konten im MVP
 
-Das initiale Systemadministrationskonto wird beim Deployment eingerichtet; danach legt allein die Systemadministration Konten in der Administrationsoberfläche an. Dort werden auch Aktivierungs- und Reset-Links erzeugt, kopiert und manuell weitergegeben — einen automatischen E-Mail-Versand gibt es nicht.
+Das initiale Systemadministrationskonto wird beim Deployment eingerichtet; danach legt allein die Systemadministration Konten in der Administrationsoberfläche an. Ein neues oder reaktiviertes Konto wartet auf Aktivierung und kann sich erst anmelden, nachdem über einen Aktivierungslink ein Passwort gesetzt wurde. Aktivierungs- und Reset-Links werden in der Administrationsoberfläche erzeugt, genau einmal vollständig angezeigt, kopiert und manuell weitergegeben — einen automatischen E-Mail-Versand gibt es nicht. Nach Verlassen der Bestätigung ist nur eine Neuausstellung möglich.
 
 Keycloak/OIDC und Studierenden-Logins sind ein späterer Ausbau; sie dürfen die fachlichen Konten-, Rollen- und Bereichsbeziehungen nicht verändern.
 
@@ -39,7 +43,9 @@ Ein neuer Blockplan beginnt als Entwurf. Die Veröffentlichung prüft Struktur- 
 
 ## Gleichzeitige Bearbeitung
 
-Schreibvorgänge auf einem Blockplan und auf einem Kurs verwenden optimistisches Locking: Bei einem Konflikt wird nichts überschrieben, und die bearbeitende Person muss den aktuellen Stand laden, bevor sie ihre Änderung erneut einbringt. Beim Blockplan gilt das für Bezeichnung, Entwurfsinhalt, Kurszuordnungen sowie Veröffentlichen und Zurücknehmen. Stilles Last-write-wins ist überall ausgeschlossen — insbesondere beim Zuordnen und Lösen, wo ein stiller Verlust bedeuten würde, dass ein Kurs unbemerkt im fremden Blockplan landet.
+Schreibvorgänge auf einem Blockplan, einem Kurs oder einem internen Konto verwenden optimistisches Locking: Bei einem Konflikt wird nichts überschrieben, und die bearbeitende Person muss den aktuellen Stand laden, bevor sie ihre Änderung erneut einbringt. Beim Blockplan gilt das für Bezeichnung, Entwurfsinhalt, Kurszuordnungen sowie Veröffentlichen und Zurücknehmen; beim Konto für E-Mail-Adresse, Status, Rolle, Administrationsmerkmal und Bereichszuordnungen. Insbesondere beim Zuordnen und Lösen eines Kurses ist stilles Last-write-wins ausgeschlossen, weil ein verlorenes Update bedeuten würde, dass ein Kurs unbemerkt im falschen Blockplan landet.
+
+Bereiche und Studiengänge verwenden wegen ihrer seltenen administrativen Änderung kein optimistisches Locking. Ihre Strukturregeln, Zustandsvoraussetzungen und Eindeutigkeiten werden innerhalb jeder Transaktion gegen den aktuellen Datenbankstand geprüft.
 
 ## Referenzintegrität
 
@@ -49,13 +55,31 @@ Bereiche und Studiengänge, auf die Kurse oder Blockpläne verweisen, werden dea
 
 ## Oberflächen
 
-Die öffentliche Ansicht ist eine vergleichende Planmatrix: Semester und Kurse sind nebeneinander lesbar, Abweichungen zwischen parallelen Kursen sichtbar und prüfungsrelevante Termine aufgeführt.
+Die öffentliche Detailansicht beginnt mit veröffentlichtem Anzeigenamen, Bereich, Jahrgang und den sichtbaren Kurskennungen. Für jedes Semester zeigt sie eine eigene vergleichende Datentabelle: Die erste Spalte enthält den Zeitraum, jede weitere Spalte genau einen veröffentlichten Kurs. Die Zeilengrenzen entstehen aus der Vereinigungsmenge aller Starttage und der jeweils auf ein inklusives Enddatum folgenden Kalendertage. Jede Zeile bildet damit den maximalen inklusiven Zeitraum, in dem sich für keinen Kurs der Phasentyp ändert; jede Kurszelle nennt „Theorie“ oder „Praxis“ textlich. Eine fachlich gemeinsame Blockphase bleibt ein Objekt, wird für die verständliche Gegenüberstellung aber in jeder betroffenen Kurszelle ausgegeben.
 
-Die interne Bearbeitung ist ein geführter, semesterweiser Editor mit Entwurfsstatus und Vorschau. Beide Oberflächen lesen dieselben strukturierten Daten, sind aber bewusst unterschiedlich gestaltet.
+Prüfungsrelevante Termine stehen nach den Semestertabellen in einer eigenen chronologischen Tabelle mit Zeitangabe, Kategorie, Titel, Vorläufigkeitsstatus, betroffenen Kursen und dem je Kurs abgeleiteten Semester. Sie werden nicht künstlich genau einem Semesterabschnitt zugeordnet. Auf schmalen Ansichten bleibt die Matrix horizontal scrollbar; eine Kursauswahl kann die sichtbaren Kursspalten reduzieren, ohne Inhalte oder die vollständige Auswahlmöglichkeit zu verlieren.
+
+Die interne Bearbeitung ist ein geführter, semesterweiser Editor mit Entwurfsstatus und Vorschau. Es gibt kein Autosave; jede Anlage, Änderung oder Löschung wird ausdrücklich gespeichert und einzeln gegen die Blockplanversion geprüft. Die Navigation zeigt alle sechs beziehungsweise sieben Semester mit ihrem Fehler- und Vollständigkeitsstatus.
+
+Innerhalb eines Semesters listet eine Tabelle die Blockphasen mit Zeitraum, Phasentyp und zugeordneten Kursen. Eine neue Blockphase wird einmal angelegt und dabei mindestens einem Kurs zugeordnet. Die Bearbeitung einer gemeinsamen Blockphase ändert sie nach einem deutlichen Hinweis für alle zugeordneten Kurse. Die gesonderte Aktion „Für ausgewählte Kurse trennen“ kopiert die Blockphase und verschiebt die gewählten Kursphasen auf die Kopie; dadurch können deren Zeitraum, Semester oder Phasentyp anschließend unabhängig geändert werden. Das Löschen einer Blockphase entfernt im Entwurf ihre Kursphasen, nicht aber Daten der veröffentlichten Fassung.
+
+Prüfungsrelevante Termine werden in einem eigenen Editorabschnitt verwaltet. Vorschau und Veröffentlichungsprüfung verwenden ausschließlich den zuletzt gespeicherten Entwurf. Bei einem Versionskonflikt findet keine automatische Zusammenführung statt: Die Oberfläche stellt den aktuellen gespeicherten Stand und den abgelehnten Änderungsversuch gegenüber, damit die Person ihre Änderung gezielt erneut einbringen kann.
+
+Öffentliche und interne Oberfläche lesen dieselben strukturierten Daten, sind aber bewusst unterschiedlich gestaltet.
+
+## Interne Informationsarchitektur
+
+Nach der Anmeldung zeigt die Startseite die zugeordneten Bereiche, zuletzt bearbeitete Blockpläne und Hinweise auf unvollständige oder konfliktbehaftete Entwürfe. Die Hauptnavigation fachlicher Rollen umfasst **Blockpläne**, **Kurse** und **Auditspur**; für die Systemadministration kommen **Bereiche**, **Studiengänge** und **Konten** hinzu. Nicht erlaubte Einträge werden ausgeblendet, ohne die erneute Berechtigungsprüfung auf jeder Zielseite und in jeder Serveroperation zu ersetzen.
+
+Alle internen Listen verwenden URL-basierte Filter, reproduzierbare Sortierung und serverseitig 25 Einträge pro Seite. Die Blockplanliste filtert nach Bereich, Jahrgang, Kurskennung und Veröffentlichungszustand; die Kursliste nach Bereich, Studiengang, Jahrgang und Zuordnungszustand. Ein Blockplan kann aus der Blockplanliste oder unmittelbar aus einem geeigneten blockplanlosen Kurs angelegt werden, wobei Blockplananlage und erste Kurszuordnung dieselbe Transaktion bilden.
+
+Die Auditliste filtert nach Zeitraum, Bereich, Entität und Ereignisart innerhalb des erlaubten Sichtbarkeitsumfangs. Die Kontoliste unterscheidet und filtert die Zustände „Aktivierung ausstehend“, „Aktiv“, „Deaktiviert“ und „Anonymisiert“. Löschungen, Deaktivierungen, Zurücknahmen, Rechteänderungen und Link-Neuausstellungen verlangen eine Bestätigung, die konkrete Folgen und betroffene Objekte nennt.
 
 ## Dimensionierungs- und Leistungsannahmen
 
 Das MVP ist für höchstens 200 aktive interne Konten, bis zu 20 gleichzeitig aktive interne Sitzungen und höchstens fünf gleichzeitige Schreibvorgänge ausgelegt. Die öffentliche Ansicht wird mit 100 gleichzeitig lesenden Nutzenden getestet. Unter diesem Testprofil sollen 95 % der öffentlichen Listen- und Detailaufrufe innerhalb von zwei Sekunden und 95 % der Speicher- und Veröffentlichungsvorgänge innerhalb von drei Sekunden beantwortet werden. Ein gesondertes Verfügbarkeits-SLA über den bestehenden DHBW-Betrieb hinaus besteht nicht.
+
+Feld- und Mengengrenzen sind als Strukturregeln in [`FACHLICHE_REGELN.md`](FACHLICHE_REGELN.md) festgelegt und bilden die Obergrenzen der Lasttestdaten.
 
 ## Nicht Teil des MVP
 
