@@ -28,20 +28,16 @@ _Avoid_: Kohorte
 
 ## Verlauf
 
-**Blockphase**: Ein einmal erfasster Zeitblock innerhalb einer Fassung mit Zeitraum, Semester und Phasentyp, den mehrere Kurse gemeinsam verwenden können.
-_Avoid_: Phase, Urlaubsphase
-
 **Phasentyp**: Die Art eines Studienabschnitts: Theorie an der Hochschule oder Praxis im Dualen Partnerunternehmen.
 
-**Kursphase**: Die Zuordnung eines Kurses zu einer Blockphase.
+**Kursphase**: Ein Zeitblock im Verlauf genau eines Kurses mit Zeitraum, Semester und Phasentyp. Inhaltlich gleiche Kursphasen verschiedener Kurse bleiben voneinander unabhängig.
+_Avoid_: Blockphase, Phase, Urlaubsphase
 
-**Semester**: Die fortlaufende Studienperiode einer Blockphase, beginnend mit Semester 1.
+**Semester**: Die fortlaufende Studienperiode einer Kursphase, beginnend mit Semester 1.
 
-**Prüfungsrelevanter Termin**: Eine Planangabe für mindestens einen Kurs mit Kategorie und tagesgenauer, mehrtägiger oder monatsgenauer Zeitangabe, beispielsweise Anmeldung, Abgabe, Präsentation oder Prüfung.
+**Prüfungsrelevanter Termin**: Eine Planangabe für mindestens einen Kurs mit Kategorie und einem Startdatum sowie optionalem Enddatum, beispielsweise Anmeldung, Abgabe, Präsentation oder Prüfung.
 
 **Kalendertag**: Ein zeitzonenloses Datum im gregorianischen Kalender.
-
-**Ortszeit**: Die für optionale Uhrzeiten prüfungsrelevanter Termine geltende Zeit in `Europe/Berlin`.
 
 ## Regeln und Lebenszyklen
 
@@ -49,11 +45,9 @@ _Avoid_: Phase, Urlaubsphase
 
 **Veröffentlichungsregel**: Eine zusätzliche Invariante für die Freigabe eines Entwurfs als veröffentlichte Fassung.
 
-**Deaktivierung**: Das reversible Stilllegen eines Bereichs oder Studiengangs für eine geordnete Auslaufphase.
-
 ## Nutzende und Berechtigungen
 
-**Internes Konto**: Die anbieterunabhängige fachliche Identität einer internen Person mit unveränderlicher interner ID. Es kann fachliche Rollen und/oder Systemadministration tragen; sein Bestand hängt nicht vom jeweils verwendeten Anmeldeverfahren ab.
+**Internes Konto**: Die anbieterunabhängige fachliche Identität einer internen Person mit unveränderlicher interner ID. Es kann Bereichsbearbeitung und/oder Systemadministration tragen; sein Bestand hängt nicht vom jeweils verwendeten Anmeldeverfahren ab.
 
 **Passwortvergabe ausstehend**: Der Zustand eines internen Kontos, das noch kein gültiges lokales Passwort besitzt. Die Person kann über einen ausgegebenen Passwortlink ein Passwort setzen.
 
@@ -65,10 +59,8 @@ _Avoid_: Aktivierungslink, Reset-Link, Anmeldelink
 **Gesperrtes internes Konto**: Ein internes Konto, dessen Zugang die Systemadministration gesperrt hat. Seine fachlichen Zuordnungen bleiben erhalten.
 _Avoid_: Deaktiviertes Konto, anonymisiertes Konto
 
-**Studiengangsmanagement**: Die fachliche Rolle für die laufende Kurs- und Entwurfsbearbeitung in zugeordneten Bereichen.
+**Bereichsbearbeitung**: Die fachliche Rolle für Kurs- und Entwurfsbearbeitung, Löschung, Veröffentlichung und Zurücknahme in zugeordneten Bereichen.
 
-**Studiengangsleitung**: Die fachliche Rolle, die in zugeordneten Bereichen zusätzlich löschen, veröffentlichen und Veröffentlichungen zurücknehmen darf.
-
-**Systemadministration**: Die globale Berechtigung für fachliche Superuser-Aufgaben, Stammdaten und Konten.
+**Systemadministration**: Die globale Berechtigung für fachliche Superuser-Aufgaben und die Verwaltung interner Konten.
 
 **Externe Nutzende**: Nicht angemeldete oder nicht intern berechtigte Personen, die ausschließlich veröffentlichte Fassungen lesen.

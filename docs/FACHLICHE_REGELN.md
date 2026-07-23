@@ -39,17 +39,14 @@ Werte werden bei einer Überschreitung abgelehnt und niemals abgeschnitten.
 
 - Ein Bereich besitzt eine unveränderliche systemische Identität und eine erforderliche Bezeichnung.
 - Ein Bereich kann beliebig viele Studiengänge enthalten; jeder Studiengang gehört genau einem Bereich.
-- Ein neuer Studiengang, Kurs oder Blockplan setzt einen aktiven Bereich voraus.
-- Ein deaktivierter Bereich nimmt keine neuen Studiengänge, Kurse oder Blockpläne auf. Bestehende Kurse und Blockpläne bleiben vollständig bearbeitbar; Blockpläne bleiben veröffentlichbar, zurücknehmbar und öffentlich sichtbar.
-- Bereichszuordnungen interner Konten dürfen für die Restverwaltung auch bei einem deaktivierten Bereich geändert werden.
+- Bereiche werden im MVP weder stillgelegt noch entfernt.
 
 ### Studiengang
 
 - Ein Studiengang besitzt eine unveränderliche systemische Identität, eine erforderliche Bezeichnung, ein erforderliches Kürzel, genau einen Bereich und eine Anzahl Semester von 6 oder 7.
-- Bezeichnung und Kürzel dürfen geändert werden. Bereich und Anzahl Semester dürfen nur geändert werden, solange noch kein Kurs vom Studiengang abhängt.
-- Eine spätere Korrektur von Bereich oder Semesterzahl bei bestehenden Kursen erfordert eine gesonderte, außerhalb der Anwendung manuell dokumentierte Datenmigration.
-- Ein neuer Kurs setzt einen aktiven Studiengang voraus.
-- Ein deaktivierter Studiengang nimmt keine neuen Kurse auf. Bestehende Kurse bleiben bearbeitbar und dürfen weiterhin bestehenden Blockplänen zugeordnet oder von ihnen gelöst werden.
+- Bezeichnung und Kürzel dürfen durch eine versionierte Datenmigration geändert werden. Bereich und Anzahl Semester dürfen dabei nur geändert werden, solange noch kein Kurs vom Studiengang abhängt.
+- Eine spätere Korrektur von Bereich oder Semesterzahl bei bestehenden Kursen erfordert eine gesonderte, außerhalb der Anwendung dokumentierte Datenmigration.
+- Studiengänge werden im MVP weder stillgelegt noch entfernt.
 
 ## Kurs
 
@@ -89,13 +86,13 @@ Ein veröffentlichter Kurs bleibt dauerhaft seinem Blockplan zugeordnet, besitzt
 
 Ohne vergebene Bezeichnung wird der interne Name aus Bereich, Jahrgang und aktuellen Kurskennungen abgeleitet, beispielsweise „SZI 2026 · TIF26A, WIN26A“. Eine vergebene Bezeichnung ersetzt diesen Namen. Angezeigte Namen müssen insgesamt nicht eindeutig sein; stabile IDs und die immer sichtbaren Kurskennungen unterscheiden Blockpläne.
 
-Ein Blockplan besitzt durchgehend einen Entwurf und höchstens eine veröffentlichte oder zurückgenommene Fassung. Aktuelle Bezeichnung und Kurszuordnungen gehören zum Blockplan und wirken intern sofort. Blockphasen, Kursphasen und prüfungsrelevante Termine gehören genau einer Fassung.
+Ein Blockplan besitzt durchgehend einen Entwurf und höchstens eine veröffentlichte oder zurückgenommene Fassung. Aktuelle Bezeichnung und Kurszuordnungen gehören zum Blockplan und wirken intern sofort. Kursphasen und prüfungsrelevante Termine gehören genau einer Fassung.
 
 ### Entwurf
 
-- Der Entwurf ist nur für berechtigte fachliche Rollen seines Bereichs und die Systemadministration sichtbar.
+- Der Entwurf ist nur für die Bereichsbearbeitung seines Bereichs und die Systemadministration sichtbar.
 - Er führt, wann und durch welches interne Konto er zuletzt geändert wurde.
-- Änderungen an Blockphasen, Kursphasen und Terminen verändern ausschließlich den Entwurf, bis erneut veröffentlicht wird.
+- Änderungen an Kursphasen und Terminen verändern ausschließlich den Entwurf, bis erneut veröffentlicht wird.
 
 Als Änderung des bearbeitbaren Planungsstands gelten außerdem Änderungen an der aktuellen Blockplanbezeichnung, an seinen Kurszuordnungen und an den vier Angaben eines zugeordneten Kurses. Sie aktualisieren ebenfalls, wann und durch welches interne Konto der Entwurf zuletzt geändert wurde. Veröffentlichen und Zurücknehmen verändern diese Angaben nicht.
 
@@ -110,25 +107,16 @@ Als Änderung des bearbeitbaren Planungsstands gelten außerdem Änderungen an d
 - Eine Zurücknahme entfernt die Fassung aus allen öffentlichen Ansichten, behält sie aber intern, bis die nächste Veröffentlichung sie ersetzt.
 - Eine erneute Veröffentlichung veröffentlicht stets den aktuellen Entwurf; die zurückgenommene Fassung wird nicht gesondert wiederhergestellt.
 
-## Blockphase und Kursphase
+## Kursphase
 
-### Blockphase
-
-- Eine Blockphase gehört genau einer Fassung und besitzt Startdatum, Enddatum, Semester und Phasentyp.
+- Eine Kursphase gehört genau einer Fassung und genau einem Kurs dieses Blockplans. Sie besitzt Startdatum, Enddatum, Semester und Phasentyp.
 - Start- und Enddatum sind gültige gregorianische Kalendertage im Format `YYYY-MM-DD`; das Startdatum liegt vor oder auf dem Enddatum.
 - Das Semester ist eine ganze Zahl von 1 bis zur Anzahl Semester des Blockplans.
 - Der Phasentyp ist genau `Theorie` oder `Praxis`.
-- Gleichartige Blockphasen dürfen unmittelbar aufeinander folgen.
-- Eine Blockphase darf über Studiengangsgrenzen hinweg mehreren Kursen gemeinsam zugeordnet sein.
-- Entwurf und veröffentlichte Fassung enthalten jeweils höchstens 500 Blockphasen.
-
-Ein Entwurf darf verwaiste Blockphasen enthalten. Eine neu angelegte Blockphase wird jedoch mindestens einem Kurs zugeordnet. Das Trennen einer gemeinsamen Blockphase kopiert sie und verschiebt die ausgewählten Kursphasen atomar auf die Kopie.
-
-### Kursphase
-
-- Eine Kursphase ordnet genau einen Kurs genau einer Blockphase derselben Fassung zu und besitzt keine eigenen Kopien von Zeitraum, Semester oder Phasentyp.
-- Derselbe Kurs darf derselben Blockphase höchstens einmal zugeordnet sein.
-- Spätere Vorlesungen dürfen ausschließlich Kursphasen zugeordnet werden, deren Blockphase vom Typ Theorie ist; Vorlesungen gehören nicht zum MVP.
+- Gleichartige Kursphasen dürfen unmittelbar aufeinander folgen.
+- Entwurf und veröffentlichte Fassung enthalten jeweils höchstens 500 Kursphasen.
+- Eine gemeinsame Anlage für mehrere Kurse erzeugt für jeden ausgewählten Kurs eine eigenständige Kursphase mit zunächst gleichen Angaben. Zwischen diesen Kursphasen besteht danach keine gemeinsame Identität; spätere Änderungen wirken nur auf die jeweils bearbeitete Kursphase.
+- Spätere Vorlesungen dürfen ausschließlich Kursphasen vom Typ Theorie zugeordnet werden; Vorlesungen gehören nicht zum MVP.
 
 ### Semester
 
@@ -141,15 +129,9 @@ Das Studienjahr wird aus dem Semester abgeleitet: Semester 1 und 2 bilden Studie
 - Entwurf und veröffentlichte Fassung enthalten jeweils höchstens 200 Termine.
 - Die Kategorie ist genau `Anmeldung`, `Abgabe`, `Präsentation`, `Prüfung` oder `Sonstiges`.
 
-Die Zeitangabe ist genau eine der folgenden Varianten:
+Die Zeitangabe besteht aus einem erforderlichen Startdatum und einem optionalen Enddatum. Beide sind gültige gregorianische Kalendertage im Format `YYYY-MM-DD`; ein angegebenes Enddatum liegt auf oder nach dem Startdatum. Ohne Enddatum bezeichnet der Termin genau den Starttag, andernfalls den beidseitig inklusiven Datumsbereich. Kalendertage sind zeitzonenlos. Eine vorläufige Zeitangabe ist gültig und veröffentlichbar.
 
-- ein Datum mit optionaler Uhrzeit in Minutenauflösung `HH:mm`,
-- ein beidseitig inklusiver Datumsbereich mit Startdatum vor oder auf Enddatum,
-- ein vollständiger Kalendermonat.
-
-Kalendertage sind zeitzonenlos. Optionale Uhrzeiten gelten in `Europe/Berlin`; eine technische Umrechnung darf den zugehörigen Kalendertag nicht verändern. Eine vorläufige Zeitangabe ist gültig und veröffentlichbar.
-
-Ein Termin trägt weder ein eigenes Semester noch eine eigene Blockphase. Sein Semester wird je betroffenem Kurs aus der Kursphase abgeleitet, die den ersten Tag seiner Zeitangabe abdeckt. Ein Termin über einen Semesterwechsel gehört zum Semester seines Beginns; bei mehreren Kursen darf das abgeleitete Semester unterschiedlich sein.
+Ein Termin trägt weder ein eigenes Semester noch eine eigene Kursphase. Sein Semester wird je betroffenem Kurs aus der Kursphase abgeleitet, die sein Startdatum abdeckt. Ein Termin über einen Semesterwechsel gehört zum Semester seines Beginns; bei mehreren Kursen darf das abgeleitete Semester unterschiedlich sein.
 
 ## Veröffentlichungsprüfung
 
@@ -161,7 +143,6 @@ Eine Veröffentlichung ist nur möglich, wenn zusätzlich folgende Regeln erfül
 - Die Kursphasen schließen lückenlos aneinander an und überlappen sich nicht.
 - Die Semester sind entlang der Zeitachse monoton nicht fallend.
 - Jedes Semester von 1 bis zur Anzahl Semester des Studiengangs kommt mindestens einmal vor; alle Kursphasen eines Semesters bilden einen zusammenhängenden Abschnitt.
-- Jede Blockphase ist mindestens einer Kursphase zugeordnet.
 - Jeder Termin liegt vollständig innerhalb des Studienzeitraums jedes betroffenen Kurses.
 
 ## Interne Konten
@@ -188,7 +169,7 @@ Eine Sperrung entfernt Passwort, Sitzungen und offene Passwortlinks. Die Freigab
 
 ### Rollen und gültige Kombinationen
 
-- Ein internes Konto trägt höchstens eine fachliche Rolle: Studiengangsmanagement oder Studiengangsleitung.
+- Ein internes Konto trägt entweder die fachliche Rolle Bereichsbearbeitung oder keine fachliche Rolle.
 - Die fachliche Rolle gilt einheitlich in allen zugeordneten Bereichen und setzt mindestens einen Bereich voraus.
 - Unabhängig davon kann das Konto Systemadministration besitzen.
 - Ein reines Systemadministrationskonto benötigt weder fachliche Rolle noch Bereich.
@@ -198,21 +179,17 @@ Eine Sperrung entfernt Passwort, Sitzungen und offene Passwortlinks. Die Freigab
 
 ### Berechtigungen
 
-Das **Studiengangsmanagement** darf in seinen Bereichen:
+Die **Bereichsbearbeitung** darf in ihren Bereichen:
 
 - Kurse anlegen und bearbeiten;
 - noch nicht veröffentlichte Kurse Blockplänen zuordnen und von ihnen lösen;
-- Blockplanentwürfe anlegen und bearbeiten.
-
-Die **Studiengangsleitung** darf dort zusätzlich:
-
 - noch nicht veröffentlichte Kurse löschen;
+- Blockplanentwürfe anlegen und bearbeiten;
 - noch nie veröffentlichte Blockpläne löschen;
 - Blockpläne veröffentlichen und Veröffentlichungen zurücknehmen.
 
-Die **Systemadministration** besitzt die Rechte der Studiengangsleitung in allen Bereichen und darf zusätzlich:
+Die **Systemadministration** besitzt die Rechte der Bereichsbearbeitung in allen Bereichen und darf zusätzlich:
 
-- Bereiche und Studiengänge anlegen, pflegen, deaktivieren und reaktivieren;
 - interne Konten anlegen, E-Mail-Adressen, Rollen und Bereichszuordnungen ändern, Passwortlinks ausstellen sowie Konten sperren und freigeben.
 
 Externe Nutzende dürfen ausschließlich veröffentlichte Fassungen einsehen.
