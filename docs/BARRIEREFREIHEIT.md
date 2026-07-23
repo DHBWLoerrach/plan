@@ -2,9 +2,7 @@
 
 Die öffentliche Planmatrix und der interne Editor werden als barrierefreiheitsrelevante Oberflächen behandelt. Ziel ist mindestens WCAG 2.1 AA entsprechend EN 301 549; für neue Oberflächen ist WCAG 2.2 AA die zusätzliche Zielmarke.
 
-Vor Go-live wird mit der zuständigen DHBW-Stelle geklärt, ob die Erklärung zur Barrierefreiheit und der Rückmeldeweg zentral oder innerhalb der Anwendung bereitgestellt werden. Geltungsbereich, Verantwortlichkeit, Rückmeldekanal und Aktualisierungsprozess sind verbindlich festzulegen.
-
-Impressum, Datenschutzhinweise und Erklärung zur Barrierefreiheit sind in allen öffentlichen und internen Ansichten an einer konsistenten Stelle per Tastatur und Screenreader erreichbar. Verweise auf zentrale DHBW-Seiten sind nur zulässig, soweit deren Inhalt die Anwendung tatsächlich abdeckt.
+Vor Go-live wird mit der zuständigen DHBW-Stelle geklärt, ob Erklärung zur Barrierefreiheit und Rückmeldeweg zentral oder in der Anwendung bereitgestellt werden; Geltungsbereich, Verantwortlichkeit, Rückmeldekanal und Aktualisierungsprozess sind dabei verbindlich festzulegen. Die rechtlichen Pflichtinformationen insgesamt behandelt [Architektur und Betrieb](ARCHITEKTUR_UND_BETRIEB.md); barrierefreiheitsseitig gilt, dass sie in allen Ansichten an einer konsistenten Stelle per Tastatur und Screenreader erreichbar sind.
 
 ## Öffentliche Planmatrix
 

@@ -1,17 +1,13 @@
 # Versionsgrenze: Kurszuordnungen gehören zum Blockplan, nicht zur Fassung
 
-Ein Blockplan existiert gleichzeitig als bearbeitbarer Entwurf und als höchstens eine veröffentlichte Fassung. Damit stellt sich für jede Angabe die Frage, ob sie je Fassung oder einmal am Blockplan geführt wird. Wir haben entschieden: Identität, Bereich, Jahrgang, Bezeichnung und die Zuordnung von Kursen hängen am Blockplan selbst und wirken sofort; nur Blockphasen, Kursphasen und prüfungsrelevante Termine gehören einer Fassung.
+Ein Blockplan existiert gleichzeitig als Entwurf und als höchstens eine veröffentlichte Fassung, also braucht jede Angabe eine Zuordnung zu einer der beiden Ebenen. Wir versionieren nur Blockphasen, Kursphasen und prüfungsrelevante Termine; Identität, Bereich, Jahrgang, Bezeichnung und Kurszuordnungen hängen am Blockplan selbst.
 
-## Considered Options
+## Verworfene Alternative
 
-Die naheliegende Alternative war, auch die Kurszuordnung zu versionieren. Sie hätte die öffentliche Ansicht automatisch sauber gehalten: Ein im Entwurf hinzugefügter Kurs wäre schlicht nicht Teil der veröffentlichten Fassung gewesen.
+Auch die Kurszuordnung zu versionieren hätte die öffentliche Ansicht automatisch sauber gehalten. Dafür wäre aus „ein Kurs ist höchstens einem Blockplan zugeordnet“ ein „…je Fassung“ geworden — mit dem möglichen Zustand, dass ein Kurs im Entwurf zu Plan A und veröffentlicht zu Plan B gehört. Das ist weder erklärbar noch auflösbar, und die Zuordnungsprüfung hätte gegen zwei Wahrheiten laufen müssen.
 
-Dagegen sprach, dass die Regel „ein Kurs ist höchstens einem Blockplan zugeordnet“ zu „…höchstens einem Blockplan je Fassung“ hätte werden müssen. Damit wäre der Zustand möglich geworden, dass ein Kurs im Entwurf zu Plan A und in der veröffentlichten Fassung zu Plan B gehört. Dieser Zustand ist weder erklärbar noch sinnvoll auflösbar, und die Prüfung der Zuordnungsbedingungen (Bereich, Jahrgang) hätte gegen zwei unterschiedliche Wahrheiten laufen müssen.
+## Konsequenzen
 
-## Consequences
+Ein Kurs kann zugeordnet und damit für andere Blockpläne gesperrt sein, obwohl öffentlich nichts davon sichtbar ist. Das ist gewollt — die Sperre spiegelt die Planungsabsicht. Damit die öffentliche Matrix keine leeren Spalten zeigt, gilt ergänzend, dass sie nur Kurse mit veröffentlichten Kursphasen darstellt.
 
-Ein Kurs kann einem Blockplan zugeordnet sein, ohne in dessen veröffentlichter Fassung Kursphasen zu besitzen — und ist dadurch für andere Blockpläne gesperrt, obwohl öffentlich nichts davon zu sehen ist. Das ist gewollt: Die Sperre spiegelt die tatsächliche Planungsabsicht wider.
-
-Damit die öffentliche Ansicht davon unberührt bleibt, gilt die ergänzende Regel, dass sie nur Kurse mit veröffentlichten Kursphasen zeigt. Ohne diese Regel erschiene ein neu zugeordneter Kurs als leere Spalte in der Planmatrix.
-
-Eine Änderung der Bezeichnung wirkt sofort öffentlich, ohne Veröffentlichung. Das ist unkritisch, weil die öffentliche URL laut MVP-Spezifikation von der Bezeichnung unabhängig ist.
+Eine Änderung der Bezeichnung wirkt sofort öffentlich. Unkritisch, weil die öffentliche URL von der Bezeichnung unabhängig ist.
