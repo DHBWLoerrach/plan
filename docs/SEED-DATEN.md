@@ -4,6 +4,8 @@ Inhaltliche Vorlage für den versionierten Seed des ersten Deployments (Mechanis
 
 Eigenständige Studiengänge ohne gemeinsames Studienzentrum bilden je einen eigenen Bereich mit der Studiengangsbezeichnung als Bereichsbezeichnung. Das hält die Rechtevergabe präzise; ein internes Konto kann mehreren Bereichen zugeordnet werden.
 
+Bewusste Abgrenzung: Der Studiengang BWL – International Business (in English) ist nicht enthalten, weil er laut [DHBW Lörrach im Oktober 2024 eingestellt wurde](https://dhbw-loerrach.de/internationalbusiness/dokumente-links); auslaufende Bestandskurse begründen keinen neuen MVP-Stammdatensatz. [Data Science und Künstliche Intelligenz](https://dhbw-loerrach.de/data-science/studieninhalte) ist dagegen ein Studiengang mit zwei Studienrichtungen und wird deshalb genau einmal geführt.
+
 | Bereich | Studiengang | Kürzel | Semester |
 | --- | --- | --- | ---: |
 | Studienzentrum IT-Management und Informatik (SZI) | Informatik | TIF | 6 |

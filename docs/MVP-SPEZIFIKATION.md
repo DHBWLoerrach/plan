@@ -15,7 +15,7 @@ Abgeleitete Übersicht; normativ ist der Abschnitt [Berechtigungen](FACHLICHE_RE
 | Kurse anlegen, bearbeiten und löschen | eigene Bereiche | alle Bereiche | – |
 | Kurse zuordnen oder lösen | eigene Bereiche | alle Bereiche | – |
 | Blockplanentwürfe anlegen und bearbeiten | eigene Bereiche | alle Bereiche | – |
-| Noch nie veröffentlichte Blockpläne löschen | eigene Bereiche | alle Bereiche | – |
+| Blockpläne ohne veröffentlichte Fassung löschen | eigene Bereiche | alle Bereiche | – |
 | Veröffentlichen und zurücknehmen | eigene Bereiche | alle Bereiche | – |
 | Konten und Rechte verwalten | – | systemweit | – |
 | Veröffentlichte Blockpläne lesen | ja | ja | ja |
@@ -24,7 +24,7 @@ Abgeleitete Übersicht; normativ ist der Abschnitt [Berechtigungen](FACHLICHE_RE
 
 Die öffentliche Anwendung bietet Filter nach Bereich, Studiengang, Jahrgang und Kurskennung. Alle Filterzustände und die Ergebnisseite stehen in der URL und sind teilbar sowie per Vor-/Zurück-Navigation reproduzierbar; mehrere gesetzte Filter werden mit UND verknüpft. Ein Blockplan erfüllt den Studiengangsfilter, wenn mindestens ein öffentlich sichtbarer Kurs seiner veröffentlichten Fassung diesem Studiengang angehört. Der Kursfilter sucht ohne Beachtung der Groß-/Kleinschreibung am Anfang der Kurskennung, sodass etwa `tif24` sowohl `TIF24A` als auch `TIF24B` findet.
 
-Bereichs-, Studiengangs- und Jahrgangsoptionen werden ausschließlich aus den Stammdaten-Snapshots vorhandener veröffentlichter Fassungen gebildet. Dadurch bleiben Pläne später umbenannter Bereiche und Studiengänge unter den tatsächlich veröffentlichten Bezeichnungen auffindbar, ohne leere Optionen anzubieten. Ohne Filter erscheinen alle veröffentlichten Pläne in den Gruppen aktuell laufend, zukünftig und vergangen; jeder Plan gehört genau einer Gruppe an. Zukünftig ist ein Plan, wenn alle Studienzeiträume seiner öffentlich sichtbaren Kurse in der Zukunft beginnen; vergangen, wenn alle geendet haben; aktuell in jedem anderen Fall. Stichtag ist überall der aktuelle Kalendertag in der Zeitzone Europe/Berlin, unabhängig von Server- oder Browserzeitzone; er wird serverseitig bestimmt. Aktuelle Pläne werden nach Jahrgang absteigend, zukünftige nach Jahrgang aufsteigend und vergangene nach Jahrgang absteigend sortiert; bei gleichem Jahrgang folgt der veröffentlichte Anzeigename aufsteigend. Ergebnisse werden serverseitig mit 25 Plänen pro Seite paginiert. Zurückgenommene Blockpläne erscheinen nirgends öffentlich.
+Bereichs-, Studiengangs- und Jahrgangsoptionen werden ausschließlich aus den Stammdaten-Snapshots vorhandener veröffentlichter Fassungen gebildet. Dadurch bleiben Pläne später umbenannter Bereiche und Studiengänge unter den tatsächlich veröffentlichten Bezeichnungen auffindbar, ohne leere Optionen anzubieten. Ohne Filter erscheinen alle veröffentlichten Pläne in den Gruppen aktuell laufend, zukünftig und vergangen; jeder Plan gehört genau einer Gruppe an. Zukünftig ist ein Plan, wenn alle Studienzeiträume seiner öffentlich sichtbaren Kurse in der Zukunft beginnen; vergangen, wenn alle geendet haben; aktuell in jedem anderen Fall. Stichtag ist überall der aktuelle Kalendertag in der Zeitzone Europe/Berlin, unabhängig von Server- oder Browserzeitzone; er wird serverseitig bestimmt. Aktuelle Pläne werden nach Jahrgang absteigend, zukünftige nach Jahrgang aufsteigend und vergangene nach Jahrgang absteigend sortiert; bei gleichem Jahrgang folgt der veröffentlichte Anzeigename aufsteigend und bei gleichem Anzeigenamen die stabile Blockplan-ID aufsteigend. Ergebnisse werden serverseitig mit 25 Plänen pro Seite paginiert. Zurückgenommene Blockpläne erscheinen nirgends öffentlich.
 
 Jeder veröffentlichte Blockplan ist über eine stabile, von seinem angezeigten Namen unabhängige URL erreichbar — der Name ändert sich bei einer neuen Veröffentlichung, wenn eine Bezeichnung vergeben wurde oder sich die öffentlich sichtbare Kursmenge geändert hat. Veröffentlichte Pläne bleiben für vergangene, aktuelle und zukünftige Jahrgänge auffindbar. Ohne veröffentlichte Fassung — sei der Plan zurückgenommen, nie veröffentlicht oder die ID unbekannt — antwortet die URL öffentlich einheitlich mit HTTP 404 und einem Verweis auf die öffentliche Suche; diese Fälle sind öffentlich ununterscheidbar. Öffentliche Seiten sind für Suchmaschinen indexierbar; interne Pfade und die Anmeldeseite werden per `robots.txt` ausgeschlossen.
 
@@ -38,7 +38,7 @@ Keycloak/OIDC und Studierenden-Logins sind ein späterer Ausbau. Das MVP impleme
 
 ## Veröffentlichung
 
-Ein neuer Blockplan beginnt als Entwurf. Die Veröffentlichung prüft Struktur- und Veröffentlichungsregeln und ersetzt die bisherige öffentliche Fassung atomar durch eine Kopie des Entwurfs; der Entwurf bleibt unverändert bearbeitbar. Eine Zurücknahme löscht die öffentliche Fassung. Auch danach veröffentlicht derselbe Veröffentlichungsweg den aktuellen Entwurf.
+Ein neuer Blockplan beginnt als Entwurf. Die Veröffentlichung prüft Struktur- und Veröffentlichungsregeln und ersetzt die bisherige öffentliche Fassung atomar durch eine Kopie des Entwurfs; der Entwurf bleibt unverändert bearbeitbar. Dieselbe Kurs-ID darf gleichzeitig in höchstens einer veröffentlichten Fassung vorkommen. Ist ein intern neu zugeordneter Kurs noch über einen anderen Blockplan öffentlich sichtbar, muss dieser zunächst ohne den Kurs neu veröffentlicht oder zurückgenommen werden. Eine Zurücknahme löscht die öffentliche Fassung. Auch danach veröffentlicht derselbe Veröffentlichungsweg den aktuellen Entwurf.
 
 ## Gleichzeitige Bearbeitung
 
@@ -48,13 +48,13 @@ Veröffentlichen vergleicht die zuletzt gesehene Entwurfsänderung und den Verö
 
 ## Referenzintegrität
 
-Wird ein noch nie veröffentlichter Blockplan gelöscht, entfallen seine Kursphasen und prüfungsrelevanten Termine mit ihm.
+Wird ein Blockplan ohne veröffentlichte Fassung gelöscht, entfallen seine Kursphasen und prüfungsrelevanten Termine mit ihm. Seine Kurse bleiben blockplanlos bestehen.
 
 Bereiche und Studiengänge werden initial per Seed bereitgestellt und im MVP nicht über die Anwendung verwaltet, stillgelegt oder entfernt. Ergänzungen und Umbenennungen erfolgen als versionierte Datenmigration. Bereich und Anzahl Semester eines Studiengangs mit bestehenden Kursen zu ändern, erfordert eine gesonderte, außerhalb der Anwendung dokumentierte Datenmigration.
 
 ## Oberflächen
 
-Die öffentliche Detailansicht beginnt mit veröffentlichtem Anzeigenamen, Bereich, Jahrgang und den sichtbaren Kurskennungen. Für jedes Semester zeigt sie eine eigene vergleichende Datentabelle: Die erste Spalte enthält den Zeitraum, jede weitere Spalte genau einen veröffentlichten Kurs. Die Zeilengrenzen entstehen aus der Vereinigungsmenge aller Starttage und der jeweils auf ein inklusives Enddatum folgenden Kalendertage. Jede Zeile bildet damit den maximalen inklusiven Zeitraum, in dem sich für keinen Kurs der Phasentyp ändert; jede Kurszelle nennt „Theorie“ oder „Praxis“ textlich.
+Die öffentliche Detailansicht beginnt mit veröffentlichtem Anzeigenamen, Bereich, Jahrgang und den sichtbaren Kurskennungen. Für jedes Semester zeigt sie eine eigene vergleichende Datentabelle: Die erste Spalte enthält den Zeitraum, jede weitere Spalte genau einen veröffentlichten Kurs. Die zunächst gebildeten Zeilengrenzen entstehen aus der Vereinigungsmenge aller Starttage und der jeweils auf ein inklusives Enddatum folgenden Kalendertage. Jede Kurszelle nennt „Theorie“ oder „Praxis“ textlich; liegt der Zeitraum für diesen Kurs außerhalb des in der Tabelle dargestellten Semesters, nennt sie stattdessen „Nicht in diesem Semester“. Unmittelbar benachbarte Intervalle werden für die Darstellung zusammengefasst, wenn sämtliche Kurszellen denselben Inhalt behalten. Die gespeicherten Kursphasen bleiben davon unberührt. Jede sichtbare Zeile bildet damit den maximalen inklusiven Zeitraum, in dem sich für keinen Kurs die Darstellung ändert; abweichende Semestergrenzen verschiedener Kurse bleiben sichtbar.
 
 Prüfungsrelevante Termine stehen nach den Semestertabellen in einer eigenen chronologischen Tabelle mit Zeitangabe, Kategorie, Titel, Vorläufigkeitsstatus, betroffenen Kursen und dem je Kurs abgeleiteten Semester. Sie werden nicht künstlich genau einem Semesterabschnitt zugeordnet. Auf schmalen Ansichten bleibt die Matrix horizontal scrollbar; eine Kursauswahl kann die sichtbaren Kursspalten reduzieren, ohne Inhalte oder die vollständige Auswahlmöglichkeit zu verlieren.
 
@@ -90,6 +90,6 @@ Feldgrenzen sowie die Höchstzahl von 20 Kursen je Blockplan sind als Strukturre
 - Curriculum- bzw. Studienverlaufsverwaltung sowie Vorlesungs-, Dozierenden- und Raumplanung.
 - Bereichsübergreifendes Kopieren, gemeinsames Bearbeiten oder Synchronisieren von Blockplänen. Synchronisierte Bereiche führen im MVP eigene Pläne.
 - Studienverläufe mit einer anderen Dauer als 6 oder 7 Semestern.
-- Blockplanübergreifende Gesamtansichten, etwa ein bereichsweiter Gantt über mehrere Jahrgänge — öffentlich über die veröffentlichten Fassungen, intern zusätzlich über die Entwürfe. Ein späterer Ausbau; das Datenmodell trägt ihn bereits, und die Zeitachse einer solchen Ansicht erlaubt anders als die semesterspaltige Planmatrix auch Kurse mit unterschiedlicher Semesterzahl nebeneinander. Innerhalb eines Blockplans ist die studiengangsübergreifende Darstellung dagegen Kernfunktion und nicht ausgeschlossen.
-- Eine persönliche kursbezogene Blockband-Ansicht; sie bleibt eine mögliche spätere Studierendenansicht.
+- Blockplanübergreifende Gesamtansichten, etwa ein bereichsweiter Gantt über mehrere Jahrgänge. Innerhalb eines Blockplans ist die studiengangsübergreifende Darstellung dagegen Kernfunktion und nicht ausgeschlossen.
+- Eine persönliche kursbezogene Blockband-Ansicht.
 - Eine fachliche oder administrative Auditspur. Außer Zeitpunkt und internem Konto der letzten Entwurfsänderung speichert die Anwendung keine Änderungshistorie; eine spätere Protokollierung beginnt ohne rückwirkende Rekonstruktion ab ihrem Einführungsstichtag (siehe [ADR 0005](adr/0005-keine-auditspur-im-mvp.md)).

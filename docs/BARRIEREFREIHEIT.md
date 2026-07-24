@@ -8,7 +8,7 @@ Vor Go-live wird mit der zuständigen DHBW-Stelle geklärt, ob Erklärung zur Ba
 
 - Die Matrix ist eine echte Datentabelle mit `caption`, Kopfzellen und programmatisch bestimmbaren Zeilen- und Spaltenbezügen.
 - Jedes Semester besitzt eine eigene Tabelle. Die Zeitraumspalte und die Kurskennungen bilden eindeutige Zeilen- und Spaltenüberschriften; geteilte visuelle Zellen dürfen die programmatische Zuordnung nicht verschleiern.
-- Theorie, Praxis und vorläufige Zeitangaben prüfungsrelevanter Termine sind immer auch textlich benannt; Farbe, Symbol oder Position sind nur Ergänzungen. Veröffentlichungszustände treten hier nicht auf, da die öffentliche Ansicht ausschließlich veröffentlichte Fassungen zeigt.
+- Theorie, Praxis, „Nicht in diesem Semester“ und vorläufige Zeitangaben prüfungsrelevanter Termine sind immer auch textlich benannt; Farbe, Symbol, leere Fläche oder Position sind nur Ergänzungen. Veröffentlichungszustände treten hier nicht auf, da die öffentliche Ansicht ausschließlich veröffentlichte Fassungen zeigt.
 - Die Inhalte bleiben bei 320 CSS-Pixeln Breite, 200 % Textvergrößerung und 400 % Browser-Zoom vollständig verfügbar. Notwendiges horizontales Scrollen ist erkennbar, per Tastatur erreichbar und frei von Fokusfallen. Eine beschriftete Kursauswahl kann sichtbare Kursspalten reduzieren; alle Kurse bleiben auswählbar und die Auswahländerung wird angekündigt.
 - Alle Funktionen sind per Tastatur erreichbar; Fokus ist sichtbar, sinnvoll angeordnet und alle Bedienelemente sind eindeutig benannt.
 - Der Tastaturfokus wird weder durch fixierte Kopfbereiche noch durch Dialoge oder Statusflächen vollständig verdeckt. Interaktive Zielgrößen erfüllen WCAG 2.2 AA oder besitzen den dort vorgesehenen ausreichenden Abstand.
@@ -33,7 +33,7 @@ Vor Go-live wird mit der zuständigen DHBW-Stelle geklärt, ob Erklärung zur Ba
 
 - Automatisierte Scans ergänzen manuelle Prüfungen aller wesentlichen Abläufe: Plan suchen und lesen, Kurs wechseln, Phasen und Termine bearbeiten, speichern, veröffentlichen und zurücknehmen.
 - Tastaturtest mit Tab, Shift+Tab, Enter, Leertaste und Escape: sichtbarer Fokus, sinnvolle Reihenfolge, keine Fokusfalle.
-- Screenreader-Test mindestens mit VoiceOver/Safari sowie einem zweiten unterstützten Browser-Screenreader-Gespann, insbesondere für Matrix, Fehler, Dialoge und Statusmeldungen.
+- Screenreader-Test mit VoiceOver/Safari, insbesondere für Matrix, Fehler, Dialoge und Statusmeldungen. Ein weiteres Browser-Screenreader-Gespann wird erst bei konkreten Interoperabilitätsproblemen oder vor einem breiteren Regelbetrieb in die verbindliche Abnahme aufgenommen.
 - Visueller Test von Text- und Nichttextkontrast, 200 % Textvergrößerung, 400 % Zoom und schmaler mobiler Breite. Fehler, Phasentypen und vorläufige Zeitangaben sind nie nur farblich unterscheidbar; im internen Editor gilt dasselbe für den Veröffentlichungszustand.
 
 ## Quellen
