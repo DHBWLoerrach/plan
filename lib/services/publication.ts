@@ -24,7 +24,7 @@ function readDraft(sqlite: Database.Database, blockPlanId: string) {
       program.semesters, program.name AS program, program.abbreviation AS programAbbreviation
     FROM courses course JOIN programs program ON program.id = course.program_id WHERE course.block_plan_id = ?`).all(blockPlanId) as CourseRow[];
   const phases = sqlite.prepare("SELECT course_id AS courseId, semester, phase_type AS type, start_date AS startDate, end_date AS endDate FROM draft_phases WHERE block_plan_id = ?").all(blockPlanId) as DraftPhase[];
-  const eventRows = sqlite.prepare("SELECT id, title, category, start_date AS startDate, end_date AS endDate, provisional FROM draft_events WHERE block_plan_id = ?").all(blockPlanId) as Omit<DraftEvent, "courseIds">[];
+  const eventRows = sqlite.prepare("SELECT id, title, description, category, start_date AS startDate, end_date AS endDate, provisional FROM draft_events WHERE block_plan_id = ?").all(blockPlanId) as Omit<DraftEvent, "courseIds">[];
   const eventCourses = sqlite.prepare("SELECT course_id AS courseId FROM draft_event_courses WHERE event_id = ?");
   const events: DraftEvent[] = eventRows.map((event) => ({
     ...event,

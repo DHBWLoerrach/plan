@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 
-import { buildSemesterMatrix, type DraftCourse, type DraftEvent, type DraftPhase } from "@/lib/domain/publication";
+import { eventCategoryLabel } from "@/lib/domain/event-category";
+import { buildSemesterMatrix, deriveEventSemester, type DraftCourse, type DraftEvent, type DraftPhase } from "@/lib/domain/publication";
 
 function formatPeriod(startDate: string, endDate: string) {
   const formatter = new Intl.DateTimeFormat("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" });
@@ -36,7 +37,7 @@ export function PlanMatrix({ courses, phases, events }: { courses: DraftCourse[]
       })}
     </section>
     <section aria-labelledby="events-heading"><div className="section-heading"><p className="eyebrow">Prüfungsrelevante Termine</p><h2 id="events-heading">Termine</h2></div>
-      {events.length ? <div className="matrix-wrap" tabIndex={0}><table className="event-table"><thead><tr><th scope="col">Zeitangabe</th><th scope="col">Kategorie</th><th scope="col">Titel</th><th scope="col">Betroffene Kurse und Semester</th></tr></thead><tbody>{events.map((event) => <tr key={event.id}><td>{formatPeriod(event.startDate, event.endDate ?? event.startDate)}{event.provisional ? <span className="provisional">Vorläufig</span> : null}</td><td>{({ REGISTRATION: "Anmeldung", SUBMISSION: "Abgabe", PRESENTATION: "Präsentation", EXAM: "Prüfung", OTHER: "Sonstiges" })[event.category]}</td><td><strong>{event.title}</strong></td><td>{event.courseIds.map((id) => { const semester = phases.find((phase) => phase.courseId === id && phase.startDate <= event.startDate && phase.endDate >= event.startDate)?.semester; return `${courseCodes.get(id)}${semester ? ` (Semester ${semester})` : " (Semester nicht ableitbar)"}`; }).join(", ")}</td></tr>)}</tbody></table></div> : <p className="empty-note">Für diesen Plan sind keine prüfungsrelevanten Termine veröffentlicht.</p>}
+      {events.length ? <div className="matrix-wrap" tabIndex={0}><table className="event-table"><thead><tr><th scope="col">Zeitangabe</th><th scope="col">Kategorie</th><th scope="col">Titel</th><th scope="col">Betroffene Kurse und Semester</th></tr></thead><tbody>{events.map((event) => <tr key={event.id}><td>{formatPeriod(event.startDate, event.endDate ?? event.startDate)}{event.provisional ? <span className="provisional">Vorläufig</span> : null}</td><td>{eventCategoryLabel(event.category)}</td><td><strong>{event.title}</strong></td><td>{event.courseIds.map((id) => { const semester = deriveEventSemester(phases, id, event.startDate); return `${courseCodes.get(id)}${semester ? ` (Semester ${semester})` : " (Semester nicht ableitbar)"}`; }).join(", ")}</td></tr>)}</tbody></table></div> : <p className="empty-note">Für diesen Plan sind keine prüfungsrelevanten Termine veröffentlicht.</p>}
     </section>
   </>;
 }

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import type Database from "better-sqlite3";
 
+import { normalizeCalendarDay } from "@/lib/domain/calendar-day";
 import { assertAreaEditPermission } from "@/lib/services/authorization";
 import { assertCourseFitsBlockPlan } from "@/lib/services/course-assignment";
 import { clearCourseFromDraft, touchDraft } from "@/lib/services/draft-changes";
@@ -92,13 +93,5 @@ function normalizeCourseInput(input: CourseInput): NormalizedCourse {
   const studyEnd = normalizeCalendarDay(input.studyEnd, "Das Studienende");
   if (studyStart >= studyEnd) throw new Error("Der Studienbeginn muss vor dem Studienende liegen.");
   return { code, normalizedCode: code.toLocaleLowerCase("de-DE"), programId, studyStart, studyEnd };
-}
-
-function normalizeCalendarDay(value: string, label: string): string {
-  const trimmed = value.trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/u.test(trimmed)) throw new Error(`${label} muss ein Datum im Format JJJJ-MM-TT sein.`);
-  const date = new Date(`${trimmed}T00:00:00Z`);
-  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== trimmed) throw new Error(`${label} ist kein gültiger Kalendertag.`);
-  return trimmed;
 }
 

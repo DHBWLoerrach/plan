@@ -153,6 +153,11 @@ p[role="status"] { margin: 0; color: var(--success); }
 .account-fieldset legend { padding: 0 .25rem; font-weight: 700; }
 .account-fieldset label, .account-check { display: flex; align-items: center; gap: .5rem; font-weight: 400; }
 .account-check { font-weight: 700; }
+.account-fieldset p { margin: 0; color: var(--gray); font-size: .9rem; }
+
+.event-editor { max-width: 38rem; margin-top: 1.5rem; padding: 1rem 1.1rem; border: 1px solid var(--line); border-left: 4px solid var(--red); background: #fff; }
+.event-editor h3 { margin: 0; font-size: 1.1rem; font-weight: 700; }
+.event-editor > p { margin: .35rem 0 .9rem; color: var(--gray); font-size: .92rem; }
 
 .confirm-region { display: grid; gap: .6rem; padding: 1rem 1.1rem; border: 1px solid var(--warning-border); border-left-width: 4px; background: var(--warning-bg); }
 .confirm-region p { margin: 0; }

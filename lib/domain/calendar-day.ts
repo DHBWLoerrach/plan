@@ -1,0 +1,11 @@
+/**
+ * Normalizes a calendar day: trimmed and a valid Gregorian day in `YYYY-MM-DD` (FACHLICHE_REGELN.md). Calendar days
+ * are timezone-free, so the value is compared against its own UTC round trip instead of being parsed locally.
+ */
+export function normalizeCalendarDay(value: string, label: string): string {
+  const trimmed = value.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/u.test(trimmed)) throw new Error(`${label} muss ein Datum im Format JJJJ-MM-TT sein.`);
+  const date = new Date(`${trimmed}T00:00:00Z`);
+  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== trimmed) throw new Error(`${label} ist kein gültiger Kalendertag.`);
+  return trimmed;
+}

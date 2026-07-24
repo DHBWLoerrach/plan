@@ -1,3 +1,5 @@
+import type { EventCategory } from "@/lib/domain/event-category";
+
 export type PhaseType = "THEORY" | "PRACTICE";
 
 export interface DraftCourse {
@@ -19,7 +21,8 @@ export interface DraftPhase {
 export interface DraftEvent {
   id: string;
   title: string;
-  category: "REGISTRATION" | "SUBMISSION" | "PRESENTATION" | "EXAM" | "OTHER";
+  description: string | null;
+  category: EventCategory;
   startDate: string;
   endDate: string | null;
   provisional: boolean;
@@ -59,8 +62,14 @@ function phaseLabel(type: PhaseType): string {
   return type === "THEORY" ? "Theorie" : "Praxis";
 }
 
-function isCoveredByPhase(phases: DraftPhase[], date: string): boolean {
-  return phases.some((phase) => phase.startDate <= date && phase.endDate >= date);
+/**
+ * The semester an event belongs to for one affected course: the semester of the course phase covering its start day
+ * (FACHLICHE_REGELN.md). An event spanning a semester change therefore belongs to the semester of its beginning.
+ * In an incomplete draft such a phase may be missing; the semester is then not derivable and stays `null`.
+ */
+export function deriveEventSemester(phases: DraftPhase[], courseId: string, startDate: string): number | null {
+  const covering = phases.find((phase) => phase.courseId === courseId && phase.startDate <= startDate && phase.endDate >= startDate);
+  return covering?.semester ?? null;
 }
 
 export function validatePublication({
@@ -162,7 +171,6 @@ export function validatePublication({
     }
     for (const courseId of event.courseIds) {
       const course = coursesById.get(courseId);
-      const coursePhases = phases.filter((phase) => phase.courseId === courseId);
       if (
         !course ||
         event.startDate < course.studyStart ||
@@ -174,7 +182,7 @@ export function validatePublication({
           eventId: event.id,
           message: `Der Termin „${event.title}“ liegt außerhalb eines Studienzeitraums.`,
         });
-      } else if (!isCoveredByPhase(coursePhases, event.startDate)) {
+      } else if (deriveEventSemester(phases, courseId, event.startDate) === null) {
         issues.push({
           code: "event-semester-not-derivable",
           eventId: event.id,

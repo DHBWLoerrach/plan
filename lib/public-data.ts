@@ -58,7 +58,7 @@ export function getPublicPlan(blockPlanId: string): (PublicPlan & { courses: (Dr
   if (!version) return null;
   const courses = sqlite.prepare(`SELECT id, code, study_start AS studyStart, study_end AS studyEnd, semesters, program_name AS program FROM published_course_snapshots WHERE version_id = ? ORDER BY code COLLATE NOCASE`).all(version.id) as (DraftCourse & { program: string })[];
   const phases = sqlite.prepare("SELECT course_snapshot_id AS courseId, semester, phase_type AS type, start_date AS startDate, end_date AS endDate FROM published_phases WHERE version_id = ?").all(version.id) as DraftPhase[];
-  const eventRows = sqlite.prepare("SELECT id, title, category, start_date AS startDate, end_date AS endDate, provisional FROM published_events WHERE version_id = ? ORDER BY start_date, title").all(version.id) as Omit<DraftEvent, "courseIds">[];
+  const eventRows = sqlite.prepare("SELECT id, title, description, category, start_date AS startDate, end_date AS endDate, provisional FROM published_events WHERE version_id = ? ORDER BY start_date, title").all(version.id) as Omit<DraftEvent, "courseIds">[];
   const getEventCourses = sqlite.prepare("SELECT course_snapshot_id AS courseId FROM published_event_courses WHERE event_id = ?");
   return { id: blockPlanId, name: version.name, area: version.area, year: Number(courses[0]?.studyStart.slice(0, 4)), courses, phases, events: eventRows.map((event) => ({ ...event, provisional: Boolean(event.provisional), courseIds: (getEventCourses.all(event.id) as { courseId: string }[]).map((row) => row.courseId) })) };
 }

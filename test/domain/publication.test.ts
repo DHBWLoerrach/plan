@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildSemesterMatrix,
+  deriveEventSemester,
   getPublicationState,
   validatePublication,
   type DraftCourse,
@@ -59,6 +60,7 @@ describe("validatePublication", () => {
           {
             id: "event-1",
             title: "Prüfung",
+            description: null,
             category: "EXAM",
             startDate: "2027-04-01",
             endDate: null,
@@ -87,7 +89,7 @@ describe("validatePublication", () => {
       validatePublication({
         courses,
         phases: completePhases,
-        events: [{ id: "event-1", title: "Prüfung", category: "EXAM", startDate: "2027-03-30", endDate: null, provisional: false, courseIds: [] }],
+        events: [{ id: "event-1", title: "Prüfung", description: null, category: "EXAM", startDate: "2027-03-30", endDate: null, provisional: false, courseIds: [] }],
       }),
     ).toContainEqual(expect.objectContaining({ eventId: "event-1", code: "event-without-course" }));
   });
@@ -107,6 +109,23 @@ describe("buildSemesterMatrix", () => {
         cells: ["Theorie", "Theorie"],
       },
     ]);
+  });
+});
+
+describe("deriveEventSemester", () => {
+  it("derives the semester per course from the phase covering the start day", () => {
+    // Course B has two phases in semester 1, so the covering phase decides — not the first phase of the course.
+    expect(deriveEventSemester(completePhases, "course-a", "2027-01-05")).toBe(2);
+    expect(deriveEventSemester(completePhases, "course-b", "2026-12-15")).toBe(1);
+  });
+
+  it("derives the semester of the start day for an event spanning a semester change", () => {
+    expect(deriveEventSemester(completePhases, "course-a", "2026-12-28")).toBe(1);
+  });
+
+  it("reports no semester while the draft has no phase covering the start day", () => {
+    expect(deriveEventSemester(completePhases, "course-a", "2027-12-01")).toBeNull();
+    expect(deriveEventSemester([], "course-a", "2026-10-05")).toBeNull();
   });
 });
 

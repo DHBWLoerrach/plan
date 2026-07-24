@@ -3,15 +3,35 @@ import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 
 import { AttachCourseForm, DeleteBlockPlanForm, DetachCourseForm, RenameBlockPlanForm } from "@/components/block-plan-forms";
+import { CreateEventForm, EventEditor } from "@/components/event-forms";
 import { SiteShell } from "@/components/site-shell";
 import { sqlite } from "@/lib/db";
 import { blockPlanDisplayName } from "@/lib/domain/block-plan-name";
+import { eventCategoryLabel } from "@/lib/domain/event-category";
+import { type DraftEvent, deriveEventSemester } from "@/lib/domain/publication";
 import { getActiveAccount } from "@/lib/internal-auth";
 import { listAttachableCourses, maximumCoursesPerBlockPlan } from "@/lib/services/block-plan-admin";
 
-import { blockPlanCourses, publicationStateLabel } from "../data";
+import { type PlanPhase, blockPlanCourses, blockPlanDraftEvents, blockPlanDraftPhases, publicationStateLabel } from "../data";
 import { searchParam } from "../../kurse/data";
 import { publishAction, withdrawAction } from "../../actions";
+
+/** Without an end date an event denotes exactly its start day, otherwise the inclusive range (FACHLICHE_REGELN.md). */
+function eventPeriod(event: DraftEvent): string {
+  return event.endDate ? `${event.startDate} – ${event.endDate}` : event.startDate;
+}
+
+/**
+ * Names the semester derived from the course phases for every affected course. In an incomplete draft a phase covering
+ * the start day may be missing; the working view then says so instead of hiding the gap.
+ */
+function affectedCourseLabels(event: DraftEvent, phases: PlanPhase[], courseCodes: Map<string, string>): string[] {
+  return event.courseIds.map((courseId) => {
+    const semester = deriveEventSemester(phases, courseId, event.startDate);
+    const code = courseCodes.get(courseId) ?? courseId;
+    return semester ? `${code} (Semester ${semester})` : `${code} (Semester noch nicht ableitbar — für den Starttag fehlt eine Kursphase)`;
+  });
+}
 
 export default async function InternalBlockPlanPage({ params, searchParams }: PageProps<"/intern/blockplaene/[blockPlanId]">) {
   await connection();
@@ -29,15 +49,17 @@ export default async function InternalBlockPlanPage({ params, searchParams }: Pa
   if (!plan) notFound();
   if (!account.systemAdmin && !account.areaIds.includes(plan.areaId)) notFound();
 
-  const created = searchParam(await searchParams, "angelegt") === "1";
+  const query = await searchParams;
+  const created = searchParam(query, "angelegt") === "1";
+  const eventDeleted = searchParam(query, "termin-geloescht") === "1";
   const courses = blockPlanCourses(plan.id);
   const displayName = blockPlanDisplayName(plan.name, courses);
   const derivedName = blockPlanDisplayName(null, courses);
   const publicationState = publicationStateLabel({ hasEverBeenPublished: Boolean(plan.hasEverBeenPublished), publishedVersionId: plan.versionId });
   const attachable = courses.length < maximumCoursesPerBlockPlan ? listAttachableCourses(sqlite, plan.id) : [];
-  const phases = sqlite.prepare(`SELECT phase.semester, phase.phase_type AS type, phase.start_date AS startDate, phase.end_date AS endDate, course.code
-    FROM draft_phases phase JOIN courses course ON course.id = phase.course_id WHERE phase.block_plan_id = ? ORDER BY phase.semester, phase.start_date`).all(plan.id) as
-    { semester: number; type: string; startDate: string; endDate: string; code: string }[];
+  const phases = blockPlanDraftPhases(plan.id);
+  const events = blockPlanDraftEvents(plan.id);
+  const courseCodes = new Map(courses.map((course) => [course.id, course.code]));
 
   return <SiteShell><article className="plan-detail">
     <p className="eyebrow">Interner Entwurf</p>
@@ -85,6 +107,29 @@ export default async function InternalBlockPlanPage({ params, searchParams }: Pa
           </tr>)}</tbody>
         </table>
         : <p className="empty-note">Noch keine Kursphasen gespeichert. Ein Entwurf kann erst nach vollständiger Verlaufserfassung veröffentlicht werden.</p>}
+    </section>
+
+    <section aria-labelledby="events-heading">
+      <h2 id="events-heading">Prüfungsrelevante Termine</h2>
+      {eventDeleted ? <p role="status">Der Termin wurde aus dem Entwurf gelöscht.</p> : null}
+      {events.length
+        ? <>
+          <div className="matrix-wrap" tabIndex={0}>
+            <table className="event-table">
+              <thead><tr><th scope="col">Zeitangabe</th><th scope="col">Kategorie</th><th scope="col">Titel</th><th scope="col">Betroffene Kurse und Semester</th></tr></thead>
+              <tbody>{events.map((event) => <tr key={event.id}>
+                <td>{eventPeriod(event)}{event.provisional ? <span className="provisional">Vorläufig</span> : null}</td>
+                <td>{eventCategoryLabel(event.category)}</td>
+                <td><strong>{event.title}</strong>{event.description ? <p>{event.description}</p> : null}</td>
+                <td>{affectedCourseLabels(event, phases, courseCodes).join(", ")}</td>
+              </tr>)}</tbody>
+            </table>
+          </div>
+          {events.map((event) => <EventEditor key={event.id} blockPlanId={plan.id} courses={courses} event={event} />)}
+        </>
+        : <p className="empty-note">Noch keine prüfungsrelevanten Termine im Entwurf.</p>}
+      <h3>Neuen Termin anlegen</h3>
+      <CreateEventForm blockPlanId={plan.id} courses={courses} />
     </section>
 
     <section aria-labelledby="publication-heading">
