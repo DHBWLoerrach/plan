@@ -69,6 +69,28 @@ describe("validatePublication", () => {
       }),
     ).toContainEqual(expect.objectContaining({ eventId: "event-1", code: "event-outside-study-period" }));
   });
+
+  it("rejects a semester that is split by a later semester", () => {
+    const phases: DraftPhase[] = [
+      { courseId: "course-a", semester: 1, type: "THEORY", startDate: "2026-10-01", endDate: "2026-10-31" },
+      { courseId: "course-a", semester: 2, type: "PRACTICE", startDate: "2026-11-01", endDate: "2026-11-30" },
+      { courseId: "course-a", semester: 1, type: "THEORY", startDate: "2026-12-01", endDate: "2027-03-31" },
+    ];
+
+    expect(validatePublication({ courses: [courses[0]], phases, events: [] })).toContainEqual(
+      expect.objectContaining({ courseId: "course-a", code: "semester-not-monotonic" }),
+    );
+  });
+
+  it("rejects an event without an affected course", () => {
+    expect(
+      validatePublication({
+        courses,
+        phases: completePhases,
+        events: [{ id: "event-1", title: "Prüfung", category: "EXAM", startDate: "2027-03-30", endDate: null, provisional: false, courseIds: [] }],
+      }),
+    ).toContainEqual(expect.objectContaining({ eventId: "event-1", code: "event-without-course" }));
+  });
 });
 
 describe("buildSemesterMatrix", () => {

@@ -1,21 +1,22 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 
 import { PlanMatrix } from "@/components/plan-matrix";
 import { SiteShell } from "@/components/site-shell";
 import { getPublicPlan } from "@/lib/public-data";
 
-export const dynamic = "force-dynamic";
-
 type DynamicProps = { params: Promise<{ blockPlanId: string }> };
 
 export async function generateMetadata({ params }: DynamicProps): Promise<Metadata> {
+  await connection();
   const { blockPlanId } = await params;
   const plan = getPublicPlan(blockPlanId);
   return plan ? { title: `${plan.name} | DHBW Lörrach Blockpläne`, description: `Veröffentlichter Blockplan ${plan.name}` } : {};
 }
 
 export default async function BlockPlanPage({ params }: DynamicProps) {
+  await connection();
   const { blockPlanId } = await params;
   const plan = getPublicPlan(blockPlanId);
   if (!plan) notFound();

@@ -1,9 +1,8 @@
 import Link from "next/link";
+import { connection } from "next/server";
 
 import { SiteShell } from "@/components/site-shell";
 import { getFilterOptions, listPublicPlans, type PublicFilters } from "@/lib/public-data";
-
-export const dynamic = "force-dynamic";
 
 function value(searchParams: Record<string, string | string[] | undefined>, key: keyof PublicFilters) {
   const candidate = searchParams[key];
@@ -21,6 +20,7 @@ function pageUrl(filters: PublicFilters, page: number) {
 }
 
 export default async function Home({ searchParams }: PageProps<"/">) {
+  await connection();
   const rawSearchParams = await searchParams;
   const filters: PublicFilters = { area: value(rawSearchParams, "area"), program: value(rawSearchParams, "program"), year: value(rawSearchParams, "year"), course: value(rawSearchParams, "course"), page: value(rawSearchParams, "page") };
   const [options, result] = [getFilterOptions(), listPublicPlans(filters)];

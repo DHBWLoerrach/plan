@@ -1,3 +1,7 @@
+"use client";
+
+import { useState } from "react";
+
 import { buildSemesterMatrix, type DraftCourse, type DraftEvent, type DraftPhase } from "@/lib/domain/publication";
 
 function formatPeriod(startDate: string, endDate: string) {
@@ -8,15 +12,25 @@ function formatPeriod(startDate: string, endDate: string) {
 }
 
 export function PlanMatrix({ courses, phases, events }: { courses: DraftCourse[]; phases: DraftPhase[]; events: DraftEvent[] }) {
-  const semesters = Math.max(...courses.map((course) => course.semesters), 0);
+  const [visibleCourseIds, setVisibleCourseIds] = useState(() => new Set(courses.map((course) => course.id)));
+  const visibleCourses = courses.filter((course) => visibleCourseIds.has(course.id));
+  const semesters = Math.max(...visibleCourses.map((course) => course.semesters), 0);
   const courseCodes = new Map(courses.map((course) => [course.id, course.code]));
   return <>
     <section aria-labelledby="matrix-heading"><div className="section-heading"><p className="eyebrow">Studienverlauf</p><h2 id="matrix-heading">Planmatrix</h2><p>Alle Angaben sind kalendergenau und vergleichbar dargestellt.</p></div>
+      <fieldset className="course-selector"><legend>Sichtbare Kurse in der Planmatrix</legend><p>Sie können Spalten ausblenden. Die Auswahl verändert keine Planinhalte.</p>{courses.map((course) => <label key={course.id}><input type="checkbox" checked={visibleCourseIds.has(course.id)} onChange={() => setVisibleCourseIds((current) => {
+        const next = new Set(current);
+        if (next.has(course.id)) {
+          if (next.size > 1) next.delete(course.id);
+        } else next.add(course.id);
+        return next;
+      })} /> {course.code}</label>)}</fieldset>
+      <p className="sr-only" aria-live="polite">{visibleCourses.length} von {courses.length} Kursen sind in der Planmatrix sichtbar.</p>
       {Array.from({ length: semesters }, (_, index) => index + 1).map((semester) => {
-        const rows = buildSemesterMatrix(courses, phases, semester);
+        const rows = buildSemesterMatrix(visibleCourses, phases, semester);
         return <div className="matrix-wrap" key={semester} tabIndex={0}>
-          <table className="matrix"><caption>Semester {semester}</caption><thead><tr><th scope="col">Zeitraum</th>{courses.map((course) => <th key={course.id} scope="col">{course.code}</th>)}</tr></thead>
-            <tbody>{rows.length ? rows.map((row) => <tr key={row.startDate}><th scope="row">{formatPeriod(row.startDate, row.endDate)}</th>{row.cells.map((cell, index) => <td key={courses[index].id} data-phase={cell === "Theorie" ? "theory" : cell === "Praxis" ? "practice" : "none"}>{cell}</td>)}</tr>) : <tr><th scope="row">–</th>{courses.map((course) => <td key={course.id}>Nicht in diesem Semester</td>)}</tr>}</tbody>
+          <table className="matrix"><caption>Semester {semester}</caption><thead><tr><th scope="col">Zeitraum</th>{visibleCourses.map((course) => <th key={course.id} scope="col">{course.code}</th>)}</tr></thead>
+            <tbody>{rows.length ? rows.map((row) => <tr key={row.startDate}><th scope="row">{formatPeriod(row.startDate, row.endDate)}</th>{row.cells.map((cell, index) => <td key={visibleCourses[index].id} data-phase={cell === "Theorie" ? "theory" : cell === "Praxis" ? "practice" : "none"}>{cell}</td>)}</tr>) : <tr><th scope="row">–</th>{visibleCourses.map((course) => <td key={course.id}>Nicht in diesem Semester</td>)}</tr>}</tbody>
           </table>
         </div>;
       })}

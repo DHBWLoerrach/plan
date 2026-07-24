@@ -36,7 +36,8 @@ export interface PublicationIssue {
     | "semester-not-monotonic"
     | "semester-not-contiguous"
     | "event-outside-study-period"
-    | "event-semester-not-derivable";
+    | "event-semester-not-derivable"
+    | "event-without-course";
   courseId?: string;
   eventId?: string;
   message: string;
@@ -151,6 +152,14 @@ export function validatePublication({
 
   const coursesById = new Map(courses.map((course) => [course.id, course]));
   for (const event of events) {
+    if (event.courseIds.length === 0) {
+      issues.push({
+        code: "event-without-course",
+        eventId: event.id,
+        message: `Der Termin „${event.title}“ benötigt mindestens einen betroffenen Kurs.`,
+      });
+      continue;
+    }
     for (const courseId of event.courseIds) {
       const course = coursesById.get(courseId);
       const coursePhases = phases.filter((phase) => phase.courseId === courseId);

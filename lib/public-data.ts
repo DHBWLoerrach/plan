@@ -13,6 +13,12 @@ export function berlinToday() {
 
 function toIsoDate(parts: Record<string, string>) { return `${parts.year}-${parts.month}-${parts.day}`; }
 
+function planGroup(plan: PublicPlan, today: string): "current" | "future" | "past" {
+  if (plan.courses.every((course) => course.studyStart > today)) return "future";
+  if (plan.courses.every((course) => course.studyEnd < today)) return "past";
+  return "current";
+}
+
 function getPlanCourses(versionId: string): PublicPlan["courses"] {
   return sqlite.prepare(`SELECT code, program_name AS program, study_start AS studyStart, study_end AS studyEnd FROM published_course_snapshots WHERE version_id = ? ORDER BY code COLLATE NOCASE`).all(versionId) as PublicPlan["courses"];
 }
@@ -34,11 +40,7 @@ export function listPublicPlans(filters: PublicFilters) {
     .filter((plan) => !filters.course || plan.courses.some((course) => course.code.toLocaleLowerCase("de-DE").startsWith(filters.course!.toLocaleLowerCase("de-DE"))));
   const today = toIsoDate(berlinToday());
   const groups: Record<"current" | "future" | "past", PublicPlan[]> = { current: [], future: [], past: [] };
-  for (const plan of plans) {
-    const future = plan.courses.every((course) => course.studyStart > today);
-    const past = plan.courses.every((course) => course.studyEnd < today);
-    groups[future ? "future" : past ? "past" : "current"].push(plan);
-  }
+  for (const plan of plans) groups[planGroup(plan, today)].push(plan);
   groups.current.sort((a, b) => b.year - a.year || a.name.localeCompare(b.name, "de") || a.id.localeCompare(b.id));
   groups.future.sort((a, b) => a.year - b.year || a.name.localeCompare(b.name, "de") || a.id.localeCompare(b.id));
   groups.past.sort((a, b) => b.year - a.year || a.name.localeCompare(b.name, "de") || a.id.localeCompare(b.id));
@@ -47,11 +49,7 @@ export function listPublicPlans(filters: PublicFilters) {
   const page = Math.min(Math.max(Number(filters.page) || 1, 1), pages);
   const visiblePlans = all.slice((page - 1) * 25, page * 25);
   const visibleGroups: typeof groups = { current: [], future: [], past: [] };
-  for (const plan of visiblePlans) {
-    const future = plan.courses.every((course) => course.studyStart > today);
-    const past = plan.courses.every((course) => course.studyEnd < today);
-    visibleGroups[future ? "future" : past ? "past" : "current"].push(plan);
-  }
+  for (const plan of visiblePlans) visibleGroups[planGroup(plan, today)].push(plan);
   return { groups: visibleGroups, total: all.length, page, pages };
 }
 
@@ -59,8 +57,8 @@ export function getPublicPlan(blockPlanId: string): (PublicPlan & { courses: (Dr
   const version = sqlite.prepare("SELECT id, block_plan_name AS name, area_name AS area FROM published_versions WHERE block_plan_id = ?").get(blockPlanId) as { id: string; name: string; area: string } | undefined;
   if (!version) return null;
   const courses = sqlite.prepare(`SELECT id, code, study_start AS studyStart, study_end AS studyEnd, semesters, program_name AS program FROM published_course_snapshots WHERE version_id = ? ORDER BY code COLLATE NOCASE`).all(version.id) as (DraftCourse & { program: string })[];
-  const phases = sqlite.prepare(`SELECT snapshot.source_course_id AS courseId, phase.semester, phase.phase_type AS type, phase.start_date AS startDate, phase.end_date AS endDate FROM published_phases phase JOIN published_course_snapshots snapshot ON snapshot.id = phase.course_snapshot_id WHERE phase.version_id = ?`).all(version.id) as DraftPhase[];
+  const phases = sqlite.prepare("SELECT course_snapshot_id AS courseId, semester, phase_type AS type, start_date AS startDate, end_date AS endDate FROM published_phases WHERE version_id = ?").all(version.id) as DraftPhase[];
   const eventRows = sqlite.prepare("SELECT id, title, category, start_date AS startDate, end_date AS endDate, provisional FROM published_events WHERE version_id = ? ORDER BY start_date, title").all(version.id) as Omit<DraftEvent, "courseIds">[];
-  const getEventCourses = sqlite.prepare("SELECT source_course_id FROM published_event_courses JOIN published_course_snapshots ON id = course_snapshot_id WHERE event_id = ?");
-  return { id: blockPlanId, name: version.name, area: version.area, year: Number(courses[0]?.studyStart.slice(0, 4)), courses, phases, events: eventRows.map((event) => ({ ...event, provisional: Boolean(event.provisional), courseIds: (getEventCourses.all(event.id) as { source_course_id: string }[]).map((row) => row.source_course_id) })) };
+  const getEventCourses = sqlite.prepare("SELECT course_snapshot_id AS courseId FROM published_event_courses WHERE event_id = ?");
+  return { id: blockPlanId, name: version.name, area: version.area, year: Number(courses[0]?.studyStart.slice(0, 4)), courses, phases, events: eventRows.map((event) => ({ ...event, provisional: Boolean(event.provisional), courseIds: (getEventCourses.all(event.id) as { courseId: string }[]).map((row) => row.courseId) })) };
 }
