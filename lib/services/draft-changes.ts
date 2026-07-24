@@ -1,5 +1,27 @@
 import type Database from "better-sqlite3";
 
+import { FieldError } from "@/lib/domain/field-error";
+
+/**
+ * The courses a draft entry applies to: at least one, each of them assigned to this block plan and counted once
+ * (FACHLICHE_REGELN.md). Course phases and examination-relevant events share the rule but word it differently.
+ */
+export function requireCoursesOfBlockPlan(sqlite: Database.Database, input: {
+  blockPlanId: string;
+  courseIds: string[];
+  field: string;
+  emptyMessage: string;
+  foreignMessage: string;
+}): string[] {
+  const courseIds = [...new Set(input.courseIds.map((courseId) => courseId.trim()).filter(Boolean))];
+  if (!courseIds.length) throw new FieldError(input.field, input.emptyMessage);
+  const isAssigned = sqlite.prepare("SELECT 1 FROM courses WHERE id = ? AND block_plan_id = ?");
+  for (const courseId of courseIds) {
+    if (!isAssigned.get(courseId, input.blockPlanId)) throw new FieldError(input.field, input.foreignMessage);
+  }
+  return courseIds;
+}
+
 /**
  * Removes everything a course contributes to a draft: its course phases and its links to examination-relevant events
  * (FACHLICHE_REGELN.md). A remaining event must still affect at least one course, so an event that would be left

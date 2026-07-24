@@ -155,9 +155,14 @@ p[role="status"] { margin: 0; color: var(--success); }
 .account-check { font-weight: 700; }
 .account-fieldset p { margin: 0; color: var(--gray); font-size: .9rem; }
 
-.event-editor { max-width: 38rem; margin-top: 1.5rem; padding: 1rem 1.1rem; border: 1px solid var(--line); border-left: 4px solid var(--red); background: #fff; }
-.event-editor h3 { margin: 0; font-size: 1.1rem; font-weight: 700; }
-.event-editor > p { margin: .35rem 0 .9rem; color: var(--gray); font-size: .92rem; }
+.semester-nav { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: .75rem; margin: 1.5rem 0 0; padding: 0; list-style: none; }
+.semester-nav li { display: grid; gap: .3rem; padding: .8rem .9rem; background: #fff; border: 1px solid var(--line); }
+.semester-nav li:has([aria-current]) { border-left: 4px solid var(--red); }
+.semester-nav span { color: var(--gray); font-size: .88rem; }
+
+.editor-card { max-width: 38rem; margin-top: 1.5rem; padding: 1rem 1.1rem; border: 1px solid var(--line); border-left: 4px solid var(--red); background: #fff; }
+.editor-card h3, .editor-card h4 { margin: 0; font-size: 1.1rem; font-weight: 700; }
+.editor-card > p { margin: .35rem 0 .9rem; color: var(--gray); font-size: .92rem; }
 
 .confirm-region { display: grid; gap: .6rem; padding: 1rem 1.1rem; border: 1px solid var(--warning-border); border-left-width: 4px; background: var(--warning-bg); }
 .confirm-region p { margin: 0; }

@@ -2,20 +2,13 @@ import { randomUUID } from "node:crypto";
 
 import type Database from "better-sqlite3";
 
-import { normalizeCalendarDay } from "@/lib/domain/calendar-day";
+import { normalizeCalendarDayField } from "@/lib/domain/calendar-day";
 import { type EventCategory, isEventCategory } from "@/lib/domain/event-category";
+import { FieldError } from "@/lib/domain/field-error";
 import { assertAreaEditPermission } from "@/lib/services/authorization";
-import { touchDraft } from "@/lib/services/draft-changes";
+import { requireCoursesOfBlockPlan, touchDraft } from "@/lib/services/draft-changes";
 
 export type EventField = "title" | "description" | "category" | "startDate" | "endDate" | "courseIds";
-
-/** A rejected value together with the field it belongs to, so the editor can point at the field (BARRIEREFREIHEIT.md). */
-export class EventFieldError extends Error {
-  constructor(readonly field: EventField, message: string) {
-    super(message);
-    this.name = "EventFieldError";
-  }
-}
 
 export type EventInput = {
   title: string;
@@ -47,12 +40,12 @@ export function createDraftEvent(sqlite: Database.Database, input: { accountId: 
   return sqlite.transaction(() => {
     const plan = requirePlan(sqlite, input.blockPlanId);
     assertAreaEditPermission(sqlite, input.accountId, plan.areaId);
-    assertCoursesOfBlockPlan(sqlite, plan.id, event.courseIds);
+    const courseIds = affectedCourses(sqlite, plan.id, event.courseIds);
     const id = randomUUID();
     sqlite.prepare(`INSERT INTO draft_events (id, block_plan_id, title, description, category, start_date, end_date, provisional)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(id, input.blockPlanId, event.title, event.description, event.category, event.startDate, event.endDate, event.provisional ? 1 : 0);
     const addCourse = sqlite.prepare("INSERT INTO draft_event_courses (event_id, course_id) VALUES (?, ?)");
-    for (const courseId of event.courseIds) addCourse.run(id, courseId);
+    for (const courseId of courseIds) addCourse.run(id, courseId);
     touchDraft(sqlite, input.blockPlanId, input.accountId, now);
     return id;
   })();
@@ -65,12 +58,12 @@ export function updateDraftEvent(sqlite: Database.Database, input: { accountId: 
   sqlite.transaction(() => {
     const plan = requirePlanOfEvent(sqlite, input.eventId);
     assertAreaEditPermission(sqlite, input.accountId, plan.areaId);
-    assertCoursesOfBlockPlan(sqlite, plan.id, event.courseIds);
+    const courseIds = affectedCourses(sqlite, plan.id, event.courseIds);
     sqlite.prepare("UPDATE draft_events SET title = ?, description = ?, category = ?, start_date = ?, end_date = ?, provisional = ? WHERE id = ?")
       .run(event.title, event.description, event.category, event.startDate, event.endDate, event.provisional ? 1 : 0, input.eventId);
     sqlite.prepare("DELETE FROM draft_event_courses WHERE event_id = ?").run(input.eventId);
     const addCourse = sqlite.prepare("INSERT INTO draft_event_courses (event_id, course_id) VALUES (?, ?)");
-    for (const courseId of event.courseIds) addCourse.run(input.eventId, courseId);
+    for (const courseId of courseIds) addCourse.run(input.eventId, courseId);
     touchDraft(sqlite, plan.id, input.accountId, now);
   })();
 }
@@ -99,30 +92,29 @@ function requirePlanOfEvent(sqlite: Database.Database, eventId: string): { id: s
   return plan;
 }
 
-/** An event affects at least one course, and every affected course belongs to the same block plan (FACHLICHE_REGELN.md). */
-function assertCoursesOfBlockPlan(sqlite: Database.Database, blockPlanId: string, courseIds: string[]): void {
-  const isAssigned = sqlite.prepare("SELECT 1 FROM courses WHERE id = ? AND block_plan_id = ?");
-  for (const courseId of courseIds) {
-    if (!isAssigned.get(courseId, blockPlanId)) throw new EventFieldError("courseIds", "Ein betroffener Kurs gehört nicht zu diesem Blockplan.");
-  }
+function affectedCourses(sqlite: Database.Database, blockPlanId: string, courseIds: string[]): string[] {
+  return requireCoursesOfBlockPlan(sqlite, {
+    blockPlanId,
+    courseIds,
+    field: "courseIds" satisfies EventField,
+    emptyMessage: "Ein Termin betrifft mindestens einen Kurs.",
+    foreignMessage: "Ein betroffener Kurs gehört nicht zu diesem Blockplan.",
+  });
 }
 
 function normalizeEventInput(input: EventInput): NormalizedEvent {
   // The title is a human designation: trimmed with interior whitespace collapsed (FACHLICHE_REGELN.md).
   const title = input.title.trim().replace(/\s+/gu, " ");
-  if (!title) throw new EventFieldError("title", "Der Termintitel ist erforderlich.");
-  if ([...title].length > maximumTitleLength) throw new EventFieldError("title", `Der Termintitel darf höchstens ${maximumTitleLength} Zeichen lang sein.`);
+  if (!title) throw new FieldError("title", "Der Termintitel ist erforderlich.");
+  if ([...title].length > maximumTitleLength) throw new FieldError("title", `Der Termintitel darf höchstens ${maximumTitleLength} Zeichen lang sein.`);
   const description = input.description.trim();
   if ([...description].length > maximumDescriptionLength) {
-    throw new EventFieldError("description", `Die Terminbeschreibung darf höchstens ${maximumDescriptionLength} Zeichen lang sein.`);
+    throw new FieldError("description", `Die Terminbeschreibung darf höchstens ${maximumDescriptionLength} Zeichen lang sein.`);
   }
-  if (!isEventCategory(input.category)) throw new EventFieldError("category", "Die Kategorie des Termins ist ungültig.");
-  const startDate = normalizeDay(input.startDate, "startDate", "Das Startdatum");
-  const endDate = input.endDate.trim() ? normalizeDay(input.endDate, "endDate", "Das Enddatum") : null;
-  if (endDate && endDate < startDate) throw new EventFieldError("endDate", "Das Enddatum darf nicht vor dem Startdatum liegen.");
-  // The same course occurs at most once in the scope of an event, so a repeated selection collapses to one entry.
-  const courseIds = [...new Set(input.courseIds.map((courseId) => courseId.trim()).filter(Boolean))];
-  if (!courseIds.length) throw new EventFieldError("courseIds", "Ein Termin betrifft mindestens einen Kurs.");
+  if (!isEventCategory(input.category)) throw new FieldError("category", "Die Kategorie des Termins ist ungültig.");
+  const startDate = normalizeCalendarDayField(input.startDate, "startDate", "Das Startdatum");
+  const endDate = input.endDate.trim() ? normalizeCalendarDayField(input.endDate, "endDate", "Das Enddatum") : null;
+  if (endDate && endDate < startDate) throw new FieldError("endDate", "Das Enddatum darf nicht vor dem Startdatum liegen.");
   return {
     title,
     description: description || null,
@@ -130,14 +122,6 @@ function normalizeEventInput(input: EventInput): NormalizedEvent {
     startDate,
     endDate,
     provisional: input.provisional,
-    courseIds,
+    courseIds: input.courseIds,
   };
-}
-
-function normalizeDay(value: string, field: EventField, label: string): string {
-  try {
-    return normalizeCalendarDay(value, label);
-  } catch (error) {
-    throw new EventFieldError(field, error instanceof Error ? error.message : `${label} ist kein gültiger Kalendertag.`);
-  }
 }

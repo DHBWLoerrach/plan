@@ -1,6 +1,5 @@
 import type { EventCategory } from "@/lib/domain/event-category";
-
-export type PhaseType = "THEORY" | "PRACTICE";
+import { type PhaseType, phaseTypeLabel } from "@/lib/domain/phase-type";
 
 export interface DraftCourse {
   id: string;
@@ -56,10 +55,6 @@ function plusDays(isoDate: string, days: number): string {
   const date = new Date(`${isoDate}T00:00:00Z`);
   date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString().slice(0, 10);
-}
-
-function phaseLabel(type: PhaseType): string {
-  return type === "THEORY" ? "Theorie" : "Praxis";
 }
 
 /**
@@ -212,7 +207,7 @@ export function buildSemesterMatrix(courses: DraftCourse[], phases: DraftPhase[]
       const phase = semesterPhases.find(
         (candidate) => candidate.courseId === course.id && candidate.startDate <= startDate && candidate.endDate >= endDate,
       );
-      return phase ? phaseLabel(phase.type) : "Nicht in diesem Semester";
+      return phase ? phaseTypeLabel(phase.type) : "Nicht in diesem Semester";
     });
     const previous = rows.at(-1);
     if (previous && previous.cells.every((cell, cellIndex) => cell === cells[cellIndex])) {

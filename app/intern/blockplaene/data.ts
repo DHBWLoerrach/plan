@@ -4,23 +4,24 @@ import { sqlite } from "@/lib/db";
 import { blockPlanDisplayName } from "@/lib/domain/block-plan-name";
 import type { DraftEvent, DraftPhase } from "@/lib/domain/publication";
 
-export type PlanCourse = { id: string; code: string; program: string; studyStart: string; studyEnd: string };
+export type PlanCourse = { id: string; code: string; program: string; semesters: number; studyStart: string; studyEnd: string };
 export type PlanSummary = { displayName: string; courseCodes: string[] };
-export type PlanPhase = DraftPhase & { code: string };
+export type PlanPhase = DraftPhase & { id: string; code: string };
 
 /** The courses currently assigned to a block plan, in the order used for display and for the derived name. */
 export function blockPlanCourses(blockPlanId: string): PlanCourse[] {
-  return sqlite.prepare(`SELECT course.id, course.code, program.name AS program, course.study_start AS studyStart, course.study_end AS studyEnd
+  return sqlite.prepare(`SELECT course.id, course.code, program.name AS program, program.semesters,
+      course.study_start AS studyStart, course.study_end AS studyEnd
     FROM courses course JOIN programs program ON program.id = course.program_id
     WHERE course.block_plan_id = ? ORDER BY course.code COLLATE NOCASE`).all(blockPlanId) as PlanCourse[];
 }
 
-/** The saved course phases of a draft, ordered as the working view lists them. */
+/** The saved course phases of a draft, ordered as the semester editor lists them. */
 export function blockPlanDraftPhases(blockPlanId: string): PlanPhase[] {
-  return sqlite.prepare(`SELECT phase.course_id AS courseId, phase.semester, phase.phase_type AS type,
+  return sqlite.prepare(`SELECT phase.id, phase.course_id AS courseId, phase.semester, phase.phase_type AS type,
       phase.start_date AS startDate, phase.end_date AS endDate, course.code
     FROM draft_phases phase JOIN courses course ON course.id = phase.course_id
-    WHERE phase.block_plan_id = ? ORDER BY phase.semester, phase.start_date`).all(blockPlanId) as PlanPhase[];
+    WHERE phase.block_plan_id = ? ORDER BY phase.semester, phase.start_date, course.code COLLATE NOCASE`).all(blockPlanId) as PlanPhase[];
 }
 
 /** The examination-relevant events of a draft in chronological order, each with the courses it affects. */

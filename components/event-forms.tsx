@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState, useId, useState } from "react";
+import { useActionState, useId } from "react";
 
 import { type BlockPlanFormState, type EventFormState, createEventAction, deleteEventAction, updateEventAction } from "@/app/intern/blockplaene/actions";
+import { CollapsibleEditor, ConfirmDeleteForm } from "@/components/editor-controls";
 import { eventCategories } from "@/lib/domain/event-category";
 import type { DraftEvent } from "@/lib/domain/publication";
 import type { EventField } from "@/lib/services/event-admin";
@@ -70,32 +71,19 @@ function EditEventForm({ blockPlanId, courses, event }: { blockPlanId: string; c
 
 function DeleteEventForm({ blockPlanId, event }: { blockPlanId: string; event: DraftEvent }) {
   const [state, formAction, isPending] = useActionState<BlockPlanFormState, FormData>(deleteEventAction, {});
-  const [confirming, setConfirming] = useState(false);
-  return <form action={formAction} className="account-form">
+  return <ConfirmDeleteForm action={formAction} error={state.error} isPending={isPending}
+    openLabel="Termin löschen"
+    confirmLabel="Endgültig löschen"
+    heading={`Termin „${event.title}“ löschen`}
+    consequence="Der Termin wird mit seinen Kurszuordnungen dauerhaft aus dem Entwurf entfernt. Die veröffentlichte Fassung bleibt bis zur nächsten Veröffentlichung unverändert.">
     <input type="hidden" name="blockPlanId" value={blockPlanId} />
     <input type="hidden" name="eventId" value={event.id} />
-    {state.error ? <p role="alert">{state.error}</p> : null}
-    {confirming ? <div className="confirm-region" role="group" aria-label={`Termin „${event.title}“ löschen bestätigen`}>
-      <p><strong>Termin „{event.title}“ löschen</strong></p>
-      <p>Der Termin wird mit seinen Kurszuordnungen dauerhaft aus dem Entwurf entfernt. Die veröffentlichte Fassung bleibt bis zur nächsten Veröffentlichung unverändert.</p>
-      <button className="button button--danger" type="submit" disabled={isPending}>{isPending ? "Wird gelöscht …" : "Endgültig löschen"}</button>
-      <button className="button button--ghost" type="button" onClick={() => setConfirming(false)}>Abbrechen</button>
-    </div> : <button className="button button--danger" type="button" onClick={() => setConfirming(true)}>Termin löschen</button>}
-  </form>;
+  </ConfirmDeleteForm>;
 }
 
-/** One saved event with its editing controls, collapsed until the editing is deliberately opened. */
 export function EventEditor({ blockPlanId, courses, event }: { blockPlanId: string; courses: EventCourse[]; event: DraftEvent }) {
-  const [open, setOpen] = useState(false);
-  const regionId = useId();
-  return <div className="event-editor">
-    <h3>{event.title}</h3>
-    <button className="button button--ghost" type="button" aria-expanded={open} aria-controls={regionId} onClick={() => setOpen(!open)}>
-      {open ? `Bearbeitung von „${event.title}“ schließen` : `Termin „${event.title}“ bearbeiten`}
-    </button>
-    <div id={regionId} hidden={!open}>
-      <EditEventForm blockPlanId={blockPlanId} courses={courses} event={event} />
-      <DeleteEventForm blockPlanId={blockPlanId} event={event} />
-    </div>
-  </div>;
+  return <CollapsibleEditor heading={event.title} openLabel={`Termin „${event.title}“ bearbeiten`} closeLabel={`Bearbeitung von „${event.title}“ schließen`}>
+    <EditEventForm blockPlanId={blockPlanId} courses={courses} event={event} />
+    <DeleteEventForm blockPlanId={blockPlanId} event={event} />
+  </CollapsibleEditor>;
 }

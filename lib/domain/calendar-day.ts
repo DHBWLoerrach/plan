@@ -1,3 +1,5 @@
+import { FieldError } from "@/lib/domain/field-error";
+
 /**
  * Normalizes a calendar day: trimmed and a valid Gregorian day in `YYYY-MM-DD` (FACHLICHE_REGELN.md). Calendar days
  * are timezone-free, so the value is compared against its own UTC round trip instead of being parsed locally.
@@ -8,4 +10,13 @@ export function normalizeCalendarDay(value: string, label: string): string {
   const date = new Date(`${trimmed}T00:00:00Z`);
   if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== trimmed) throw new Error(`${label} ist kein gültiger Kalendertag.`);
   return trimmed;
+}
+
+/** The same normalization for an editor field, so a rejected day names the field it came from. */
+export function normalizeCalendarDayField<TField extends string>(value: string, field: TField, label: string): string {
+  try {
+    return normalizeCalendarDay(value, label);
+  } catch (error) {
+    throw new FieldError(field, error instanceof Error ? error.message : `${label} ist kein gültiger Kalendertag.`);
+  }
 }
