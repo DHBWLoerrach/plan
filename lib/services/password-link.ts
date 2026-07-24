@@ -4,8 +4,20 @@ import type Database from "better-sqlite3";
 
 const minimumPasswordLength = 15;
 const maximumPasswordLength = 128;
-const passwordLinkLifetimeMs = 7 * 24 * 60 * 60 * 1000;
+export const passwordLinkLifetimeMs = 7 * 24 * 60 * 60 * 1000;
 const invalidPasswordLinkMessage = "Der Passwortlink ist ungültig oder abgelaufen.";
+
+/** Replaces any open password link of the account with a fresh, only-hashed one-time link and returns its plain token. */
+export function issuePasswordLinkToken(sqlite: Database.Database, userId: string, now: Date) {
+  const token = randomBytes(32).toString("base64url");
+  const tokenHash = createHash("sha256").update(token).digest("hex");
+  sqlite.prepare("DELETE FROM password_links WHERE user_id = ?").run(userId);
+  sqlite.prepare(`
+    INSERT INTO password_links (id, user_id, token_hash, expires_at, created_at)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(randomUUID(), userId, tokenHash, new Date(now.getTime() + passwordLinkLifetimeMs).toISOString(), now.toISOString());
+  return token;
+}
 
 type PasswordHasher = (password: string) => Promise<string>;
 type PasswordVerifier = (hash: string, password: string) => Promise<boolean>;
@@ -79,6 +91,10 @@ export function unlockAccount(sqlite: Database.Database, userId: string, now = n
   return transitionToPasswordPending(sqlite, userId, ["LOCKED"], now);
 }
 
+export function reissuePasswordLink(sqlite: Database.Database, userId: string, now = new Date()) {
+  return transitionToPasswordPending(sqlite, userId, ["PASSWORD_PENDING"], now);
+}
+
 export function lockAccount(sqlite: Database.Database, userId: string, now = new Date()) {
   sqlite.transaction(() => {
     const user = findUser(sqlite, userId);
@@ -101,21 +117,14 @@ function findPasswordLink(sqlite: Database.Database, tokenHash: string) {
 }
 
 function transitionToPasswordPending(sqlite: Database.Database, userId: string, allowedStatuses: AccountStatus[], now: Date) {
-  const token = randomBytes(32).toString("base64url");
-  const tokenHash = createHash("sha256").update(token).digest("hex");
-  sqlite.transaction(() => {
+  return sqlite.transaction(() => {
     const user = findUser(sqlite, userId);
     if (!user || !allowedStatuses.includes(user.status as AccountStatus)) throw new Error("Das interne Konto kann keinen Passwortlink erhalten.");
     sqlite.prepare("DELETE FROM account WHERE userId = ? AND providerId = 'credential'").run(userId);
     sqlite.prepare("DELETE FROM session WHERE userId = ?").run(userId);
-    sqlite.prepare("DELETE FROM password_links WHERE user_id = ?").run(userId);
     sqlite.prepare("UPDATE user SET status = 'PASSWORD_PENDING', updatedAt = ? WHERE id = ?").run(now.getTime(), userId);
-    sqlite.prepare(`
-      INSERT INTO password_links (id, user_id, token_hash, expires_at, created_at)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(randomUUID(), userId, tokenHash, new Date(now.getTime() + passwordLinkLifetimeMs).toISOString(), now.toISOString());
+    return issuePasswordLinkToken(sqlite, userId, now);
   })();
-  return token;
 }
 
 function findUser(sqlite: Database.Database, userId: string) {
