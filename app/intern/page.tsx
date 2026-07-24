@@ -16,7 +16,7 @@ export default async function InternalHome() {
     ORDER BY plan.draft_updated_at DESC`).all(account.systemAdmin ? 1 : 0, account.id) as { id: string; name: string | null; hasEverBeenPublished: number; versionId: string | null }[];
   return <SiteShell><section className="search-panel" aria-labelledby="internal-heading"><p className="eyebrow">Interner Bereich</p><h1 id="internal-heading">Blockpläne</h1>
     <p>Angemeldet als {account.email}. Änderungen bleiben Entwurf, bis Sie sie bewusst veröffentlichen.</p>
-    <nav aria-label="Interne Navigation"><Link className="text-link" href="/intern/kurse">Kurse verwalten</Link>{account.systemAdmin ? <Link className="text-link" href="/intern/konten">Konten verwalten</Link> : null}</nav>
+    <nav aria-label="Interne Navigation"><Link className="text-link" href="/intern/kurse">Kurse verwalten</Link><Link className="text-link" href="/intern/konto">Eigenes Konto</Link>{account.systemAdmin ? <Link className="text-link" href="/intern/konten">Konten verwalten</Link> : null}</nav>
     {plans.length ? <ul className="internal-list">{plans.map((plan) => <li key={plan.id}><Link href={`/intern/blockplaene/${plan.id}`}>{plan.name ?? "Unbenannter Blockplan"}</Link><span>{plan.versionId ? "Veröffentlicht" : plan.hasEverBeenPublished ? "Zurückgenommen" : "Noch nie veröffentlicht"}</span></li>)}</ul> : <p className="empty-note">Für Ihre Bereiche gibt es noch keine Blockpläne.</p>}
   </section></SiteShell>;
 }

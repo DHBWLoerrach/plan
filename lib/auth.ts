@@ -16,6 +16,7 @@ if (!secret) {
 export const auth = betterAuth({
   secret,
   database: drizzleAdapter(db, { provider: "sqlite", schema }),
+  disabledPaths: ["/change-password", "/request-password-reset", "/reset-password", "/set-password"],
   emailAndPassword: {
     enabled: true,
     disableSignUp: true,
