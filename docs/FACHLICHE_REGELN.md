@@ -71,7 +71,7 @@ Eine Kurszuordnung setzt voraus:
 
 Beim Lösen oder Löschen eines zugeordneten Kurses entfallen seine Kursphasen und seine Zuordnungen zu prüfungsrelevanten Terminen im Entwurf dieses Blockplans. Ein verbleibender Termin muss weiterhin mindestens einen Kurs betreffen; andernfalls wird die Operation unter Nennung der betroffenen Termine abgelehnt. Termine werden nie automatisch gelöscht.
 
-Ein veröffentlichter Kurs bleibt dauerhaft seinem Blockplan zugeordnet, besitzt unveränderliche Kursangaben und muss in jeder späteren Veröffentlichung wieder einen vollständigen Verlauf haben. Die Kursmenge eines einmal veröffentlichten Blockplans kann deshalb nur wachsen. Eine Korrektur dieser Bindung ist im MVP nur durch eine gesonderte, außerhalb der Anwendung manuell dokumentierte Datenmigration möglich.
+Ein veröffentlichter Kurs bleibt dauerhaft als solcher gekennzeichnet, seinem Blockplan zugeordnet, besitzt unveränderliche Kursangaben und muss in jeder späteren Veröffentlichung wieder einen vollständigen Verlauf haben. Die Kursmenge eines einmal veröffentlichten Blockplans kann deshalb nur wachsen. Eine Korrektur dieser Bindung ist im MVP nur durch eine gesonderte, außerhalb der Anwendung manuell dokumentierte Datenmigration möglich.
 
 ## Blockplan und Fassungen
 
@@ -86,7 +86,13 @@ Ein veröffentlichter Kurs bleibt dauerhaft seinem Blockplan zugeordnet, besitzt
 
 Ohne vergebene Bezeichnung wird der interne Name aus Bereich, Jahrgang und aktuellen Kurskennungen abgeleitet, beispielsweise „SZI 2026 · TIF26A, WIN26A“. Eine vergebene Bezeichnung ersetzt diesen Namen. Angezeigte Namen müssen insgesamt nicht eindeutig sein; stabile IDs und die immer sichtbaren Kurskennungen unterscheiden Blockpläne.
 
-Ein Blockplan besitzt durchgehend einen Entwurf und höchstens eine veröffentlichte oder zurückgenommene Fassung. Aktuelle Bezeichnung und Kurszuordnungen gehören zum Blockplan und wirken intern sofort. Kursphasen und prüfungsrelevante Termine gehören genau einer Fassung.
+Ein Blockplan besitzt durchgehend einen Entwurf und höchstens eine veröffentlichte Fassung. Aktuelle Bezeichnung und Kurszuordnungen gehören zum Blockplan und wirken intern sofort. Kursphasen und prüfungsrelevante Termine gehören genau einer Fassung.
+
+Sein Veröffentlichungszustand ist:
+
+- **noch nie veröffentlicht**, wenn keine veröffentlichte Fassung existiert und keiner seiner Kurse ein veröffentlichter Kurs ist;
+- **veröffentlicht**, wenn eine veröffentlichte Fassung existiert;
+- **zurückgenommen**, wenn keine veröffentlichte Fassung existiert und mindestens einer seiner Kurse ein veröffentlichter Kurs ist.
 
 ### Entwurf
 
@@ -96,16 +102,19 @@ Ein Blockplan besitzt durchgehend einen Entwurf und höchstens eine veröffentli
 
 Als Änderung des bearbeitbaren Planungsstands gelten außerdem Änderungen an der aktuellen Blockplanbezeichnung, an seinen Kurszuordnungen und an den vier Angaben eines zugeordneten Kurses. Sie aktualisieren ebenfalls, wann und durch welches interne Konto der Entwurf zuletzt geändert wurde. Veröffentlichen und Zurücknehmen verändern diese Angaben nicht.
 
+Normale, granulare Speicheraktionen verwenden Last-write-wins und besitzen keine Konfliktwarnung. Sie prüfen Berechtigung, Existenz, Strukturregeln und weitere Zustandsvoraussetzungen stets gegen den aktuellen Stand.
+
 ### Veröffentlichung und Zurücknahme
 
-- Veröffentlichen prüft alle Struktur- und Veröffentlichungsregeln und ersetzt die bisherige veröffentlichte oder zurückgenommene Fassung atomar durch eine Kopie des aktuellen Entwurfs.
+- Veröffentlichen prüft alle Struktur- und Veröffentlichungsregeln und ersetzt die bisherige veröffentlichte Fassung atomar durch eine Kopie des aktuellen Entwurfs.
 - Der Entwurf bleibt dabei unverändert bestehen und anschließend weiter bearbeitbar.
 - Die Fassung übernimmt als Snapshots die zu diesem Zeitpunkt öffentlich sichtbaren Bezeichnungen von Blockplan, Bereich und Studiengängen.
 - Die öffentlich sichtbare Kursmenge ergibt sich ausschließlich aus den Kursphasen der Fassung.
+- Alle Kurse der veröffentlichten Fassung werden dauerhaft zu veröffentlichten Kursen.
 - Öffentlich sichtbarer Inhalt ändert sich nur durch Veröffentlichen oder Zurücknehmen. Interne Änderungen an Bezeichnungen, Stammdaten oder Kurszuordnungen bleiben bis zur nächsten Veröffentlichung unsichtbar.
 - Frühere Revisionen werden weder angezeigt noch wiederhergestellt.
-- Eine Zurücknahme entfernt die Fassung aus allen öffentlichen Ansichten, behält sie aber intern, bis die nächste Veröffentlichung sie ersetzt.
-- Eine erneute Veröffentlichung veröffentlicht stets den aktuellen Entwurf; die zurückgenommene Fassung wird nicht gesondert wiederhergestellt.
+- Eine Zurücknahme löscht die veröffentlichte Fassung atomar und entfernt den Blockplan damit aus allen öffentlichen Ansichten.
+- Eine erneute Veröffentlichung veröffentlicht stets den aktuellen Entwurf.
 
 ## Kursphase
 
@@ -114,7 +123,6 @@ Als Änderung des bearbeitbaren Planungsstands gelten außerdem Änderungen an d
 - Das Semester ist eine ganze Zahl von 1 bis zur Anzahl Semester des Blockplans.
 - Der Phasentyp ist genau `Theorie` oder `Praxis`.
 - Gleichartige Kursphasen dürfen unmittelbar aufeinander folgen.
-- Entwurf und veröffentlichte Fassung enthalten jeweils höchstens 500 Kursphasen.
 - Eine gemeinsame Anlage für mehrere Kurse erzeugt für jeden ausgewählten Kurs eine eigenständige Kursphase mit zunächst gleichen Angaben. Zwischen diesen Kursphasen besteht danach keine gemeinsame Identität; spätere Änderungen wirken nur auf die jeweils bearbeitete Kursphase.
 - Spätere Vorlesungen dürfen ausschließlich Kursphasen vom Typ Theorie zugeordnet werden; Vorlesungen gehören nicht zum MVP.
 
@@ -126,7 +134,6 @@ Das Studienjahr wird aus dem Semester abgeleitet: Semester 1 und 2 bilden Studie
 
 - Ein Termin gehört genau einer Fassung und besitzt Titel, optionale Beschreibung, Kategorie, Zeitangabe, Vorläufigkeitsstatus und mindestens einen betroffenen Kurs desselben Blockplans.
 - Derselbe Kurs darf im Geltungsbereich eines Termins höchstens einmal vorkommen.
-- Entwurf und veröffentlichte Fassung enthalten jeweils höchstens 200 Termine.
 - Die Kategorie ist genau `Anmeldung`, `Abgabe`, `Präsentation`, `Prüfung` oder `Sonstiges`.
 
 Die Zeitangabe besteht aus einem erforderlichen Startdatum und einem optionalen Enddatum. Beide sind gültige gregorianische Kalendertage im Format `YYYY-MM-DD`; ein angegebenes Enddatum liegt auf oder nach dem Startdatum. Ohne Enddatum bezeichnet der Termin genau den Starttag, andernfalls den beidseitig inklusiven Datumsbereich. Kalendertage sind zeitzonenlos. Eine vorläufige Zeitangabe ist gültig und veröffentlichbar.
@@ -157,15 +164,13 @@ Ein internes Konto befindet sich genau in einem Zustand:
 
 Ein neues Konto wartet auf die Passwortvergabe. Ein Passwortlink ist zufällig, einmal verwendbar, serverseitig nur gehasht gespeichert und sieben Tage gültig. Er kann ausschließlich für ein Konto mit ausstehender Passwortvergabe erzeugt werden; eine Neuausstellung macht einen vorherigen Passwortlink dieses Kontos ungültig. Das erfolgreiche Setzen eines Passworts versetzt das Konto in den aktiven Zustand.
 
-Setzt die Systemadministration das Passwort eines aktiven Kontos zurück, werden das bisherige Passwort und alle Sitzungen sofort ungültig, das Konto wartet wieder auf die Passwortvergabe und ein neuer Passwortlink wird ausgegeben. Mitarbeitende können ihr Passwort nicht selbst ändern oder zurücksetzen.
+Setzt die Systemadministration das Passwort eines aktiven Kontos zurück, werden das bisherige Passwort und alle Sitzungen sofort ungültig, das Konto wartet wieder auf die Passwortvergabe und ein neuer Passwortlink wird ausgegeben. Mitarbeitende können ein vergessenes Passwort nicht selbst zurücksetzen.
+
+Eine Person mit aktivem internem Konto darf ihr Passwort nach Eingabe des bisherigen Passworts selbst ändern. Das neue Passwort gilt sofort; andere Sitzungen dieses Kontos werden beendet, die aktuelle Sitzung bleibt bestehen.
 
 Eine Sperrung entfernt Passwort, Sitzungen und offene Passwortlinks. Die Freigabe eines gesperrten Kontos führt zur ausstehenden Passwortvergabe und gibt einen neuen Passwortlink aus. Gesperrte Konten werden im MVP weder automatisch anonymisiert noch gelöscht.
 
-Ändert die Systemadministration die E-Mail-Adresse:
-
-- bleibt ein Konto mit ausstehender Passwortvergabe in diesem Zustand, verliert offene Passwortlinks und erhält einen neuen;
-- fällt ein aktives Konto auf „Passwortvergabe ausstehend“ zurück, verliert Passwort und Sitzungen und erhält einen neuen Passwortlink;
-- bleibt ein gesperrtes Konto gesperrt.
+Ändert die Systemadministration die E-Mail-Adresse, bleiben Kontozustand, Passwort, Sitzungen und offene Passwortlinks unverändert. Die Änderung dient ausschließlich der Korrektur oder Aktualisierung der Anmeldeadresse derselben Person; ein internes Konto darf nicht auf eine andere Person übertragen werden.
 
 ### Rollen und gültige Kombinationen
 

@@ -24,7 +24,7 @@ _Avoid_: Kohorte
 
 **Veröffentlichte Fassung**: Die bewusst freigegebene Fassung eines Blockplans, die externe Nutzende sehen.
 
-**Zurückgenommene Veröffentlichung**: Eine zuvor veröffentlichte Fassung, die aus der öffentlichen Ansicht entfernt wurde, intern aber bis zur nächsten Veröffentlichung erhalten bleibt.
+**Zurückgenommene Veröffentlichung**: Der Zustand eines zuvor veröffentlichten Blockplans, dessen öffentliche Fassung entfernt wurde. Der Entwurf bleibt bestehen und kann erneut veröffentlicht werden.
 
 ## Verlauf
 

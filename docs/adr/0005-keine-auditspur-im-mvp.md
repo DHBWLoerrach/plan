@@ -8,6 +8,6 @@ Eine allgemeine Auditspur hätte spätere Fragen nach Auslöser und Inhalt einer
 
 ## Konsequenzen
 
-Am Entwurf bleiben ausschließlich `updated_at` und `updated_by_account_id` für Änderungsanzeige und Änderungswarnung erhalten. Veröffentlichungen, Rücknahmen und administrative Kontoaktionen erhalten keine personenbezogene Änderungshistorie. Außergewöhnliche Datenkorrekturen erfolgen als gesonderte, außerhalb der Anwendung manuell dokumentierte Datenmigration.
+Am Entwurf bleiben ausschließlich `updated_at` und `updated_by_account_id` für die Änderungsanzeige sowie die Aktualitätsprüfung vor dem Veröffentlichen erhalten. Veröffentlichungen, Rücknahmen und administrative Kontoaktionen erhalten keine personenbezogene Änderungshistorie. Außergewöhnliche Datenkorrekturen erfolgen als gesonderte, außerhalb der Anwendung manuell dokumentierte Datenmigration.
 
 Entsteht später ein konkreter Nachweiszweck, beginnt eine neue Protokollierung ab einem dokumentierten Einführungsstichtag. Auslöser und frühere Werte von Änderungen vor diesem Stichtag lassen sich nicht rückwirkend rekonstruieren.

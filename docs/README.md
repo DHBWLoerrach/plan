@@ -1,9 +1,10 @@
 # Projektentscheidungen
 
-Die kanonischen Begriffe stehen in [`../CONTEXT.md`](../CONTEXT.md). Normative Invarianten, Lebenszyklen und Rechte stehen in [`FACHLICHE_REGELN.md`](FACHLICHE_REGELN.md); die übrigen Dokumente verweisen darauf, statt sie vollständig zu wiederholen.
+Jedes Dokument ist für genau eine Art von Entscheidung maßgeblich. Andere Dokumente beschreiben nur die für ihre Perspektive sichtbaren Folgen und verweisen für Details auf die jeweilige Quelle.
 
-- [Fachliche Regeln](FACHLICHE_REGELN.md): Datenregeln, Lebenszyklen, Berechtigungen und Veröffentlichung.
-- [MVP-Spezifikation](MVP-SPEZIFIKATION.md): Zielumfang, Rollenübersicht, öffentliche Auffindbarkeit, Oberflächen, Dimensionierung und bewusst ausgeklammerte Funktionen.
-- [Architektur und Betrieb](ARCHITEKTUR_UND_BETRIEB.md): Anwendungsschnitt, Authentifizierung, Datenhaltung, SQLite-Nebenläufigkeit, Sicherheit, rechtliche Pflichtinformationen, Betrieb, Migration, Rückweg und Tests.
-- [Barrierefreiheit](BARRIEREFREIHEIT.md): verbindliche Gestaltungs- und Abnahmekriterien.
-- [`adr/`](adr/): Architekturentscheidungen mit ihrer Begründung und den verworfenen Alternativen.
+- [`../CONTEXT.md`](../CONTEXT.md): kanonische Domänensprache ohne Implementierungsdetails.
+- [Fachliche Regeln](FACHLICHE_REGELN.md): normative Invarianten, Lebenszyklen und Berechtigungen.
+- [MVP-Spezifikation](MVP-SPEZIFIKATION.md): Produktumfang, sichtbares Verhalten, Oberflächen und bewusst ausgeklammerte Funktionen.
+- [Architektur und Betrieb](ARCHITEKTUR_UND_BETRIEB.md): technische und betriebliche Entscheidungen, Sicherheit, Migration und Teststrategie.
+- [Barrierefreiheit](BARRIEREFREIHEIT.md): verbindliche Gestaltungs- und Abnahmekriterien der Barrierefreiheit.
+- [`adr/`](adr/): Begründungen schwer reversibler Entscheidungen und verworfene Alternativen.

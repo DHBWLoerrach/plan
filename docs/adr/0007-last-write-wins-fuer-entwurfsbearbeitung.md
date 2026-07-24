@@ -1,0 +1,3 @@
+# Last-write-wins für granulare Entwurfsbearbeitung
+
+Normale Speicheraktionen bearbeiten jeweils nur eine konkrete Plan- oder Kursangabe und verwenden im MVP Last-write-wins. Bei den zwei bis vier unmittelbar zusammenarbeitenden Personen pro Bereich rechtfertigen seltene Überschreibungen weder eine allgemeine Konfliktprüfung noch Warnungs- und Bestätigungspfade in jeder Server Action. Veröffentlichen prüft weiterhin, ob die angezeigte Vorschau aktuell ist, und Zurücknehmen adressiert weiterhin die konkrete veröffentlichte Fassungs-ID; Transaktionen, Berechtigungen, Existenzprüfungen und fachliche Regeln bleiben unberührt.

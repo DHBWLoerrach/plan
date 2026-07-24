@@ -1,3 +1,7 @@
+---
+status: superseded by ADR-0007
+---
+
 # Änderungswarnung statt Versionszähler für Entwürfe
 
 Die Blockpläne eines Bereichs werden nur gelegentlich von zwei bis vier Personen bearbeitet, die sich unmittelbar abstimmen können. Deshalb schützt das MVP Entwürfe nicht mit einem allgemeinen Versionszähler und verhindert seltene Überschreibungen nicht ausnahmslos. Stattdessen führt jeder Entwurf Zeitpunkt und internes Konto seiner letzten Änderung. Erkennt eine granulare Speicheraktion einen neueren als den beim Laden gesehenen Stand, schreibt sie zunächst nichts und zeigt eine Änderungswarnung. Die Person darf genau ihre einzelne Operation für den angezeigten Stand bestätigen; eine weitere zwischenzeitliche Änderung löst erneut die Warnung aus.

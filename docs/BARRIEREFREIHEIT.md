@@ -17,21 +17,21 @@ Vor Go-live wird mit der zuständigen DHBW-Stelle geklärt, ob Erklärung zur Ba
 
 ## Interner Editor
 
-- Anmeldung und Passwortvergabe erlauben Passwortmanager, Autofill und Einfügen und verlangen keine kognitive Aufgabe wie das Abschreiben oder Erinnern zusätzlicher Inhalte.
+- Anmeldung, Passwortvergabe und Passwortänderung erlauben Passwortmanager, Autofill und Einfügen und verlangen keine kognitive Aufgabe wie das Abschreiben oder Erinnern zusätzlicher Inhalte.
 - Jede Eingabe besitzt ein sichtbares und programmatisch verknüpftes Label. Pflichtangaben und zulässige Formate sind vor der Eingabe erklärt.
 - Validierungsfehler erscheinen am Feld und zusätzlich in einer Fehlerübersicht; bekannte Korrekturmöglichkeiten werden genannt.
-- Gespeicherte Entwürfe, aktualisierte Vorschauen sowie erfolgreiche oder fehlgeschlagene Veröffentlichungen werden als zugängliche Statusmeldungen ausgegeben. Eine Änderungswarnung erscheint als fokussierter Hinweis im Editor, nennt Änderungszeitpunkt und dienstliche E-Mail-Adresse und lässt die nicht gespeicherte Eingabe bestehen. Die Aktionen „Abbrechen“ und „Trotzdem speichern“ sind eindeutig beschriftet und vollständig per Tastatur und Screenreader bedienbar.
+- Gespeicherte Entwürfe, aktualisierte Vorschauen sowie erfolgreiche oder fehlgeschlagene Veröffentlichungen werden als zugängliche Statusmeldungen ausgegeben.
 - Semester-Navigation sowie Fehler- und Vollständigkeitsstatus sind programmatisch bestimmt und per Tastatur erreichbar. Ein Status wird nie nur durch Farbe oder Symbol vermittelt.
 - Die gemeinsame Anlage einer Kursphase für mehrere ausgewählte Kurse erklärt vor dem Speichern, dass eigenständige Kursphasen entstehen und spätere Änderungen nur auf die jeweils bearbeitete Kursphase wirken.
 - Jede Bearbeitungsfunktion funktioniert ohne Maus. Falls Phasen visuell sortiert werden, existieren gleichwertige Verschiebe-Schaltflächen; Drag-and-drop ist nie erforderlich.
 - Der Veröffentlichungszustand eines Blockplans — noch nie veröffentlicht, veröffentlicht, zurückgenommen — ist immer auch textlich benannt, in Listen ebenso wie in der Detailansicht; Farbe, Symbol oder Position sind nur Ergänzungen. Der Entwurf ist kein Zustand dieser Reihe, sondern existiert in allen dreien.
 - Dialoge, Menüs und Bestätigungen besitzen korrekte Fokusführung, Escape-Verhalten und Fokus-Rückkehr. Die Vorschau erfüllt dieselben semantischen Regeln wie die öffentliche Matrix.
 - Bestätigungen für Löschung, Kontosperrung, Zurücknahme, Rechteänderung und die Ausstellung eines neuen Passwortlinks benennen Aktion, Ziel und Folgen im zugänglichen Namen beziehungsweise in der zugeordneten Beschreibung; eine generische Schaltfläche „OK“ genügt nicht.
-- Ändert sich der Entwurf nach einer Änderungswarnung erneut, wird die neue Warnung verständlich angekündigt und erhält wieder sinnvoll den Fokus. Ist die Operation im aktuellen Zustand nicht mehr zulässig oder soll ein zwischenzeitlich geänderter Entwurf veröffentlicht werden, fehlt die Aktion „Trotzdem speichern“ und der Hinweis erklärt den erforderlichen nächsten Schritt.
+- Hat sich die angezeigte Vorschau vor dem Veröffentlichen geändert, wird der neu geladene Stand verständlich angekündigt und der Hinweis erklärt die erforderliche erneute Freigabe.
 
 ## Nachweis vor Abnahme
 
-- Automatisierte Scans ergänzen manuelle Prüfungen aller wesentlichen Abläufe: Plan suchen und lesen, Kurs wechseln, Phasen und Termine bearbeiten, speichern, eine Änderungswarnung behandeln, veröffentlichen und zurücknehmen.
+- Automatisierte Scans ergänzen manuelle Prüfungen aller wesentlichen Abläufe: Plan suchen und lesen, Kurs wechseln, Phasen und Termine bearbeiten, speichern, veröffentlichen und zurücknehmen.
 - Tastaturtest mit Tab, Shift+Tab, Enter, Leertaste und Escape: sichtbarer Fokus, sinnvolle Reihenfolge, keine Fokusfalle.
 - Screenreader-Test mindestens mit VoiceOver/Safari sowie einem zweiten unterstützten Browser-Screenreader-Gespann, insbesondere für Matrix, Fehler, Dialoge und Statusmeldungen.
 - Visueller Test von Text- und Nichttextkontrast, 200 % Textvergrößerung, 400 % Zoom und schmaler mobiler Breite. Fehler, Phasentypen und vorläufige Zeitangaben sind nie nur farblich unterscheidbar; im internen Editor gilt dasselbe für den Veröffentlichungszustand.
