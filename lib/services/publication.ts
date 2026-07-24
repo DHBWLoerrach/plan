@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import type Database from "better-sqlite3";
 
 import { type DraftCourse, type DraftEvent, type DraftPhase, validatePublication } from "@/lib/domain/publication";
+import { assertAreaEditPermission } from "@/lib/services/authorization";
 
 type PublicationRequest = {
   blockPlanId: string;
@@ -18,16 +19,6 @@ function derivedName(courses: DraftCourse[]) {
   const year = courses[0]?.studyStart.slice(0, 4);
   const courseCodes = courses.map((course) => course.code).toSorted((left, right) => left.localeCompare(right, "de"));
   return `${year} · ${courseCodes.join(", ")}`;
-}
-
-function canEdit(sqlite: Database.Database, accountId: string, areaId: string) {
-  const account = sqlite.prepare("SELECT role, system_admin AS systemAdmin, status FROM user WHERE id = ?").get(accountId) as
-    | { role: string; systemAdmin: number; status: string }
-    | undefined;
-  if (!account || account.status !== "ACTIVE") throw new Error("Sie sind nicht zur Bearbeitung berechtigt.");
-  if (account.systemAdmin) return;
-  const assignment = sqlite.prepare("SELECT 1 FROM area_assignments WHERE user_id = ? AND area_id = ?").get(accountId, areaId);
-  if (account.role !== "AREA_EDITOR" || !assignment) throw new Error("Sie sind nicht zur Bearbeitung dieses Bereichs berechtigt.");
 }
 
 function readDraft(sqlite: Database.Database, blockPlanId: string) {
@@ -51,7 +42,7 @@ function readDraft(sqlite: Database.Database, blockPlanId: string) {
 export function publishBlockPlan(sqlite: Database.Database, request: PublicationRequest) {
   return sqlite.transaction(() => {
     const { plan, courses, phases, events } = readDraft(sqlite, request.blockPlanId);
-    canEdit(sqlite, request.accountId, plan.areaId);
+    assertAreaEditPermission(sqlite, request.accountId, plan.areaId);
     const existing = sqlite.prepare("SELECT id FROM published_versions WHERE block_plan_id = ?").get(plan.id) as { id: string } | undefined;
     if (plan.draftUpdatedAt !== request.seenDraftUpdatedAt || (existing?.id ?? null) !== request.seenPublishedVersionId) {
       throw new Error("Die Vorschau ist nicht mehr aktuell. Laden Sie den aktuellen Entwurf erneut.");
@@ -99,7 +90,7 @@ export function withdrawBlockPlan(sqlite: Database.Database, { blockPlanId, acco
   return sqlite.transaction(() => {
     const plan = sqlite.prepare("SELECT area_id AS areaId FROM block_plans WHERE id = ?").get(blockPlanId) as { areaId: string } | undefined;
     if (!plan) throw new Error("Der Blockplan wurde nicht gefunden.");
-    canEdit(sqlite, accountId, plan.areaId);
+    assertAreaEditPermission(sqlite, accountId, plan.areaId);
     const version = sqlite.prepare("SELECT id FROM published_versions WHERE block_plan_id = ?").get(blockPlanId) as { id: string } | undefined;
     if (!version || version.id !== seenPublishedVersionId) throw new Error("Die angezeigte Veröffentlichung ist nicht mehr aktuell.");
     sqlite.prepare("DELETE FROM published_versions WHERE id = ?").run(version.id);
