@@ -8,7 +8,7 @@ import { SiteShell } from "@/components/site-shell";
 import { sqlite } from "@/lib/db";
 import { getActiveAccount } from "@/lib/internal-auth";
 
-import { blockPlanDisplayNames } from "../../blockplaene/data";
+import { blockPlanSummaries } from "../../blockplaene/data";
 import { programOptions, searchParam } from "../data";
 
 export default async function CourseDetailPage({ params, searchParams }: PageProps<"/intern/kurse/[courseId]">) {
@@ -37,7 +37,7 @@ export default async function CourseDetailPage({ params, searchParams }: PagePro
 
     <h2>Blockplan</h2>
     {course.blockPlanId
-      ? <p>Dieser Kurs gehört zum Blockplan <Link className="text-link" href={`/intern/blockplaene/${course.blockPlanId}`}>{blockPlanDisplayNames([course.blockPlanId]).get(course.blockPlanId)}</Link>. Dort können Sie ihn lösen und weitere Kurse zuordnen.</p>
+      ? <p>Dieser Kurs gehört zum Blockplan <Link className="text-link" href={`/intern/blockplaene/${course.blockPlanId}`}>{blockPlanSummaries([course.blockPlanId]).get(course.blockPlanId)?.displayName}</Link>. Dort können Sie ihn lösen und weitere Kurse zuordnen.</p>
       : <CreateBlockPlanFromCourseForm courseId={course.id} code={course.code} />}
 
     <h2>Löschen</h2>

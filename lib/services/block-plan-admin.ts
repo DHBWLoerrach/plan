@@ -3,9 +3,10 @@ import { randomUUID } from "node:crypto";
 import type Database from "better-sqlite3";
 
 import { assertAreaEditPermission } from "@/lib/services/authorization";
+import { assertCourseFitsBlockPlan } from "@/lib/services/course-assignment";
 import { clearCourseFromDraft, touchDraft } from "@/lib/services/draft-changes";
 
-const maximumCoursesPerBlockPlan = 20;
+export const maximumCoursesPerBlockPlan = 20;
 const maximumNameLength = 160;
 
 type CourseRow = { id: string; code: string; blockPlanId: string | null; areaId: string; semesters: number; studyStart: string };
@@ -36,7 +37,8 @@ export function attachCourse(sqlite: Database.Database, input: { accountId: stri
     assertAreaEditPermission(sqlite, input.accountId, plan.areaId);
     const course = requireCourse(sqlite, input.courseId);
     if (course.blockPlanId) throw new Error("Der Kurs ist bereits einem Blockplan zugeordnet. Lösen Sie ihn zuerst.");
-    assertFitsPlan(sqlite, plan, course);
+    assertBelowMaximum(sqlite, plan.id);
+    assertCourseFitsBlockPlan(sqlite, plan.id, course);
     sqlite.prepare("UPDATE courses SET block_plan_id = ? WHERE id = ?").run(input.blockPlanId, input.courseId);
     touchDraft(sqlite, input.blockPlanId, input.accountId, now);
   })();
@@ -82,10 +84,10 @@ export function listAttachableCourses(sqlite: Database.Database, blockPlanId: st
     JOIN block_plans plan ON plan.id = ?
     WHERE course.block_plan_id IS NULL
       AND program.area_id = plan.area_id
-      AND EXISTS (SELECT 1 FROM courses assigned JOIN programs assignedProgram ON assignedProgram.id = assigned.program_id
+      AND NOT EXISTS (SELECT 1 FROM courses assigned JOIN programs assignedProgram ON assignedProgram.id = assigned.program_id
         WHERE assigned.block_plan_id = plan.id
-          AND substr(assigned.study_start, 1, 4) = substr(course.study_start, 1, 4)
-          AND assignedProgram.semesters = program.semesters)
+          AND (substr(assigned.study_start, 1, 4) <> substr(course.study_start, 1, 4)
+            OR assignedProgram.semesters <> program.semesters))
     ORDER BY course.code COLLATE NOCASE`).all(blockPlanId) as AttachableCourse[];
 }
 
@@ -101,15 +103,9 @@ export function deleteBlockPlan(sqlite: Database.Database, input: { accountId: s
   })();
 }
 
-function assertFitsPlan(sqlite: Database.Database, plan: PlanRow, course: CourseRow): void {
-  if (course.areaId !== plan.areaId) throw new Error("Der Studiengang des Kurses gehört nicht zum Bereich des Blockplans.");
-  const assigned = sqlite.prepare(`SELECT course.study_start AS studyStart, program.semesters FROM courses course
-    JOIN programs program ON program.id = course.program_id WHERE course.block_plan_id = ?`).all(plan.id) as { studyStart: string; semesters: number }[];
-  if (assigned.length >= maximumCoursesPerBlockPlan) throw new Error(`Ein Blockplan enthält höchstens ${maximumCoursesPerBlockPlan} Kurse.`);
-  for (const other of assigned) {
-    if (other.semesters !== course.semesters) throw new Error("Die Semesteranzahl des Kurses passt nicht zu den bereits zugeordneten Kursen.");
-    if (year(other.studyStart) !== year(course.studyStart)) throw new Error("Der Jahrgang des Kurses passt nicht zu den bereits zugeordneten Kursen.");
-  }
+function assertBelowMaximum(sqlite: Database.Database, blockPlanId: string): void {
+  const assigned = (sqlite.prepare("SELECT COUNT(*) AS count FROM courses WHERE block_plan_id = ?").get(blockPlanId) as { count: number }).count;
+  if (assigned >= maximumCoursesPerBlockPlan) throw new Error(`Ein Blockplan enthält höchstens ${maximumCoursesPerBlockPlan} Kurse.`);
 }
 
 function normalizeName(value: string): string | null {
@@ -118,10 +114,6 @@ function normalizeName(value: string): string | null {
   if (!name) return null;
   if ([...name].length > maximumNameLength) throw new Error(`Die Blockplanbezeichnung darf höchstens ${maximumNameLength} Zeichen lang sein.`);
   return name;
-}
-
-function year(isoDate: string): string {
-  return isoDate.slice(0, 4);
 }
 
 function requirePlan(sqlite: Database.Database, blockPlanId: string): PlanRow {

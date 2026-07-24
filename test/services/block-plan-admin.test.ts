@@ -302,4 +302,18 @@ describe("listAttachableCourses", () => {
     expect(listAttachableCourses(sqlite, blockPlanId).map((course) => course.code)).toEqual(["TIF24B"]);
     expect(listAttachableCourses(sqlite, blockPlanId)[0]).toMatchObject({ id: fitting, program: "Informatik", studyStart: "2024-09-01", studyEnd: "2027-08-31" });
   });
+  it("offers no course while the assigned courses disagree about year or study duration", () => {
+    const sqlite = createDatabase();
+    insertAdmin(sqlite, "admin");
+    const first = addCourse(sqlite, "TIF24A");
+    const blockPlanId = createBlockPlanFromCourse(sqlite, { accountId: "admin", courseId: first });
+    // A block plan whose courses disagree can only arise outside the service; the offer must not propose a course
+    // that matches just one of them (FACHLICHE_REGELN: Jahrgang und Semester stimmen mit allen Kursen überein).
+    const inconsistent = addCourse(sqlite, "TIF25B", { studyStart: "2025-10-01", studyEnd: "2028-09-30" });
+    sqlite.prepare("UPDATE courses SET block_plan_id = ? WHERE id = ?").run(blockPlanId, inconsistent);
+    addCourse(sqlite, "TIF24B");
+
+    expect(listAttachableCourses(sqlite, blockPlanId)).toEqual([]);
+  });
 });
+

@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import type Database from "better-sqlite3";
 
 import { assertAreaEditPermission } from "@/lib/services/authorization";
+import { assertCourseFitsBlockPlan } from "@/lib/services/course-assignment";
 import { clearCourseFromDraft, touchDraft } from "@/lib/services/draft-changes";
 
 const maximumCodeLength = 32;
@@ -35,7 +36,9 @@ export function updateCourse(sqlite: Database.Database, input: { accountId: stri
     const program = requireProgram(sqlite, normalized.programId);
     if (program.areaId !== currentProgram.areaId) assertAreaEditPermission(sqlite, input.accountId, program.areaId);
     assertCodeAvailable(sqlite, normalized.normalizedCode, input.courseId);
-    if (course.blockPlanId) assertFitsBlockPlan(sqlite, course.blockPlanId, input.courseId, program, normalized.studyStart);
+    if (course.blockPlanId) {
+      assertCourseFitsBlockPlan(sqlite, course.blockPlanId, { id: input.courseId, areaId: program.areaId, semesters: program.semesters, studyStart: normalized.studyStart });
+    }
     sqlite.prepare("UPDATE courses SET program_id = ?, code = ?, normalized_code = ?, study_start = ?, study_end = ? WHERE id = ?")
       .run(normalized.programId, normalized.code, normalized.normalizedCode, normalized.studyStart, normalized.studyEnd, input.courseId);
     if (course.blockPlanId) touchDraft(sqlite, course.blockPlanId, input.accountId, now);
@@ -59,17 +62,6 @@ export function deleteCourse(sqlite: Database.Database, input: { accountId: stri
     }
     sqlite.prepare("DELETE FROM courses WHERE id = ?").run(input.courseId);
   })();
-}
-
-function assertFitsBlockPlan(sqlite: Database.Database, blockPlanId: string, courseId: string, program: ProgramRow, studyStart: string): void {
-  const plan = sqlite.prepare("SELECT area_id AS areaId FROM block_plans WHERE id = ?").get(blockPlanId) as { areaId: string } | undefined;
-  if (!plan || program.areaId !== plan.areaId) throw new Error("Der Studiengang gehört nicht zum Bereich des zugeordneten Blockplans.");
-  const siblings = sqlite.prepare(`SELECT course.study_start AS studyStart, program.semesters FROM courses course
-    JOIN programs program ON program.id = course.program_id WHERE course.block_plan_id = ? AND course.id <> ?`).all(blockPlanId, courseId) as { studyStart: string; semesters: number }[];
-  for (const sibling of siblings) {
-    if (sibling.semesters !== program.semesters) throw new Error("Die Semesteranzahl passt nicht zu den anderen Kursen des zugeordneten Blockplans.");
-    if (year(studyStart) !== year(sibling.studyStart)) throw new Error("Der Jahrgang passt nicht zu den anderen Kursen des zugeordneten Blockplans.");
-  }
 }
 
 function requireProgram(sqlite: Database.Database, programId: string): ProgramRow {
@@ -110,6 +102,3 @@ function normalizeCalendarDay(value: string, label: string): string {
   return trimmed;
 }
 
-function year(isoDate: string): string {
-  return isoDate.slice(0, 4);
-}
