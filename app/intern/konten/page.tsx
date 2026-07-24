@@ -39,10 +39,10 @@ export default async function AccountsPage({ searchParams }: PageProps<"/intern/
       <Link className="text-link" href="/intern/konten" aria-current={status ? undefined : "true"}>Alle</Link>
       {statusFilters.map((value) => <Link key={value} className="text-link" href={`/intern/konten?status=${value}`} aria-current={status === value ? "true" : undefined}>{statusLabels[value]}</Link>)}
     </nav>
-    {accounts.length ? <table className="event-table"><thead><tr><th scope="col">E-Mail-Adresse</th><th scope="col">Berechtigungen</th><th scope="col">Bereiche</th><th scope="col">Zustand</th><th scope="col">Verwalten</th></tr></thead>
+    {accounts.length ? <div className="matrix-wrap" tabIndex={0}><table className="event-table"><thead><tr><th scope="col">E-Mail-Adresse</th><th scope="col">Berechtigungen</th><th scope="col">Bereiche</th><th scope="col">Zustand</th><th scope="col">Verwalten</th></tr></thead>
       <tbody>{accounts.map((row) => <tr key={row.id}>
         <td>{row.email}</td><td>{roleSummary(row)}</td><td>{row.areas ?? "—"}</td><td>{statusLabels[row.status]}</td>
         <td><Link className="text-link" href={`/intern/konten/${row.id}`}>Verwalten</Link></td>
-      </tr>)}</tbody></table> : <p className="empty-note">Für diesen Zustand gibt es keine Konten.</p>}
+      </tr>)}</tbody></table></div> : <p className="empty-note">Für diesen Zustand gibt es keine Konten.</p>}
   </section></SiteShell>;
 }

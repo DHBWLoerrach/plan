@@ -54,11 +54,11 @@ export default async function CoursesPage({ searchParams }: PageProps<"/intern/k
       <label>Zuordnung<select name="assignment" defaultValue={assignment ?? ""}><option value="">Alle</option><option value="assigned">Blockplan zugeordnet</option><option value="unassigned">Blockplanlos</option></select></label>
       <div className="filter-actions"><button className="button" type="submit">Filtern</button><Link href="/intern/kurse">Filter zurücksetzen</Link></div>
     </form>
-    {courses.length ? <table className="event-table"><thead><tr><th scope="col">Kurskennung</th><th scope="col">Studiengang</th><th scope="col">Bereich</th><th scope="col">Studienzeitraum</th><th scope="col">Zuordnung</th><th scope="col">Verwalten</th></tr></thead>
+    {courses.length ? <div className="matrix-wrap" tabIndex={0}><table className="event-table"><thead><tr><th scope="col">Kurskennung</th><th scope="col">Studiengang</th><th scope="col">Bereich</th><th scope="col">Studienzeitraum</th><th scope="col">Zuordnung</th><th scope="col">Verwalten</th></tr></thead>
       <tbody>{courses.map((course) => <tr key={course.id}>
         <td>{course.code}</td><td>{course.program}</td><td>{course.areaName}</td><td>{course.studyStart} – {course.studyEnd}</td>
         <td>{course.publishedIn ? `Öffentlich sichtbar (${course.publishedIn})` : course.blockPlanId ? "Blockplan zugeordnet" : "Blockplanlos"}</td>
         <td><Link className="text-link" href={`/intern/kurse/${course.id}`}>Verwalten</Link></td>
-      </tr>)}</tbody></table> : <p className="empty-note">Für diese Filter gibt es keine Kurse.</p>}
+      </tr>)}</tbody></table></div> : <p className="empty-note">Für diese Filter gibt es keine Kurse.</p>}
   </section></SiteShell>;
 }
