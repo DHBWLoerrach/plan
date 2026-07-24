@@ -14,7 +14,7 @@ _Avoid_: Studienzentrum als eigener Modellbegriff
 **Kurs**: Eine Gruppe von Studierenden eines Studiengangs und Jahrgangs, die vom Studienbeginn bis zum Studienende zusammenbleibt.
 _Avoid_: Kohorte
 
-**Veröffentlichter Kurs**: Ein Kurs, dessen Verlauf mindestens einmal Bestandteil einer veröffentlichten Fassung war.
+**Öffentlich sichtbarer Kurs**: Ein Kurs, den die aktuell veröffentlichte Fassung seines Blockplans zeigt. Kurse tragen selbst keinen Veröffentlichungszustand.
 
 **Studienzeitraum**: Der einschließlich beider Grenztage geltende Zeitraum vom Studienbeginn bis zum Studienende eines Kurses.
 
@@ -35,7 +35,7 @@ _Avoid_: Blockphase, Phase, Urlaubsphase
 
 **Semester**: Die fortlaufende Studienperiode einer Kursphase, beginnend mit Semester 1.
 
-**Prüfungsrelevanter Termin**: Eine Planangabe für mindestens einen Kurs mit Kategorie und einem Startdatum sowie optionalem Enddatum, beispielsweise Anmeldung, Abgabe, Präsentation oder Prüfung.
+**Prüfungsrelevanter Termin**: Eine Planangabe für mindestens einen Kurs mit Titel, Kategorie und einem Startdatum sowie optionalem Enddatum, beispielsweise Anmeldung, Abgabe, Präsentation oder Prüfung. Er kann als vorläufig gekennzeichnet sein, solange seine Zeitangabe noch nicht verbindlich ist.
 
 **Kalendertag**: Ein zeitzonenloses Datum im gregorianischen Kalender.
 

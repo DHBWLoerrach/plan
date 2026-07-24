@@ -12,8 +12,8 @@ Abgeleitete Übersicht; normativ ist der Abschnitt [Berechtigungen](FACHLICHE_RE
 
 | Funktion | Bereichsbearbeitung | Systemadministration | Externe Nutzende |
 | --- | --- | --- | --- |
-| Kurse anlegen, bearbeiten und unveröffentlichte Kurse löschen | eigene Bereiche | alle Bereiche | – |
-| Noch nicht veröffentlichte Kurse zuordnen oder lösen | eigene Bereiche | alle Bereiche | – |
+| Kurse anlegen, bearbeiten und löschen | eigene Bereiche | alle Bereiche | – |
+| Kurse zuordnen oder lösen | eigene Bereiche | alle Bereiche | – |
 | Blockplanentwürfe anlegen und bearbeiten | eigene Bereiche | alle Bereiche | – |
 | Noch nie veröffentlichte Blockpläne löschen | eigene Bereiche | alle Bereiche | – |
 | Veröffentlichen und zurücknehmen | eigene Bereiche | alle Bereiche | – |
@@ -24,9 +24,9 @@ Abgeleitete Übersicht; normativ ist der Abschnitt [Berechtigungen](FACHLICHE_RE
 
 Die öffentliche Anwendung bietet Filter nach Bereich, Studiengang, Jahrgang und Kurskennung. Alle Filterzustände und die Ergebnisseite stehen in der URL und sind teilbar sowie per Vor-/Zurück-Navigation reproduzierbar; mehrere gesetzte Filter werden mit UND verknüpft. Ein Blockplan erfüllt den Studiengangsfilter, wenn mindestens ein öffentlich sichtbarer Kurs seiner veröffentlichten Fassung diesem Studiengang angehört. Der Kursfilter sucht ohne Beachtung der Groß-/Kleinschreibung am Anfang der Kurskennung, sodass etwa `tif24` sowohl `TIF24A` als auch `TIF24B` findet.
 
-Bereichs-, Studiengangs- und Jahrgangsoptionen werden ausschließlich aus den Stammdaten-Snapshots vorhandener veröffentlichter Fassungen gebildet. Dadurch bleiben Pläne später umbenannter Bereiche und Studiengänge unter den tatsächlich veröffentlichten Bezeichnungen auffindbar, ohne leere Optionen anzubieten. Ohne Filter erscheinen alle veröffentlichten Pläne in den Gruppen aktuell laufend, zukünftig und vergangen. Aktuell bedeutet, dass der heutige Kalendertag im Studienzeitraum mindestens eines öffentlich sichtbaren Kurses liegt. Aktuelle Pläne werden nach Jahrgang absteigend, zukünftige nach Jahrgang aufsteigend und vergangene nach Jahrgang absteigend sortiert; bei gleichem Jahrgang folgt der veröffentlichte Anzeigename aufsteigend. Ergebnisse werden serverseitig mit 25 Plänen pro Seite paginiert. Zurückgenommene Blockpläne erscheinen nirgends öffentlich.
+Bereichs-, Studiengangs- und Jahrgangsoptionen werden ausschließlich aus den Stammdaten-Snapshots vorhandener veröffentlichter Fassungen gebildet. Dadurch bleiben Pläne später umbenannter Bereiche und Studiengänge unter den tatsächlich veröffentlichten Bezeichnungen auffindbar, ohne leere Optionen anzubieten. Ohne Filter erscheinen alle veröffentlichten Pläne in den Gruppen aktuell laufend, zukünftig und vergangen; jeder Plan gehört genau einer Gruppe an. Zukünftig ist ein Plan, wenn alle Studienzeiträume seiner öffentlich sichtbaren Kurse in der Zukunft beginnen; vergangen, wenn alle geendet haben; aktuell in jedem anderen Fall. Stichtag ist überall der aktuelle Kalendertag in der Zeitzone Europe/Berlin, unabhängig von Server- oder Browserzeitzone; er wird serverseitig bestimmt. Aktuelle Pläne werden nach Jahrgang absteigend, zukünftige nach Jahrgang aufsteigend und vergangene nach Jahrgang absteigend sortiert; bei gleichem Jahrgang folgt der veröffentlichte Anzeigename aufsteigend. Ergebnisse werden serverseitig mit 25 Plänen pro Seite paginiert. Zurückgenommene Blockpläne erscheinen nirgends öffentlich.
 
-Jeder veröffentlichte Blockplan ist über eine stabile, von seinem angezeigten Namen unabhängige URL erreichbar — der Name ändert sich bei einer neuen Veröffentlichung, wenn eine Bezeichnung vergeben wurde oder sich die öffentlich sichtbare Kursmenge geändert hat. Veröffentlichte Pläne bleiben für vergangene, aktuelle und zukünftige Jahrgänge auffindbar.
+Jeder veröffentlichte Blockplan ist über eine stabile, von seinem angezeigten Namen unabhängige URL erreichbar — der Name ändert sich bei einer neuen Veröffentlichung, wenn eine Bezeichnung vergeben wurde oder sich die öffentlich sichtbare Kursmenge geändert hat. Veröffentlichte Pläne bleiben für vergangene, aktuelle und zukünftige Jahrgänge auffindbar. Ohne veröffentlichte Fassung — sei der Plan zurückgenommen, nie veröffentlicht oder die ID unbekannt — antwortet die URL öffentlich einheitlich mit HTTP 404 und einem Verweis auf die öffentliche Suche; diese Fälle sind öffentlich ununterscheidbar. Öffentliche Seiten sind für Suchmaschinen indexierbar; interne Pfade und die Anmeldeseite werden per `robots.txt` ausgeschlossen.
 
 ## Lokale Konten im MVP
 
@@ -62,7 +62,7 @@ Die interne Bearbeitung ist ein geführter, semesterweiser Editor mit Entwurfsst
 
 Innerhalb eines Semesters listet eine Tabelle die Kursphasen mit Kurs, Zeitraum und Phasentyp. Eine neue Kursphase kann für einen oder mehrere ausgewählte Kurse angelegt werden. Bei mehreren Kursen entstehen eigenständige Kursphasen mit zunächst gleichen Angaben; spätere Änderungen wirken nur auf die jeweils bearbeitete Kursphase. Das Löschen einer Kursphase verändert ausschließlich den Entwurf, nicht aber Daten der veröffentlichten Fassung.
 
-Prüfungsrelevante Termine werden in einem eigenen Editorabschnitt verwaltet. Vorschau und Veröffentlichungsprüfung verwenden ausschließlich den zuletzt gespeicherten Entwurf. Hat sich die angezeigte Vorschau vor dem Veröffentlichen geändert, lädt der Editor den aktuellen Stand und verlangt eine neue Freigabe.
+Prüfungsrelevante Termine werden in einem eigenen Editorabschnitt verwaltet. Vorschau und Veröffentlichungsprüfung verwenden ausschließlich den zuletzt gespeicherten Entwurf. Die Vorschau zeigt die Planmatrix nur für einen veröffentlichbaren Entwurf; verletzt der Entwurf Veröffentlichungsregeln, zeigt sie stattdessen die strukturierte Fehlerübersicht mit Verweisen auf die betroffenen Semester und Felder. Die Arbeitsansicht während der Bearbeitung bleibt der semesterweise Editor. Hat sich die angezeigte Vorschau vor dem Veröffentlichen geändert, lädt der Editor den aktuellen Stand und verlangt eine neue Freigabe.
 
 Öffentliche und interne Oberfläche lesen dieselben strukturierten Daten, sind aber bewusst unterschiedlich gestaltet.
 
@@ -72,7 +72,9 @@ Nach der Anmeldung zeigt die Startseite die zugeordneten Bereiche, zuletzt bearb
 
 Alle internen Listen verwenden URL-basierte Filter und reproduzierbare Sortierung, aber im MVP keine Paginierung. Die Blockplanliste filtert nach Bereich, Jahrgang, Kurskennung und Veröffentlichungszustand; die Kursliste nach Bereich, Studiengang, Jahrgang und Zuordnungszustand. Ein Blockplan kann aus der Blockplanliste oder unmittelbar aus einem geeigneten blockplanlosen Kurs angelegt werden, wobei Blockplananlage und erste Kurszuordnung dieselbe Transaktion bilden.
 
-Die Kontoliste unterscheidet und filtert die Zustände „Passwortvergabe ausstehend“, „Aktiv“ und „Gesperrt“. Löschungen, Kontosperrungen, Zurücknahmen, Rechteänderungen und die Ausstellung neuer Passwortlinks verlangen eine Bestätigung, die konkrete Folgen und betroffene Objekte nennt.
+Die Kontoliste unterscheidet und filtert die Zustände „Passwortvergabe ausstehend“, „Aktiv“ und „Gesperrt“. Eine Kontolöschung gibt es im MVP nicht; das Sperren ist die weitestgehende Kontoaktion.
+
+Für alle destruktiven oder weitreichenden Aktionen gilt eine Bestätigungspflicht: Kurs- und Blockplanlöschungen, Kontosperrungen, Zurücknahmen von Veröffentlichungen, Rechteänderungen und die Ausstellung neuer Passwortlinks verlangen eine Bestätigung, die konkrete Folgen und betroffene Objekte nennt.
 
 ## Dimensionierungs- und Leistungsannahmen
 
