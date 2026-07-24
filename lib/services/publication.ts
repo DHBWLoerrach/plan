@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import type Database from "better-sqlite3";
 
+import { blockPlanDisplayName } from "@/lib/domain/block-plan-name";
 import { type DraftCourse, type DraftEvent, type DraftPhase, validatePublication } from "@/lib/domain/publication";
 import { assertAreaEditPermission } from "@/lib/services/authorization";
 
@@ -14,12 +15,6 @@ type PublicationRequest = {
 
 type PlanRow = { id: string; areaId: string; name: string | null; draftUpdatedAt: string; areaName: string };
 type CourseRow = DraftCourse & { program: string; programAbbreviation: string };
-
-function derivedName(courses: DraftCourse[]) {
-  const year = courses[0]?.studyStart.slice(0, 4);
-  const courseCodes = courses.map((course) => course.code).toSorted((left, right) => left.localeCompare(right, "de"));
-  return `${year} · ${courseCodes.join(", ")}`;
-}
 
 function readDraft(sqlite: Database.Database, blockPlanId: string) {
   const plan = sqlite.prepare(`SELECT plan.id, plan.area_id AS areaId, plan.name, plan.draft_updated_at AS draftUpdatedAt, area.name AS areaName
@@ -60,7 +55,7 @@ export function publishBlockPlan(sqlite: Database.Database, request: Publication
 
     if (existing) sqlite.prepare("DELETE FROM published_versions WHERE id = ?").run(existing.id);
     const versionId = randomUUID();
-    const blockPlanName = plan.name ?? derivedName(courses);
+    const blockPlanName = blockPlanDisplayName(plan.name, courses);
     sqlite.prepare("INSERT INTO published_versions (id, block_plan_id, published_at, block_plan_name, area_name) VALUES (?, ?, ?, ?, ?)")
       .run(versionId, plan.id, new Date().toISOString(), blockPlanName, plan.areaName);
     const snapshotIds = new Map<string, string>();

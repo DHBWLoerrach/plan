@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import type Database from "better-sqlite3";
 
 import { assertAreaEditPermission } from "@/lib/services/authorization";
+import { clearCourseFromDraft, touchDraft } from "@/lib/services/draft-changes";
 
 const maximumCodeLength = 32;
 
@@ -53,9 +54,7 @@ export function deleteCourse(sqlite: Database.Database, input: { accountId: stri
     if (course.blockPlanId) {
       const remaining = (sqlite.prepare("SELECT COUNT(*) AS count FROM courses WHERE block_plan_id = ?").get(course.blockPlanId) as { count: number }).count;
       if (remaining <= 1) throw new Error("Der letzte Kurs eines Blockplans kann nicht gelöscht werden. Löschen Sie stattdessen den Blockplan.");
-      assertNoOrphanedEvents(sqlite, course.blockPlanId, input.courseId);
-      sqlite.prepare("DELETE FROM draft_phases WHERE block_plan_id = ? AND course_id = ?").run(course.blockPlanId, input.courseId);
-      sqlite.prepare("DELETE FROM draft_event_courses WHERE course_id = ? AND event_id IN (SELECT id FROM draft_events WHERE block_plan_id = ?)").run(input.courseId, course.blockPlanId);
+      clearCourseFromDraft(sqlite, course.blockPlanId, input.courseId);
       touchDraft(sqlite, course.blockPlanId, input.accountId, now);
     }
     sqlite.prepare("DELETE FROM courses WHERE id = ?").run(input.courseId);
@@ -71,18 +70,6 @@ function assertFitsBlockPlan(sqlite: Database.Database, blockPlanId: string, cou
     if (sibling.semesters !== program.semesters) throw new Error("Die Semesteranzahl passt nicht zu den anderen Kursen des zugeordneten Blockplans.");
     if (year(studyStart) !== year(sibling.studyStart)) throw new Error("Der Jahrgang passt nicht zu den anderen Kursen des zugeordneten Blockplans.");
   }
-}
-
-function assertNoOrphanedEvents(sqlite: Database.Database, blockPlanId: string, courseId: string): void {
-  const orphaned = sqlite.prepare(`SELECT event.title FROM draft_events event
-    WHERE event.block_plan_id = ?
-      AND EXISTS (SELECT 1 FROM draft_event_courses link WHERE link.event_id = event.id AND link.course_id = ?)
-      AND NOT EXISTS (SELECT 1 FROM draft_event_courses link WHERE link.event_id = event.id AND link.course_id <> ?)`).all(blockPlanId, courseId, courseId) as { title: string }[];
-  if (orphaned.length) throw new Error(`Folgende Termine würden ohne Kurs verbleiben: ${orphaned.map((event) => `„${event.title}“`).join(", ")}. Passen Sie die Termine zuerst an.`);
-}
-
-function touchDraft(sqlite: Database.Database, blockPlanId: string, accountId: string, now: Date): void {
-  sqlite.prepare("UPDATE block_plans SET draft_updated_at = ?, draft_updated_by_account_id = ? WHERE id = ?").run(now.toISOString(), accountId, blockPlanId);
 }
 
 function requireProgram(sqlite: Database.Database, programId: string): ProgramRow {
