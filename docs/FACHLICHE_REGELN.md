@@ -20,16 +20,16 @@ Die Regeln im Abschnitt [Veröffentlichungsprüfung](#veröffentlichungsprüfung
 
 Nach der Normalisierung gelten folgende Höchstlängen in Unicode-Codepoints:
 
-| Angabe | Höchstlänge |
-| --- | ---: |
-| Bereichsbezeichnung | 120 |
-| Studiengangsbezeichnung | 160 |
-| Studiengangskürzel | 20 |
-| Kurskennung | 32 |
-| Blockplanbezeichnung | 160 |
-| Termintitel | 160 |
-| Terminbeschreibung | 2.000 |
-| Dienstliche E-Mail-Adresse | 254 |
+| Angabe                     | Höchstlänge |
+| -------------------------- | ----------: |
+| Bereichsbezeichnung        |         120 |
+| Studiengangsbezeichnung    |         160 |
+| Studiengangskürzel         |          20 |
+| Kurskennung                |          32 |
+| Blockplanbezeichnung       |         160 |
+| Termintitel                |         160 |
+| Terminbeschreibung         |       2.000 |
+| Dienstliche E-Mail-Adresse |         254 |
 
 Werte werden bei einer Überschreitung abgelehnt und niemals abgeschnitten.
 
@@ -123,6 +123,7 @@ Normale, granulare Speicheraktionen verwenden Last-write-wins und besitzen keine
 
 - Eine Kursphase gehört genau einer Fassung und genau einem Kurs dieses Blockplans beziehungsweise in einer veröffentlichten Fassung genau dessen Kurs-Snapshot. Sie besitzt Startdatum, Enddatum, Semester und Phasentyp.
 - Start- und Enddatum sind gültige gregorianische Kalendertage im Format `YYYY-MM-DD`; das Startdatum liegt vor oder auf dem Enddatum.
+- Eine Kursphase liegt vollständig innerhalb des Studienzeitraums ihres Kurses.
 - Das Semester ist eine ganze Zahl von 1 bis zur Anzahl Semester des Blockplans.
 - Der Phasentyp ist genau `Theorie` oder `Praxis`.
 - Gleichartige Kursphasen dürfen unmittelbar aufeinander folgen.
@@ -149,7 +150,6 @@ Eine Veröffentlichung ist nur möglich, wenn zusätzlich folgende Regeln erfül
 
 - Jeder zugeordnete Kurs besitzt einen vollständigen Verlauf.
 - Die Kursphasen jedes Kurses decken jeden Kalendertag seines einschließlich beider Grenztage geltenden Studienzeitraums genau einmal ab.
-- Keine Kursphase liegt ganz oder teilweise außerhalb des Studienzeitraums.
 - Die Kursphasen schließen lückenlos aneinander an und überlappen sich nicht.
 - Die Semester sind entlang der Zeitachse monoton nicht fallend.
 - Jedes Semester von 1 bis zur Anzahl Semester des Studiengangs kommt mindestens einmal vor; alle Kursphasen eines Semesters bilden einen zusammenhängenden Abschnitt.
