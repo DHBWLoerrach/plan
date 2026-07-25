@@ -8,7 +8,7 @@ import { auth } from "@/lib/auth";
 import { sqlite } from "@/lib/db";
 import { getActiveAccount } from "@/lib/internal-auth";
 import { changeAccountPassword, redeemPasswordLink } from "@/lib/services/password-link";
-import { publishBlockPlan, withdrawBlockPlan } from "@/lib/services/publication";
+import { StalePreviewError, publishBlockPlan, withdrawBlockPlan } from "@/lib/services/publication";
 import { hashPassword, verifyPassword } from "better-auth/crypto";
 
 async function accountId() {
@@ -17,17 +17,34 @@ async function accountId() {
   return account.id;
 }
 
-export async function publishAction(formData: FormData) {
+export type PublishFormState = { error?: string };
+
+export async function publishAction(_: PublishFormState, formData: FormData): Promise<PublishFormState> {
   const blockPlanId = String(formData.get("blockPlanId") ?? "");
-  publishBlockPlan(sqlite, {
-    blockPlanId,
-    accountId: await accountId(),
-    seenDraftUpdatedAt: String(formData.get("draftUpdatedAt") ?? ""),
-    seenPublishedVersionId: formData.get("publishedVersionId")?.toString() || null,
-  });
+  const previewPath = `/intern/blockplaene/${blockPlanId}/vorschau`;
+  let stale = false;
+  try {
+    publishBlockPlan(sqlite, {
+      blockPlanId,
+      accountId: await accountId(),
+      seenDraftUpdatedAt: String(formData.get("draftUpdatedAt") ?? ""),
+      seenPublishedVersionId: formData.get("publishedVersionId")?.toString() || null,
+    });
+  } catch (error) {
+    // Only a draft that changed under the shown preview gets the reload; every other refusal stays at the button.
+    if (!(error instanceof StalePreviewError)) {
+      return { error: error instanceof Error ? error.message : "Der Blockplan konnte nicht veröffentlicht werden." };
+    }
+    stale = true;
+  }
+  revalidatePath(previewPath);
+  // A stale preview wrote nothing, so only the preview itself needs to be read again.
+  if (stale) redirect(`${previewPath}?geaendert=1`);
   revalidatePath("/");
   revalidatePath(`/${blockPlanId}`);
+  revalidatePath("/intern");
   revalidatePath(`/intern/blockplaene/${blockPlanId}`);
+  redirect(`/intern/blockplaene/${blockPlanId}?veroeffentlicht=1`);
 }
 
 export async function withdrawAction(formData: FormData) {

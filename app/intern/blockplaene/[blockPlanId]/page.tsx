@@ -17,7 +17,7 @@ import { listAttachableCourses, maximumCoursesPerBlockPlan } from "@/lib/service
 
 import { type PlanPhase, blockPlanCourses, blockPlanDraftEvents, blockPlanDraftPhases, publicationStateLabel } from "../data";
 import { searchParam } from "../../kurse/data";
-import { publishAction, withdrawAction } from "../../actions";
+import { withdrawAction } from "../../actions";
 
 /**
  * Groups the affected courses of an event by the semester derived from their course phases. In an incomplete draft a
@@ -57,6 +57,7 @@ export default async function InternalBlockPlanPage({ params, searchParams }: Pa
 
   const query = await searchParams;
   const created = searchParam(query, "angelegt") === "1";
+  const published = searchParam(query, "veroeffentlicht") === "1";
   const courses = blockPlanCourses(plan.id);
   const displayName = blockPlanDisplayName(plan.name, courses);
   const derivedName = blockPlanDisplayName(null, courses);
@@ -86,6 +87,7 @@ export default async function InternalBlockPlanPage({ params, searchParams }: Pa
     <p className="eyebrow">Interner Entwurf</p>
     <h1>{displayName}</h1>
     {created ? <p role="status">Der Blockplan wurde mit dem Kurs {courses[0]?.code} angelegt.</p> : null}
+    {published ? <p role="status">Die Vorschau wurde veröffentlicht. Der Blockplan ist jetzt <Link className="text-link" href={`/${plan.id}`}>öffentlich sichtbar</Link>; der Entwurf bleibt unverändert bearbeitbar.</p> : null}
     <p className="plan-area">{plan.areaName} · Jahrgang {courses[0]?.studyStart.slice(0, 4)}</p>
     <dl className="course-list">
       <dt>Zugeordnete Kurse</dt><dd>{courses.map((course) => <span key={course.id}>{course.code}</span>)}</dd>
@@ -109,9 +111,9 @@ export default async function InternalBlockPlanPage({ params, searchParams }: Pa
     <section aria-labelledby="publication-heading">
       <h2 id="publication-heading">Veröffentlichung</h2>
       <p>Zustand: {publicationState}</p>
-      {plan.versionId ? <form action={withdrawAction}><input type="hidden" name="blockPlanId" value={plan.id} /><input type="hidden" name="publishedVersionId" value={plan.versionId} /><button className="button" type="submit">Veröffentlichung zurücknehmen</button></form> : null}
-      <form action={publishAction}><input type="hidden" name="blockPlanId" value={plan.id} /><input type="hidden" name="draftUpdatedAt" value={plan.draftUpdatedAt} /><input type="hidden" name="publishedVersionId" value={plan.versionId ?? ""} /><button className="button" type="submit">Entwurf veröffentlichen</button></form>
-      <p>Beim Veröffentlichen wird der gespeicherte Entwurf erneut geprüft und als eigenständige öffentliche Fassung kopiert.</p>
+      <p><Link className="button" href={`/intern/blockplaene/${plan.id}/vorschau`}>Vorschau prüfen und veröffentlichen</Link></p>
+      <p>Die Vorschau zeigt den gespeicherten Entwurf so, wie externe Nutzende ihn sähen — und solange er noch Regeln verletzt, stattdessen die Fehlerübersicht mit Verweisen auf die betroffenen Semester und Felder.</p>
+      {plan.versionId ? <form action={withdrawAction}><input type="hidden" name="blockPlanId" value={plan.id} /><input type="hidden" name="publishedVersionId" value={plan.versionId} /><button className="button button--ghost" type="submit">Veröffentlichung zurücknehmen</button></form> : null}
     </section>
 
     <details className="plan-settings">

@@ -12,6 +12,10 @@ describe("blockPlanDisplayName", () => {
     expect(blockPlanDisplayName(null, courses)).toBe("2026 · TIF26A, WWI26A");
   });
 
+  it("names a block plan whose courses are all detached instead of deriving from nothing", () => {
+    expect(blockPlanDisplayName(null, [])).toBe("Blockplan ohne Kurse");
+  });
+
   it("uses the given designation instead of the derived name", () => {
     expect(blockPlanDisplayName("Technik Jahrgang 2026", [{ code: "TIF26A", studyStart: "2026-09-01" }])).toBe("Technik Jahrgang 2026");
   });

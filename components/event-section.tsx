@@ -64,7 +64,10 @@ export function EventSection({ blockPlanId, courses, entries, missingPhaseSemest
     {entries.length ? <ul className="entry-list">{entries.map(({ event, derived }) => {
       const period = event.endDate ? formatCalendarPeriod(event.startDate, event.endDate, { weekday: true }) : formatCalendarDay(event.startDate, { weekday: true });
       const meta = `${period} · ${eventCategoryLabel(event.category)}${event.provisional ? " · Vorläufig" : ""}`;
-      return <li key={event.id}>
+      // The error overview of the preview links here, because an event carries no semester of its own to navigate
+      // to. The entry takes focus on arrival, so keyboard and screen reader continue at the named event and not at
+      // the top of the document (BARRIEREFREIHEIT.md).
+      return <li key={event.id} id={`termin-${event.id}`} tabIndex={-1}>
         <p className="entry-meta">{meta}</p>
         <h3>{event.title}</h3>
         {event.description ? <p>{event.description}</p> : null}

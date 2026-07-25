@@ -4,7 +4,7 @@ import path from "node:path";
 import Database from "better-sqlite3";
 import { describe, expect, it } from "vitest";
 
-import { publishBlockPlan } from "@/lib/services/publication";
+import { StalePreviewError, publishBlockPlan, readPublicationPreview } from "@/lib/services/publication";
 
 function databaseWithPublishablePlan() {
   const sqlite = new Database(":memory:");
@@ -25,6 +25,50 @@ function databaseWithPublishablePlan() {
   `);
   return sqlite;
 }
+
+describe("readPublicationPreview", () => {
+  it("reports no issue for a publishable draft", () => {
+    const sqlite = databaseWithPublishablePlan();
+
+    expect(readPublicationPreview(sqlite, "plan-1")?.issues).toEqual([]);
+  });
+
+  it("reports the missing course phase of an incomplete draft per semester", () => {
+    const sqlite = databaseWithPublishablePlan();
+    sqlite.exec("DELETE FROM draft_phases WHERE id = 'phase-3'");
+
+    const issues = readPublicationPreview(sqlite, "plan-1")?.issues ?? [];
+
+    expect(issues).toContainEqual(expect.objectContaining({ code: "semester-missing", semester: 3, courseId: "course-1" }));
+    expect(issues).toContainEqual(expect.objectContaining({ code: "coverage-gap", semester: 4, field: "startDate" }));
+  });
+
+  it("reports a course that another published version still shows", () => {
+    const sqlite = databaseWithPublishablePlan();
+    sqlite.exec(`
+      INSERT INTO block_plans VALUES ('plan-2', 'area-1', NULL, NULL, 1, '2026-01-01T00:00:00.000Z', 'editor-1');
+      INSERT INTO published_versions VALUES ('version-2', 'plan-2', '2026-01-01T00:00:00.000Z', '2026 · TIF26A', 'Informatik');
+      INSERT INTO published_course_snapshots VALUES ('snapshot-2', 'version-2', 'course-1', 'TIF26A', 'Informatik', 'TIF', '2026-10-01', '2027-03-31', 6);
+    `);
+
+    expect(readPublicationPreview(sqlite, "plan-1")?.issues).toContainEqual(
+      expect.objectContaining({ code: "course-published-elsewhere", courseId: "course-1" }),
+    );
+  });
+
+  it("reports a block plan without any course", () => {
+    const sqlite = databaseWithPublishablePlan();
+    sqlite.exec("DELETE FROM draft_phases; UPDATE courses SET block_plan_id = NULL WHERE id = 'course-1'");
+
+    expect(readPublicationPreview(sqlite, "plan-1")?.issues).toEqual([
+      expect.objectContaining({ code: "block-plan-without-course" }),
+    ]);
+  });
+
+  it("reports an unknown block plan as absent", () => {
+    expect(readPublicationPreview(databaseWithPublishablePlan(), "plan-unknown")).toBeNull();
+  });
+});
 
 describe("publishBlockPlan", () => {
   it("creates an independent public snapshot and marks the block plan as published", () => {
@@ -47,8 +91,21 @@ describe("publishBlockPlan", () => {
   it("rejects a publication when the viewed draft is stale", () => {
     const sqlite = databaseWithPublishablePlan();
 
+    // The editor must be able to tell this apart from any other refusal: only here it reloads the preview and asks
+    // for a fresh release instead of showing an error at the button (MVP-SPEZIFIKATION.md).
     expect(() => publishBlockPlan(sqlite, {
       blockPlanId: "plan-1", accountId: "editor-1", seenDraftUpdatedAt: "outdated", seenPublishedVersionId: null,
-    })).toThrow("Vorschau ist nicht mehr aktuell");
+    })).toThrow(StalePreviewError);
+    expect(sqlite.prepare("SELECT count(*) AS count FROM published_versions").get()).toEqual({ count: 0 });
+  });
+
+  it("refuses a draft that violates a publication rule", () => {
+    const sqlite = databaseWithPublishablePlan();
+    sqlite.exec("DELETE FROM draft_phases WHERE id = 'phase-6'");
+
+    expect(() => publishBlockPlan(sqlite, {
+      blockPlanId: "plan-1", accountId: "editor-1", seenDraftUpdatedAt: "2026-01-01T00:00:00.000Z", seenPublishedVersionId: null,
+    })).toThrow("Studienende");
+    expect(sqlite.prepare("SELECT count(*) AS count FROM published_versions").get()).toEqual({ count: 0 });
   });
 });

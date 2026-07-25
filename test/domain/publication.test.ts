@@ -39,7 +39,7 @@ describe("validatePublication", () => {
     expect(validatePublication({ courses, phases: completePhases, events: [] })).toEqual([]);
   });
 
-  it("rejects gaps in a course history", () => {
+  it("rejects gaps in a course history and names the semester and field to correct", () => {
     const phases = completePhases.map((phase) =>
       phase.courseId === "course-a" && phase.semester === 2
         ? { ...phase, startDate: "2027-01-02" }
@@ -47,7 +47,15 @@ describe("validatePublication", () => {
     );
 
     expect(validatePublication({ courses, phases, events: [] })).toContainEqual(
-      expect.objectContaining({ courseId: "course-a", code: "coverage-gap" }),
+      expect.objectContaining({ courseId: "course-a", code: "coverage-gap", semester: 2, field: "startDate" }),
+    );
+  });
+
+  it("names the semester of a course phase that is missing entirely", () => {
+    const phases = completePhases.filter((phase) => !(phase.courseId === "course-a" && phase.semester === 2));
+
+    expect(validatePublication({ courses, phases, events: [] })).toContainEqual(
+      expect.objectContaining({ courseId: "course-a", code: "semester-missing", semester: 2, field: null }),
     );
   });
 
@@ -69,7 +77,39 @@ describe("validatePublication", () => {
           },
         ],
       }),
-    ).toContainEqual(expect.objectContaining({ eventId: "event-1", code: "event-outside-study-period" }));
+    ).toContainEqual(expect.objectContaining({ eventId: "event-1", courseId: "course-a", code: "event-outside-study-period", semester: null, field: "startDate" }));
+  });
+
+  it("names every affected course separately, because study period and semester are decided per course", () => {
+    const issues = validatePublication({
+      courses,
+      phases: completePhases,
+      events: [{ id: "event-1", title: "Prüfung", description: null, category: "EXAM", startDate: "2027-04-01", endDate: null, provisional: false, courseIds: ["course-a", "course-b"] }],
+    });
+
+    expect(issues.map((issue) => issue.courseId)).toEqual(["course-a", "course-b"]);
+    expect(new Set(issues.map((issue) => issue.message)).size).toBe(2);
+  });
+
+  it("names the end date of an event that reaches beyond the study period", () => {
+    expect(
+      validatePublication({
+        courses,
+        phases: completePhases,
+        events: [
+          {
+            id: "event-1",
+            title: "Projektarbeit",
+            description: null,
+            category: "SUBMISSION",
+            startDate: "2027-03-30",
+            endDate: "2027-04-02",
+            provisional: false,
+            courseIds: ["course-a"],
+          },
+        ],
+      }),
+    ).toContainEqual(expect.objectContaining({ eventId: "event-1", code: "event-outside-study-period", field: "endDate" }));
   });
 
   it("rejects a semester that is split by a later semester", () => {
@@ -91,7 +131,19 @@ describe("validatePublication", () => {
         phases: completePhases,
         events: [{ id: "event-1", title: "Prüfung", description: null, category: "EXAM", startDate: "2027-03-30", endDate: null, provisional: false, courseIds: [] }],
       }),
-    ).toContainEqual(expect.objectContaining({ eventId: "event-1", code: "event-without-course" }));
+    ).toContainEqual(expect.objectContaining({ eventId: "event-1", code: "event-without-course", field: "courseIds" }));
+  });
+
+  it("points at the start date of an event whose semester no course phase covers", () => {
+    const phases = completePhases.filter((phase) => !(phase.courseId === "course-a" && phase.semester === 2));
+
+    expect(
+      validatePublication({
+        courses: [courses[0]],
+        phases,
+        events: [{ id: "event-1", title: "Prüfung", description: null, category: "EXAM", startDate: "2027-02-10", endDate: null, provisional: false, courseIds: ["course-a"] }],
+      }),
+    ).toContainEqual(expect.objectContaining({ eventId: "event-1", courseId: "course-a", code: "event-semester-not-derivable", semester: null, field: "startDate" }));
   });
 });
 

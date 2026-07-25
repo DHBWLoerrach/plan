@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import type Database from "better-sqlite3";
 
 import { blockPlanDisplayName } from "@/lib/domain/block-plan-name";
-import { type DraftCourse, type DraftEvent, type DraftPhase, validatePublication } from "@/lib/domain/publication";
+import { type DraftCourse, type DraftEvent, type DraftPhase, type PublicationIssue, validatePublication } from "@/lib/domain/publication";
 import { assertAreaEditPermission } from "@/lib/services/authorization";
 
 type PublicationRequest = {
@@ -13,13 +13,34 @@ type PublicationRequest = {
   seenPublishedVersionId: string | null;
 };
 
-type PlanRow = { id: string; areaId: string; name: string | null; draftUpdatedAt: string; areaName: string };
+type PlanRow = {
+  id: string;
+  areaId: string;
+  name: string | null;
+  draftUpdatedAt: string;
+  areaName: string;
+  hasEverBeenPublished: number;
+  publishedVersionId: string | null;
+};
 type CourseRow = DraftCourse & { program: string; programAbbreviation: string };
 
+/**
+ * The refusal to publish a draft that changed after the preview was rendered. The editor tells it apart from every
+ * other refusal, because only here it reloads the preview and asks for a fresh release (MVP-SPEZIFIKATION.md).
+ */
+export class StalePreviewError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "StalePreviewError";
+  }
+}
+
 function readDraft(sqlite: Database.Database, blockPlanId: string) {
-  const plan = sqlite.prepare(`SELECT plan.id, plan.area_id AS areaId, plan.name, plan.draft_updated_at AS draftUpdatedAt, area.name AS areaName
-    FROM block_plans plan JOIN areas area ON area.id = plan.area_id WHERE plan.id = ?`).get(blockPlanId) as PlanRow | undefined;
-  if (!plan) throw new Error("Der Blockplan wurde nicht gefunden.");
+  const plan = sqlite.prepare(`SELECT plan.id, plan.area_id AS areaId, plan.name, plan.draft_updated_at AS draftUpdatedAt,
+      area.name AS areaName, plan.has_ever_been_published AS hasEverBeenPublished, version.id AS publishedVersionId
+    FROM block_plans plan JOIN areas area ON area.id = plan.area_id
+    LEFT JOIN published_versions version ON version.block_plan_id = plan.id WHERE plan.id = ?`).get(blockPlanId) as PlanRow | undefined;
+  if (!plan) return null;
   const courses = sqlite.prepare(`SELECT course.id, course.code, course.study_start AS studyStart, course.study_end AS studyEnd,
       program.semesters, program.name AS program, program.abbreviation AS programAbbreviation
     FROM courses course JOIN programs program ON program.id = course.program_id WHERE course.block_plan_id = ?`).all(blockPlanId) as CourseRow[];
@@ -34,26 +55,54 @@ function readDraft(sqlite: Database.Database, blockPlanId: string) {
   return { plan, courses, phases, events };
 }
 
+/**
+ * Everything a draft needs to be checked before its release: the saved draft and every structural and publication
+ * rule it still violates. Preview and publication read it from the same place, so what the preview shows is exactly
+ * what the release checks again (MVP-SPEZIFIKATION.md). Returns `null` for an unknown block plan.
+ */
+export function readPublicationPreview(sqlite: Database.Database, blockPlanId: string) {
+  const draft = readDraft(sqlite, blockPlanId);
+  if (!draft) return null;
+  const { plan, courses, phases, events } = draft;
+  const issues: PublicationIssue[] = [];
+  if (!courses.length) {
+    issues.push({
+      code: "block-plan-without-course",
+      semester: null,
+      field: null,
+      message: "Der Blockplan benötigt mindestens einen zugeordneten Kurs.",
+    });
+  }
+  const publishedElsewhere = sqlite.prepare(`SELECT snapshot.id FROM published_course_snapshots snapshot
+    JOIN published_versions version ON version.id = snapshot.version_id
+    WHERE snapshot.source_course_id = ? AND version.block_plan_id <> ?`);
+  for (const course of courses) {
+    if (publishedElsewhere.get(course.id, plan.id)) {
+      issues.push({
+        code: "course-published-elsewhere",
+        courseId: course.id,
+        semester: null,
+        field: null,
+        message: `Der Kurs ${course.code} ist bereits in einer anderen veröffentlichten Fassung sichtbar. Diese muss zuerst ohne den Kurs neu veröffentlicht oder zurückgenommen werden.`,
+      });
+    }
+  }
+  issues.push(...validatePublication({ courses, phases, events }));
+  return { plan, courses, phases, events, issues };
+}
+
 export function publishBlockPlan(sqlite: Database.Database, request: PublicationRequest) {
   return sqlite.transaction(() => {
-    const { plan, courses, phases, events } = readDraft(sqlite, request.blockPlanId);
+    const preview = readPublicationPreview(sqlite, request.blockPlanId);
+    if (!preview) throw new Error("Der Blockplan wurde nicht gefunden.");
+    const { plan, courses, phases, events, issues } = preview;
     assertAreaEditPermission(sqlite, request.accountId, plan.areaId);
-    const existing = sqlite.prepare("SELECT id FROM published_versions WHERE block_plan_id = ?").get(plan.id) as { id: string } | undefined;
-    if (plan.draftUpdatedAt !== request.seenDraftUpdatedAt || (existing?.id ?? null) !== request.seenPublishedVersionId) {
-      throw new Error("Die Vorschau ist nicht mehr aktuell. Laden Sie den aktuellen Entwurf erneut.");
+    if (plan.draftUpdatedAt !== request.seenDraftUpdatedAt || plan.publishedVersionId !== request.seenPublishedVersionId) {
+      throw new StalePreviewError("Die Vorschau ist nicht mehr aktuell. Laden Sie den aktuellen Entwurf erneut.");
     }
-    if (!courses.length) throw new Error("Ein Blockplan benötigt mindestens einen Kurs.");
-    const issues = validatePublication({ courses, phases, events });
     if (issues.length) throw new Error(issues.map((issue) => issue.message).join(" "));
 
-    for (const course of courses) {
-      const conflict = sqlite.prepare(`SELECT snapshot.code FROM published_course_snapshots snapshot
-        JOIN published_versions version ON version.id = snapshot.version_id
-        WHERE snapshot.source_course_id = ? AND version.block_plan_id <> ?`).get(course.id, plan.id);
-      if (conflict) throw new Error(`Der Kurs ${course.code} ist bereits in einer anderen veröffentlichten Fassung sichtbar.`);
-    }
-
-    if (existing) sqlite.prepare("DELETE FROM published_versions WHERE id = ?").run(existing.id);
+    if (plan.publishedVersionId) sqlite.prepare("DELETE FROM published_versions WHERE id = ?").run(plan.publishedVersionId);
     const versionId = randomUUID();
     const blockPlanName = blockPlanDisplayName(plan.name, courses);
     sqlite.prepare("INSERT INTO published_versions (id, block_plan_id, published_at, block_plan_name, area_name) VALUES (?, ?, ?, ?, ?)")

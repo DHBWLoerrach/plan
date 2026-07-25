@@ -212,6 +212,15 @@ p[role="status"] { margin: 0; color: var(--success); }
 
 .field-hint { margin: 0; color: var(--gray); font-size: .85rem; }
 
+/* An announcement, not a failure: it keeps the alert role but not the error colour of a rejected input. */
+.notice { margin: 1.5rem 0 0; padding: 1rem 1.1rem; border: 1px solid var(--warning-border); border-left-width: 4px; background: var(--warning-bg); color: var(--ink); }
+
+.issue-group { margin-top: 2rem; padding: 1rem 1.1rem; background: #fff; border: 1px solid var(--line); border-left: 4px solid var(--error); }
+.issue-group h3 { margin: 0; font-size: 1.1rem; font-weight: 700; }
+.issue-list { display: grid; gap: .9rem; margin: .9rem 0; padding: 0; list-style: none; }
+.issue-list > li > p { margin: 0 0 .2rem; }
+.issue-list > li > a { display: inline-block; margin-top: .2rem; }
+
 .plan-settings { margin-top: 2.5rem; padding: 0 0 .5rem; border-top: 1px solid var(--line); }
 .plan-settings > summary { padding: 1rem 0; font-weight: 700; cursor: pointer; }
 .plan-settings > summary:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
