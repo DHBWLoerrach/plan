@@ -15,8 +15,20 @@ import type { PhaseField } from "@/lib/services/phase-admin";
 
 type PhaseCourse = { id: string; code: string };
 
-/** Completeness and errors of a semester as text, never by colour or position alone (BARRIEREFREIHEIT.md). */
-function shortStatus(entry: SemesterEntry): string {
+/**
+ * The composition of a semester as "je 1 Theorie, 0–1 Praxis". A range names the courses that deviate from the rest,
+ * "je" only makes sense once several courses share the number.
+ */
+function composition(entry: SemesterEntry, courseCount: number): string {
+  return entry.phasesPerCourse.map(({ type, min, max }) => {
+    const label = phaseTypeLabel(type);
+    if (min !== max) return `${min}–${max} ${label}`;
+    return courseCount > 1 ? `je ${min} ${label}` : `${min} ${label}`;
+  }).join(", ");
+}
+
+/** Composition and errors of a semester as text, never by colour or position alone (BARRIEREFREIHEIT.md). */
+function shortStatus(entry: SemesterEntry, courseCount: number): string {
   if (entry.codesWithOverlap.length) return `Fehler: überlappende Kursphasen (${entry.codesWithOverlap.join(", ")})`;
   if (!entry.phaseCount) return "noch keine Kursphase";
   if (entry.codesWithoutPhase.length) {
@@ -24,15 +36,15 @@ function shortStatus(entry: SemesterEntry): string {
       ? `1 Kurs ohne Kursphase (${entry.codesWithoutPhase[0]})`
       : `${entry.codesWithoutPhase.length} Kurse ohne Kursphase (${entry.codesWithoutPhase.join(", ")})`;
   }
-  return "vollständig";
+  return composition(entry, courseCount);
 }
 
-function fullStatus(entry: SemesterEntry): string {
+function fullStatus(entry: SemesterEntry, courseCount: number): string {
   if (!entry.phaseCount) return "In diesem Semester ist noch keine Kursphase gespeichert.";
   const parts = [entry.phaseCount === 1 ? "1 Kursphase" : `${entry.phaseCount} Kursphasen`];
   parts.push(entry.codesWithoutPhase.length
     ? `ohne Kursphase: ${entry.codesWithoutPhase.join(", ")}`
-    : "jeder Kurs hat hier mindestens eine Kursphase");
+    : composition(entry, courseCount));
   if (entry.codesWithOverlap.length) parts.push(`Fehler — überlappende Kursphasen: ${entry.codesWithOverlap.join(", ")}`);
   return parts.join(" · ");
 }
@@ -138,13 +150,13 @@ export function PhaseSection({ blockPlanId, courses, semesters, semester, overvi
             aria-current={item.semester === semester ? "page" : undefined} aria-describedby={statusId}>
             Semester {item.semester}
           </Link>
-          <span id={statusId}>{shortStatus(item)}</span>
+          <span id={statusId}>{shortStatus(item, courses.length)}</span>
         </li>;
       })}</ul>
     </nav>
 
     <h3>Semester {semester}</h3>
-    {entry ? <p>{fullStatus(entry)}</p> : null}
+    {entry ? <p>{fullStatus(entry, courses.length)}</p> : null}
 
     {context.before.length ? <div className="entry-context">
       <h4>Vor diesem Semester</h4>
