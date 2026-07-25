@@ -1,3 +1,4 @@
+import { plusDays } from "@/lib/domain/calendar-day";
 import type { EventCategory } from "@/lib/domain/event-category";
 import { type PhaseType, phaseTypeLabel } from "@/lib/domain/phase-type";
 
@@ -48,12 +49,6 @@ export interface MatrixRow {
   startDate: string;
   endDate: string;
   cells: string[];
-}
-
-function plusDays(isoDate: string, days: number): string {
-  const date = new Date(`${isoDate}T00:00:00Z`);
-  date.setUTCDate(date.getUTCDate() + days);
-  return date.toISOString().slice(0, 10);
 }
 
 /**

@@ -20,3 +20,19 @@ export function normalizeCalendarDayField<TField extends string>(value: string, 
     throw new FieldError(field, error instanceof Error ? error.message : `${label} ist kein gültiger Kalendertag.`);
   }
 }
+
+/** The calendar day the given number of days after the given one; a negative count steps backwards. */
+export function plusDays(day: string, days: number): string {
+  const date = new Date(`${day}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+/**
+ * The number of days strictly between two calendar days, so directly consecutive days yield zero. Used to name the
+ * span a draft leaves unassigned between two course phases.
+ */
+export function daysBetween(from: string, to: string): number {
+  const difference = Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`);
+  return Math.max(0, Math.round(difference / 86_400_000) - 1);
+}
