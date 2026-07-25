@@ -74,7 +74,10 @@ function EditEventForm({ blockPlanId, courses, event, onSaved }: {
 }) {
   const [state, formAction, isPending] = useActionState<EventFormState, FormData>(async (previous, formData) => {
     const result = await updateEventAction(previous, formData);
-    if (result.success) onSaved(result.success);
+    // The title makes the message unique even when the same event is saved twice in a row (or event A then event
+    // B): the status region is shared across every editor on the page, and repeating the server's generic text
+    // verbatim would mutate nothing in the DOM, so assistive tech would announce nothing the second time (BARRIEREFREIHEIT.md).
+    if (result.success) onSaved(`Die Angaben zum Termin „${event.title}“ wurden gespeichert.`);
     return result;
   }, {});
   const errorId = useId();
