@@ -227,7 +227,8 @@ export type NextPhaseDefaults = {
 
 export function nextPhaseDefaults(input: {
   phases: PlanPhase[];
-  courseIds: string[];
+  /** Die aktuell ausgewählten Kurse; ihre Kennungen erscheinen im Hinweis bei uneindeutiger Vorbelegung. */
+  courses: { id: string; code: string }[];
   semester: number;
 }): NextPhaseDefaults;
 
