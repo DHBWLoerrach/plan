@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useId, useState } from "react";
+import { type ReactNode, useActionState, useId, useState } from "react";
 
 import { type PhaseFormState, createPhasesAction } from "@/app/intern/blockplaene/actions";
 import { DateField } from "@/components/date-field";
@@ -43,11 +43,17 @@ function CreatePhasesForm({ blockPlanId, courses, semesters, semester, defaults,
   semesters: number;
   semester: number;
   defaults: NextPhaseDefaults;
-  onSaved: (message: string) => void;
+  onSaved: (message: ReactNode) => void;
 }) {
   const [state, formAction, isPending] = useActionState<PhaseFormState, FormData>(async (previous, formData) => {
     const result = await createPhasesAction(previous, formData);
-    if (result.success) onSaved(result.success);
+    if (result.success) {
+      // A phase created into another semester than the one open would otherwise leave the list without a trace;
+      // the message says where it went and links there (blockplan-editor-ux-design.md).
+      onSaved(result.createdInSemester
+        ? <>{result.success} <Link className="text-link" href={`/intern/blockplaene/${blockPlanId}?semester=${result.createdInSemester}`}>Zu Semester {result.createdInSemester}</Link></>
+        : result.success);
+    }
     // A rejected save must keep the token of the last successful one, or the form remounts and the keyboard
     // focus needed to fix the error is lost (it would land on the document instead of the invalid field).
     return result.error ? { ...result, token: previous.token } : result;
@@ -61,6 +67,7 @@ function CreatePhasesForm({ blockPlanId, courses, semesters, semester, defaults,
   const periodHint = "Der Zeitraum gilt einschließlich beider Grenztage; Start- und Enddatum dürfen derselbe Tag sein.";
   return <form key={state.token ?? "initial"} action={formAction} className="account-form">
     <input type="hidden" name="blockPlanId" value={blockPlanId} />
+    <input type="hidden" name="openSemester" value={semester} />
     <p>Alle Angaben sind erforderlich. Die Kursphase entsteht zunächst in Semester {semester}; Sie können ein anderes Semester wählen.</p>
     {state.error ? <p id={ids.error} role="alert">{state.error}</p> : null}
     <fieldset className="account-fieldset" aria-describedby={`${ids.consequence}${invalid("courseIds") ? ` ${ids.error}` : ""}`}>
@@ -87,15 +94,18 @@ function CreatePhasesForm({ blockPlanId, courses, semesters, semester, defaults,
     </select>
     <label htmlFor={ids.type}>Phasentyp</label>
     <select id={ids.type} name="type" required defaultValue={values.type}
-      aria-invalid={invalid("type") || undefined} aria-describedby={invalid("type") ? ids.error : undefined}>
+      aria-invalid={invalid("type") || undefined}
+      aria-describedby={[invalid("type") ? ids.error : "", active.ambiguousPredecessors.length ? ids.ambiguous : ""].filter(Boolean).join(" ") || undefined}>
       <option value="" disabled>Bitte wählen</option>
       {phaseTypes.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}
     </select>
     <DateField label="Startdatum" name="startDate" defaultValue={values.startDate} required
       invalid={invalid("startDate")} errorId={ids.error} hint={periodHint}
+      describedBy={active.ambiguousPredecessors.length ? ids.ambiguous : undefined}
       autoFocus={Boolean(state.token) && !values.startDate} />
     <DateField label="Enddatum" name="endDate" defaultValue={values.endDate} required
       invalid={invalid("endDate")} errorId={ids.error}
+      describedBy={active.ambiguousPredecessors.length ? ids.ambiguous : undefined}
       autoFocus={Boolean(state.token) && Boolean(values.startDate)} />
     <button className="button" type="submit" disabled={isPending}>{isPending ? "Kursphasen werden angelegt …" : "Anlegen und nächste erfassen"}</button>
   </form>;
@@ -112,7 +122,8 @@ export function PhaseSection({ blockPlanId, courses, semesters, semester, overvi
   nextDefaults: NextPhaseDefaults;
 }) {
   // The status lives on the section, because a moved or deleted phase takes its own editor and state with it.
-  const [status, setStatus] = useState<string | null>(null);
+  const [status, setStatus] = useState<ReactNode>(null);
+  const statusIdBase = useId();
   const entry = overview[semester - 1];
   return <section aria-labelledby="draft-heading">
     <h2 id="draft-heading">Kursphasen</h2>
@@ -120,13 +131,16 @@ export function PhaseSection({ blockPlanId, courses, semesters, semester, overvi
     <p role="status">{status ?? ""}</p>
 
     <nav aria-label="Semester des Blockplans">
-      <ul className="semester-bar">{overview.map((item) => <li key={item.semester}>
-        <Link className="text-link" href={`/intern/blockplaene/${blockPlanId}?semester=${item.semester}`}
-          aria-current={item.semester === semester ? "page" : undefined}>
-          Semester {item.semester}
-        </Link>
-        <span>{shortStatus(item)}</span>
-      </li>)}</ul>
+      <ul className="semester-bar">{overview.map((item) => {
+        const statusId = `${statusIdBase}-${item.semester}`;
+        return <li key={item.semester}>
+          <Link className="text-link" href={`/intern/blockplaene/${blockPlanId}?semester=${item.semester}`}
+            aria-current={item.semester === semester ? "page" : undefined} aria-describedby={statusId}>
+            Semester {item.semester}
+          </Link>
+          <span id={statusId}>{shortStatus(item)}</span>
+        </li>;
+      })}</ul>
     </nav>
 
     <h3>Semester {semester}</h3>

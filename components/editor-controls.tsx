@@ -7,7 +7,8 @@ import { type ReactNode, useId, useState } from "react";
  * names the entry, so its accessible name stays unambiguous among several editors on the page (BARRIEREFREIHEIT.md).
  */
 export function CollapsibleEditor({ heading, openLabel, closeLabel, children }: {
-  heading: string;
+  /** Omit when the entry already renders its own heading; the toggle's accessible name still names the entry via `openLabel`/`closeLabel`. */
+  heading?: string;
   openLabel: string;
   closeLabel: string;
   children: ReactNode;
@@ -15,7 +16,7 @@ export function CollapsibleEditor({ heading, openLabel, closeLabel, children }: 
   const [open, setOpen] = useState(false);
   const regionId = useId();
   return <div className="editor-card">
-    <h4>{heading}</h4>
+    {heading ? <h4>{heading}</h4> : null}
     <button className="button button--ghost" type="button" aria-expanded={open} aria-controls={regionId} onClick={() => setOpen(!open)}>
       {open ? closeLabel : openLabel}
     </button>

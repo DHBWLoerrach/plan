@@ -22,8 +22,8 @@ export type EventFormState = EditorFormState<EventField, EventInput> & { token?:
 export type PhaseFormState = EditorFormState<PhaseField, PhaseInput> & {
   /** The values the create form starts the next course phase with. */
   next?: NextPhaseDefaults;
-  /** Set when a change moved the phase into another semester, so the section can say where it went. */
-  movedToSemester?: number;
+  /** Set when the created phase landed in a semester other than the one open, so the section can say where it went. */
+  createdInSemester?: number;
   /** Changes on every successful save and remounts the uncontrolled fields. */
   token?: string;
 };
@@ -178,11 +178,22 @@ export async function createPhasesAction(_: PhaseFormState, formData: FormData):
   // The period is part of the message, not just decoration: two rapid, identical-looking saves in the capture
   // rhythm this section exists for must still produce distinct text, or the repeat is never announced (BARRIEREFREIHEIT.md).
   const period = formatCalendarPeriod(input.startDate, input.endDate);
-  return {
-    success: created.length > 1
+  // The create form lets the semester be changed away from the one currently open; the list there is filtered to
+  // that semester, so a phase created into another one would otherwise vanish from view without explanation.
+  const target = Number(input.semester);
+  const opened = Number(formData.get("openSemester") ?? target);
+  const createdInSemester = target === opened ? undefined : target;
+  const success = createdInSemester
+    ? (created.length > 1
+      ? `${created.length} eigenständige Kursphasen wurden in Semester ${createdInSemester} angelegt — je ausgewähltem Kurs eine.`
+      : `Die Kursphase wurde in Semester ${createdInSemester} angelegt.`)
+    : (created.length > 1
       ? `${created.length} eigenständige Kursphasen vom ${period} wurden angelegt — je ausgewähltem Kurs eine.`
-      : `Die Kursphase vom ${period} wurde angelegt.`,
-    next: nextPhaseDefaults({ phases: blockPlanDraftPhases(blockPlanId), courses: selected, semester: Number(input.semester) }),
+      : `Die Kursphase vom ${period} wurde angelegt.`);
+  return {
+    success,
+    next: nextPhaseDefaults({ phases: blockPlanDraftPhases(blockPlanId), courses: selected, semester: target }),
+    createdInSemester,
     token: created[0],
   };
 }

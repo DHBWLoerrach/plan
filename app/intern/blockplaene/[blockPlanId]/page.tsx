@@ -76,8 +76,11 @@ export default async function InternalBlockPlanPage({ params, searchParams }: Pa
   const nextDefaults = nextPhaseDefaults({ phases, courses, semester });
   const entries = eventEntries(events, phases, courseCodes);
   const missingPhaseSemester = overview.find((item) => item.codesWithoutPhase.length)?.semester ?? null;
-  // Assigned courses share year and duration, so identical periods are named once instead of per course.
-  const studyPeriods = [...new Set(courses.map((course) => formatCalendarPeriod(course.studyStart, course.studyEnd)))];
+  // Course attachment only requires the same Jahrgang and Studiendauer (FACHLICHE_REGELN.md), not identical
+  // start/end days, so the period can diverge between assigned courses; it is the boundary every phase and event is
+  // validated against, so a divergence must be visible per course rather than hidden behind a de-duplicated chip.
+  const studyPeriods = courses.map((course) => ({ code: course.code, period: formatCalendarPeriod(course.studyStart, course.studyEnd) }));
+  const identicalStudyPeriod = new Set(studyPeriods.map((entry) => entry.period)).size <= 1;
 
   return <SiteShell><article className="plan-detail">
     <p className="eyebrow">Interner Entwurf</p>
@@ -86,7 +89,9 @@ export default async function InternalBlockPlanPage({ params, searchParams }: Pa
     <p className="plan-area">{plan.areaName} · Jahrgang {courses[0]?.studyStart.slice(0, 4)}</p>
     <dl className="course-list">
       <dt>Zugeordnete Kurse</dt><dd>{courses.map((course) => <span key={course.id}>{course.code}</span>)}</dd>
-      <dt>Studienzeitraum</dt><dd>{studyPeriods.map((period) => <span key={period}>{period}</span>)}</dd>
+      <dt>Studienzeitraum</dt><dd>{identicalStudyPeriod
+        ? <span>{studyPeriods[0]?.period}</span>
+        : studyPeriods.map((entry) => <span key={entry.code}>{entry.code}: {entry.period}</span>)}</dd>
       <dt>Veröffentlichungszustand</dt><dd>{publicationState}</dd>
       <dt>Letzte Entwurfsänderung</dt><dd>{new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" }).format(new Date(plan.draftUpdatedAt))}{plan.draftUpdatedBy ? ` durch ${plan.draftUpdatedBy}` : ""}</dd>
     </dl>

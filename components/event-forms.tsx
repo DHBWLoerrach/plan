@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useId } from "react";
+import { type ReactNode, useActionState, useId } from "react";
 
 import { type EventFormState, deleteEventAction, updateEventAction } from "@/app/intern/blockplaene/actions";
 import { DateField } from "@/components/date-field";
@@ -70,7 +70,7 @@ function EditEventForm({ blockPlanId, courses, event, onSaved }: {
   blockPlanId: string;
   courses: EventCourse[];
   event: DraftEvent;
-  onSaved: (message: string) => void;
+  onSaved: (message: ReactNode) => void;
 }) {
   const [state, formAction, isPending] = useActionState<EventFormState, FormData>(async (previous, formData) => {
     const result = await updateEventAction(previous, formData);
@@ -91,7 +91,7 @@ function EditEventForm({ blockPlanId, courses, event, onSaved }: {
   </form>;
 }
 
-function DeleteEventForm({ blockPlanId, event, onSaved }: { blockPlanId: string; event: DraftEvent; onSaved: (message: string) => void }) {
+function DeleteEventForm({ blockPlanId, event, onSaved }: { blockPlanId: string; event: DraftEvent; onSaved: (message: ReactNode) => void }) {
   const [state, formAction, isPending] = useActionState<EventFormState, FormData>(async (previous, formData) => {
     const result = await deleteEventAction(previous, formData);
     if (result.success) onSaved(`Der Termin „${event.title}“ wurde aus dem Entwurf gelöscht.`);
@@ -111,7 +111,7 @@ export function EventEditorForms({ blockPlanId, courses, event, onSaved }: {
   blockPlanId: string;
   courses: EventCourse[];
   event: DraftEvent;
-  onSaved: (message: string) => void;
+  onSaved: (message: ReactNode) => void;
 }) {
   return <>
     <EditEventForm blockPlanId={blockPlanId} courses={courses} event={event} onSaved={onSaved} />

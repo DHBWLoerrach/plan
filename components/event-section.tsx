@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useId, useState } from "react";
+import { type ReactNode, useActionState, useId, useState } from "react";
 
 import { type EventFormState, createEventAction } from "@/app/intern/blockplaene/actions";
 import { CollapsibleEditor } from "@/components/editor-controls";
@@ -26,7 +26,7 @@ function affectedText(groups: EventEntry["derived"]): string {
 function CreateEventForm({ blockPlanId, courses, onSaved }: {
   blockPlanId: string;
   courses: EventCourse[];
-  onSaved: (message: string) => void;
+  onSaved: (message: ReactNode) => void;
 }) {
   const [state, formAction, isPending] = useActionState<EventFormState, FormData>(async (previous, formData) => {
     const result = await createEventAction(previous, formData);
@@ -57,23 +57,23 @@ export function EventSection({ blockPlanId, courses, entries, missingPhaseSemest
   /** The semester to offer when an event has no derivable semester; the first one still without a phase. */
   missingPhaseSemester: number | null;
 }) {
-  const [status, setStatus] = useState<string | null>(null);
+  const [status, setStatus] = useState<ReactNode>(null);
   return <section aria-labelledby="events-heading">
     <h2 id="events-heading">Prüfungsrelevante Termine</h2>
     <p role="status">{status ?? ""}</p>
     {entries.length ? <ul className="entry-list">{entries.map(({ event, derived }) => {
       const period = event.endDate ? formatCalendarPeriod(event.startDate, event.endDate, { weekday: true }) : formatCalendarDay(event.startDate, { weekday: true });
-      const heading = `${period} · ${eventCategoryLabel(event.category)}${event.provisional ? " · Vorläufig" : ""}`;
+      const meta = `${period} · ${eventCategoryLabel(event.category)}${event.provisional ? " · Vorläufig" : ""}`;
       return <li key={event.id}>
-        <p className="entry-meta">{heading}</p>
-        <p><strong>{event.title}</strong></p>
+        <p className="entry-meta">{meta}</p>
+        <h3>{event.title}</h3>
         {event.description ? <p>{event.description}</p> : null}
         <p className="entry-meta">{affectedText(derived)}</p>
         {derived.some((group) => group.semester === null) ? <p className="empty-note">
           Für den {formatCalendarDay(event.startDate)} fehlt eine Kursphase.
           {missingPhaseSemester ? <> <Link className="text-link" href={`/intern/blockplaene/${blockPlanId}?semester=${missingPhaseSemester}`}>Semester {missingPhaseSemester} ergänzen</Link></> : null}
         </p> : null}
-        <CollapsibleEditor heading={event.title}
+        <CollapsibleEditor
           openLabel={`Termin „${event.title}“ bearbeiten`}
           closeLabel={`Bearbeitung von „${event.title}“ schließen`}>
           <EventEditorForms blockPlanId={blockPlanId} courses={courses} event={event} onSaved={setStatus} />

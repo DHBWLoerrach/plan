@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useId } from "react";
+import Link from "next/link";
+import { type ReactNode, useActionState, useId } from "react";
 
 import { type PhaseDetailsFormState, type PhaseFormState, deletePhaseAction, updatePhaseAction } from "@/app/intern/blockplaene/actions";
 import { DateField } from "@/components/date-field";
@@ -18,13 +19,16 @@ function EditPhaseForm({ blockPlanId, phase, semesters, openSemester, onSaved }:
   phase: EditablePhase;
   semesters: number;
   openSemester: number;
-  onSaved: (message: string) => void;
+  onSaved: (message: ReactNode) => void;
 }) {
   const [state, formAction, isPending] = useActionState<PhaseDetailsFormState, FormData>(async (previous, formData) => {
     const result = await updatePhaseAction(previous, formData);
     if (result.success) {
+      // A moved phase leaves the opened semester's list; the message says where it went and links there, so it
+      // does not read as though the entry vanished by accident (blockplan-editor-ux-design.md).
       onSaved(result.movedToSemester
-        ? `Die Kursphase von ${phase.code} wurde nach Semester ${result.movedToSemester} verschoben.`
+        ? <>Die Kursphase von {phase.code} wurde nach Semester {result.movedToSemester} verschoben. <Link
+            className="text-link" href={`/intern/blockplaene/${blockPlanId}?semester=${result.movedToSemester}`}>Zu Semester {result.movedToSemester}</Link></>
         : result.success);
     }
     return result;
@@ -57,7 +61,7 @@ function EditPhaseForm({ blockPlanId, phase, semesters, openSemester, onSaved }:
   </form>;
 }
 
-function DeletePhaseForm({ blockPlanId, phase, onSaved }: { blockPlanId: string; phase: EditablePhase; onSaved: (message: string) => void }) {
+function DeletePhaseForm({ blockPlanId, phase, onSaved }: { blockPlanId: string; phase: EditablePhase; onSaved: (message: ReactNode) => void }) {
   const [state, formAction, isPending] = useActionState<PhaseFormState, FormData>(async (previous, formData) => {
     const result = await deletePhaseAction(previous, formData);
     // The period makes the message unique even when two phases of the same course are deleted one after another,
@@ -80,7 +84,7 @@ export function PhaseEditorForms({ blockPlanId, phase, semesters, openSemester, 
   phase: EditablePhase;
   semesters: number;
   openSemester: number;
-  onSaved: (message: string) => void;
+  onSaved: (message: ReactNode) => void;
 }) {
   return <>
     <EditPhaseForm blockPlanId={blockPlanId} phase={phase} semesters={semesters} openSemester={openSemester} onSaved={onSaved} />
