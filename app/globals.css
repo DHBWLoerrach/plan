@@ -194,3 +194,18 @@ p[role="status"] { margin: 0; color: var(--success); }
   .course-list { align-items: flex-start; flex-direction: column; gap: .5rem; }
 }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
+
+.semester-bar { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1.25rem 0 0; padding: 0; list-style: none; }
+.semester-bar li { display: grid; gap: .15rem; padding: .5rem .7rem; background: #fff; border: 1px solid var(--line); }
+.semester-bar li:has([aria-current]) { border-left: 4px solid var(--red); }
+.semester-bar span { color: var(--gray); font-size: .82rem; }
+
+.entry-list { display: grid; gap: .75rem; margin: 1.25rem 0 0; padding: 0; list-style: none; }
+.entry-list > li { padding: 0; }
+
+.entry-context { margin: 1.25rem 0 0; padding: .75rem .9rem; border: 1px dashed var(--line); background: #fff; color: var(--gray); }
+.entry-context h4 { margin: 0 0 .4rem; font-size: .9rem; font-weight: 700; }
+.entry-context ul { margin: 0; padding: 0; list-style: none; display: grid; gap: .3rem; font-size: .9rem; }
+.entry-context p { margin: .5rem 0 0; font-size: .9rem; }
+
+.field-hint { margin: 0; color: var(--gray); font-size: .85rem; }

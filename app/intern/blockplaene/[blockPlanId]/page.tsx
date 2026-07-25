@@ -4,14 +4,14 @@ import { connection } from "next/server";
 
 import { AttachCourseForm, DeleteBlockPlanForm, DetachCourseForm, RenameBlockPlanForm } from "@/components/block-plan-forms";
 import { CreateEventForm, EventEditor } from "@/components/event-forms";
-import { CreatePhasesForm, PhaseEditor } from "@/components/phase-forms";
+import { PhaseSection } from "@/components/phase-section";
 import { SiteShell } from "@/components/site-shell";
 import { sqlite } from "@/lib/db";
 import { blockPlanDisplayName } from "@/lib/domain/block-plan-name";
 import { eventCategoryLabel } from "@/lib/domain/event-category";
-import { phaseTypeLabel } from "@/lib/domain/phase-type";
 import { type DraftEvent, deriveEventSemester } from "@/lib/domain/publication";
-import { type SemesterEntry, semesterOverview } from "@/lib/domain/semester-overview";
+import { nextPhaseDefaults, semesterContext } from "@/lib/domain/phase-sequence";
+import { semesterOverview } from "@/lib/domain/semester-overview";
 import { getActiveAccount } from "@/lib/internal-auth";
 import { listAttachableCourses, maximumCoursesPerBlockPlan } from "@/lib/services/block-plan-admin";
 
@@ -34,17 +34,6 @@ function affectedCourseLabels(event: DraftEvent, phases: PlanPhase[], courseCode
     const code = courseCodes.get(courseId) ?? courseId;
     return semester ? `${code} (Semester ${semester})` : `${code} (Semester noch nicht ableitbar — für den Starttag fehlt eine Kursphase)`;
   });
-}
-
-/** Completeness and errors of a semester as text, never by colour or position alone (BARRIEREFREIHEIT.md). */
-function semesterStatusText(entry: SemesterEntry): string {
-  if (!entry.phaseCount) return "Noch keine Kursphase";
-  const parts = [entry.phaseCount === 1 ? "1 Kursphase" : `${entry.phaseCount} Kursphasen`];
-  parts.push(entry.codesWithoutPhase.length
-    ? `ohne Kursphase: ${entry.codesWithoutPhase.join(", ")}`
-    : "jeder Kurs hat hier mindestens eine Kursphase");
-  if (entry.codesWithOverlap.length) parts.push(`Fehler — überlappende Kursphasen: ${entry.codesWithOverlap.join(", ")}`);
-  return parts.join(" · ");
 }
 
 export default async function InternalBlockPlanPage({ params, searchParams }: PageProps<"/intern/blockplaene/[blockPlanId]">) {
@@ -80,14 +69,9 @@ export default async function InternalBlockPlanPage({ params, searchParams }: Pa
   const requestedSemester = searchParam(query, "semester");
   const knownSemester = overview.some((entry) => entry.semester === Number(requestedSemester));
   const semester = knownSemester ? Number(requestedSemester) : 1;
-  const semesterEntry = overview[semester - 1];
   const semesterPhases = phases.filter((phase) => phase.semester === semester);
-  const createdPhases = Number(searchParam(query, "kursphasen-angelegt")) || 0;
-  const phaseStatus = createdPhases > 1
-    ? `${createdPhases} eigenständige Kursphasen wurden angelegt — je ausgewähltem Kurs eine.`
-    : createdPhases === 1 ? "Die Kursphase wurde angelegt."
-      : searchParam(query, "kursphase-gespeichert") === "1" ? "Die Kursphase wurde gespeichert."
-        : searchParam(query, "kursphase-geloescht") === "1" ? "Die Kursphase wurde aus dem Entwurf gelöscht." : null;
+  const context = semesterContext({ courses, phases, semester });
+  const nextDefaults = nextPhaseDefaults({ phases, courses, semester });
 
   return <SiteShell><article className="plan-detail">
     <p className="eyebrow">Interner Entwurf</p>
@@ -125,40 +109,11 @@ export default async function InternalBlockPlanPage({ params, searchParams }: Pa
           : <p className="empty-note">Es gibt derzeit keinen blockplanlosen Kurs mit demselben Bereich, Jahrgang und derselben Studiendauer.</p>}
     </section>
 
-    <section aria-labelledby="draft-heading">
-      <h2 id="draft-heading">Kursphasen</h2>
-      <p>Der Verlauf wird semesterweise erfasst. Jede Anlage, Änderung und Löschung wird einzeln gespeichert; ein Entwurf ist erst nach vollständigem Verlauf veröffentlichbar.</p>
-      <nav aria-label="Semester des Blockplans">
-        <ul className="semester-nav">{overview.map((entry) => <li key={entry.semester}>
-          <Link className="text-link" href={`/intern/blockplaene/${plan.id}?semester=${entry.semester}`} aria-current={entry.semester === semester ? "page" : undefined}>
-            Semester {entry.semester}
-          </Link>
-          <span>{semesterStatusText(entry)}</span>
-        </li>)}</ul>
-      </nav>
-
-      <h3>Semester {semester}</h3>
-      {requestedSemester && !knownSemester
-        ? <p role="status">Semester {requestedSemester} gibt es in diesem Blockplan nicht. Angezeigt wird Semester 1.</p>
-        : null}
-      {phaseStatus ? <p role="status">{phaseStatus}</p> : null}
-      {semesterEntry ? <p>{semesterStatusText(semesterEntry)}</p> : null}
-      {semesterPhases.length
-        ? <>
-          <div className="matrix-wrap" tabIndex={0}>
-            <table className="event-table">
-              <thead><tr><th scope="col">Kurs</th><th scope="col">Zeitraum</th><th scope="col">Phasentyp</th></tr></thead>
-              <tbody>{semesterPhases.map((phase) => <tr key={phase.id}>
-                <td>{phase.code}</td><td>{phase.startDate} – {phase.endDate}</td><td>{phaseTypeLabel(phase.type)}</td>
-              </tr>)}</tbody>
-            </table>
-          </div>
-          {semesterPhases.map((phase) => <PhaseEditor key={phase.id} blockPlanId={plan.id} phase={phase} semesters={semesters} />)}
-        </>
-        : <p className="empty-note">In Semester {semester} ist noch keine Kursphase gespeichert.</p>}
-      <h4>Neue Kursphase anlegen</h4>
-      <CreatePhasesForm blockPlanId={plan.id} courses={courses} semesters={semesters} semester={semester} />
-    </section>
+    {requestedSemester && !knownSemester
+      ? <p role="status">Semester {requestedSemester} gibt es in diesem Blockplan nicht. Angezeigt wird Semester 1.</p>
+      : null}
+    <PhaseSection blockPlanId={plan.id} courses={courses} semesters={semesters} semester={semester}
+      overview={overview} phases={semesterPhases} context={context} nextDefaults={nextDefaults} />
 
     <section aria-labelledby="events-heading">
       <h2 id="events-heading">Prüfungsrelevante Termine</h2>

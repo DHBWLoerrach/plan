@@ -9,14 +9,24 @@ import { attachCourse, createBlockPlanFromCourse, deleteBlockPlan, detachCourse,
 import { FieldError } from "@/lib/domain/field-error";
 import { type EventField, type EventInput, createDraftEvent, deleteDraftEvent, updateDraftEvent } from "@/lib/services/event-admin";
 import { type PhaseDetails, type PhaseField, type PhaseInput, createDraftPhases, deleteDraftPhase, updateDraftPhase } from "@/lib/services/phase-admin";
+import { type NextPhaseDefaults, nextPhaseDefaults } from "@/lib/domain/phase-sequence";
+
+import { blockPlanCourses, blockPlanDraftPhases } from "./data";
 
 export type BlockPlanFormState = { error?: string; success?: string };
 
 /** A rejected save keeps the entered values and names the field, so the editor can show both (BARRIEREFREIHEIT.md). */
 export type EditorFormState<TField extends string, TValues> = BlockPlanFormState & { field?: TField; values?: TValues };
-export type EventFormState = EditorFormState<EventField, EventInput>;
-export type PhaseFormState = EditorFormState<PhaseField, PhaseInput>;
-export type PhaseDetailsFormState = EditorFormState<PhaseField, PhaseDetails>;
+export type EventFormState = EditorFormState<EventField, EventInput> & { token?: string };
+export type PhaseFormState = EditorFormState<PhaseField, PhaseInput> & {
+  /** The values the create form starts the next course phase with. */
+  next?: NextPhaseDefaults;
+  /** Set when a change moved the phase into another semester, so the section can say where it went. */
+  movedToSemester?: number;
+  /** Changes on every successful save and remounts the uncontrolled fields. */
+  token?: string;
+};
+export type PhaseDetailsFormState = EditorFormState<PhaseField, PhaseDetails> & { movedToSemester?: number };
 
 async function requireAccountId() {
   const account = await getActiveAccount();
@@ -151,14 +161,6 @@ function phaseInput(formData: FormData): PhaseInput {
   return { ...phaseDetails(formData), courseIds: formData.getAll("courseIds").map(String) };
 }
 
-/**
- * A saved phase may belong to another semester than the one being edited, and a deleted one disappears with its form.
- * Both therefore report back on the reloaded semester instead of in a form that may no longer be shown.
- */
-function backToSemester(blockPlanId: string, semester: string, status: string): never {
-  redirect(`/intern/blockplaene/${blockPlanId}?semester=${encodeURIComponent(semester)}&${status}`);
-}
-
 export async function createPhasesAction(_: PhaseFormState, formData: FormData): Promise<PhaseFormState> {
   const blockPlanId = String(formData.get("blockPlanId") ?? "");
   const input = phaseInput(formData);
@@ -169,7 +171,15 @@ export async function createPhasesAction(_: PhaseFormState, formData: FormData):
     return rejected<PhaseField, PhaseInput>(error, input);
   }
   revalidateBlockPlan(blockPlanId);
-  backToSemester(blockPlanId, input.semester, `kursphasen-angelegt=${created.length}`);
+  // The defaults for the next phase come from the saved draft, so they already include what was just created.
+  const selected = blockPlanCourses(blockPlanId).filter((course) => input.courseIds.includes(course.id));
+  return {
+    success: created.length > 1
+      ? `${created.length} eigenständige Kursphasen wurden angelegt — je ausgewähltem Kurs eine.`
+      : "Die Kursphase wurde angelegt.",
+    next: nextPhaseDefaults({ phases: blockPlanDraftPhases(blockPlanId), courses: selected, semester: Number(input.semester) }),
+    token: created[0],
+  };
 }
 
 export async function updatePhaseAction(_: PhaseDetailsFormState, formData: FormData): Promise<PhaseDetailsFormState> {
@@ -182,20 +192,22 @@ export async function updatePhaseAction(_: PhaseDetailsFormState, formData: Form
     return rejected<PhaseField, PhaseDetails>(error, details);
   }
   revalidateBlockPlan(blockPlanId);
-  backToSemester(blockPlanId, details.semester, "kursphase-gespeichert=1");
+  // A phase may have been moved out of the opened semester; it then leaves the list and the section says where to.
+  const saved = Number(details.semester);
+  const opened = Number(formData.get("openSemester") ?? saved);
+  return { success: "Die Kursphase wurde gespeichert.", movedToSemester: saved === opened ? undefined : saved };
 }
 
 export async function deletePhaseAction(_: PhaseFormState, formData: FormData): Promise<PhaseFormState> {
   const blockPlanId = String(formData.get("blockPlanId") ?? "");
   const phaseId = String(formData.get("phaseId") ?? "");
-  const semester = String(formData.get("semester") ?? "");
   try {
     deleteDraftPhase(sqlite, { accountId: await requireAccountId(), phaseId });
   } catch (error) {
     return { error: errorMessage(error) };
   }
   revalidateBlockPlan(blockPlanId);
-  backToSemester(blockPlanId, semester, "kursphase-geloescht=1");
+  return { success: "Die Kursphase wurde aus dem Entwurf gelöscht." };
 }
 
 export async function deleteBlockPlanAction(_: BlockPlanFormState, formData: FormData): Promise<BlockPlanFormState> {
