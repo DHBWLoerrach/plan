@@ -2,11 +2,12 @@ import "server-only";
 
 import { sqlite } from "@/lib/db";
 import { blockPlanDisplayName } from "@/lib/domain/block-plan-name";
-import type { DraftEvent, DraftPhase } from "@/lib/domain/publication";
+import type { DraftEvent, PlanPhase } from "@/lib/domain/publication";
 
 export type PlanCourse = { id: string; code: string; program: string; semesters: number; studyStart: string; studyEnd: string };
 export type PlanSummary = { displayName: string; courseCodes: string[] };
-export type PlanPhase = DraftPhase & { id: string; code: string };
+
+export type { PlanPhase };
 
 /** The courses currently assigned to a block plan, in the order used for display and for the derived name. */
 export function blockPlanCourses(blockPlanId: string): PlanCourse[] {

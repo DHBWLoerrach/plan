@@ -18,6 +18,9 @@ export interface DraftPhase {
   endDate: string;
 }
 
+/** A saved draft phase as the editor lists it: the domain data plus its identity and the code of its course. */
+export type PlanPhase = DraftPhase & { id: string; code: string };
+
 export interface DraftEvent {
   id: string;
   title: string;
