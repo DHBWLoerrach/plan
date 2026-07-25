@@ -114,13 +114,15 @@ function rejected<TField extends string, TValues>(error: unknown, values: TValue
 export async function createEventAction(_: EventFormState, formData: FormData): Promise<EventFormState> {
   const blockPlanId = String(formData.get("blockPlanId") ?? "");
   const input = eventInput(formData);
+  let eventId: string;
   try {
-    createDraftEvent(sqlite, { accountId: await requireAccountId(), blockPlanId, ...input });
+    eventId = createDraftEvent(sqlite, { accountId: await requireAccountId(), blockPlanId, ...input });
   } catch (error) {
     return rejected<EventField, EventInput>(error, input);
   }
   revalidateBlockPlan(blockPlanId);
-  return { success: "Der Termin wurde angelegt." };
+  // The token remounts the create form, so title, description and dates start empty for the next event.
+  return { success: `Der Termin „${input.title}“ wurde angelegt.`, token: eventId, values: input };
 }
 
 export async function updateEventAction(_: EventFormState, formData: FormData): Promise<EventFormState> {
@@ -145,8 +147,7 @@ export async function deleteEventAction(_: EventFormState, formData: FormData): 
     return { error: errorMessage(error) };
   }
   revalidateBlockPlan(blockPlanId);
-  // The deleted event disappears with its form, so the confirmation lives on the reloaded page instead.
-  redirect(`/intern/blockplaene/${blockPlanId}?termin-geloescht=1`);
+  return { success: "Der Termin wurde aus dem Entwurf gelöscht." };
 }
 
 function phaseDetails(formData: FormData): PhaseDetails {
