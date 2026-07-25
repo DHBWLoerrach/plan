@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { nextPhaseDefaults } from "@/lib/domain/phase-sequence";
+import { nextPhaseDefaults, semesterContext } from "@/lib/domain/phase-sequence";
 import type { PlanPhase } from "@/lib/domain/publication";
 
 const courses = [
@@ -131,5 +131,86 @@ describe("nextPhaseDefaults", () => {
       type: "THEORY",
       startDate: "2027-04-01",
     });
+  });
+});
+
+const spanning: PlanPhase[] = [
+  { id: "s1", code: "TIF26A", courseId: "course-a", semester: 1, type: "THEORY", startDate: "2026-10-01", endDate: "2027-03-31" },
+  { id: "s2", code: "TIF26B", courseId: "course-b", semester: 1, type: "THEORY", startDate: "2026-10-01", endDate: "2027-03-31" },
+  { id: "s3", code: "TIF26A", courseId: "course-a", semester: 2, type: "PRACTICE", startDate: "2027-04-01", endDate: "2027-06-19" },
+  { id: "s4", code: "TIF26B", courseId: "course-b", semester: 2, type: "PRACTICE", startDate: "2027-04-01", endDate: "2027-06-19" },
+  { id: "s5", code: "TIF26A", courseId: "course-a", semester: 3, type: "THEORY", startDate: "2027-09-14", endDate: "2027-12-31" },
+  { id: "s6", code: "TIF26B", courseId: "course-b", semester: 3, type: "THEORY", startDate: "2027-09-14", endDate: "2027-12-31" },
+];
+
+describe("semesterContext", () => {
+  it("names the last phase before and the first phase after the opened semester", () => {
+    const context = semesterContext({ courses, phases: spanning, semester: 2 });
+
+    expect(context.before).toEqual([
+      { code: "TIF26A", semester: 1, type: "THEORY", startDate: "2026-10-01", endDate: "2027-03-31" },
+      { code: "TIF26B", semester: 1, type: "THEORY", startDate: "2026-10-01", endDate: "2027-03-31" },
+    ]);
+    expect(context.after).toEqual([
+      { code: "TIF26A", semester: 3, type: "THEORY", startDate: "2027-09-14", endDate: "2027-12-31" },
+      { code: "TIF26B", semester: 3, type: "THEORY", startDate: "2027-09-14", endDate: "2027-12-31" },
+    ]);
+  });
+
+  it("counts the days the draft leaves unassigned before the following semester", () => {
+    expect(semesterContext({ courses, phases: spanning, semester: 2 }).unplanned).toEqual([
+      { code: "TIF26A", from: "2027-06-19", to: "2027-09-14", days: 86 },
+      { code: "TIF26B", from: "2027-06-19", to: "2027-09-14", days: 86 },
+    ]);
+  });
+
+  it("reports no unassigned span when the following semester starts the next day", () => {
+    const seamless: PlanPhase[] = [
+      spanning[0],
+      spanning[2],
+      { id: "s7", code: "TIF26A", courseId: "course-a", semester: 3, type: "THEORY", startDate: "2027-06-20", endDate: "2027-12-31" },
+    ];
+
+    expect(semesterContext({ courses: [courses[0]], phases: seamless, semester: 2 }).unplanned).toEqual([]);
+  });
+
+  it("measures the gap from the opened semester, not from the one before it", () => {
+    const emptySecond: PlanPhase[] = [spanning[0], spanning[4]];
+
+    expect(semesterContext({ courses: [courses[0]], phases: emptySecond, semester: 2 }).unplanned).toEqual([
+      { code: "TIF26A", from: "2027-03-31", to: "2027-09-14", days: 166 },
+    ]);
+  });
+
+  it("has no predecessor in the first semester", () => {
+    const context = semesterContext({ courses, phases: spanning, semester: 1 });
+
+    expect(context.before).toEqual([]);
+    expect(context.after).toHaveLength(2);
+  });
+
+  it("has no successor in the last planned semester", () => {
+    const context = semesterContext({ courses, phases: spanning, semester: 3 });
+
+    expect(context.after).toEqual([]);
+    expect(context.unplanned).toEqual([]);
+    expect(context.before).toHaveLength(2);
+  });
+
+  it("keeps courses apart whose phases run on different days", () => {
+    const diverging: PlanPhase[] = [
+      spanning[0],
+      { id: "s8", code: "TIF26B", courseId: "course-b", semester: 1, type: "THEORY", startDate: "2026-10-01", endDate: "2027-02-28" },
+      spanning[4],
+    ];
+
+    expect(semesterContext({ courses, phases: diverging, semester: 2 }).before).toEqual([
+      { code: "TIF26A", semester: 1, type: "THEORY", startDate: "2026-10-01", endDate: "2027-03-31" },
+      { code: "TIF26B", semester: 1, type: "THEORY", startDate: "2026-10-01", endDate: "2027-02-28" },
+    ]);
+  });
+
+  it("returns empty context for a draft without any phase", () => {
+    expect(semesterContext({ courses, phases: [], semester: 1 })).toEqual({ before: [], after: [], unplanned: [] });
   });
 });

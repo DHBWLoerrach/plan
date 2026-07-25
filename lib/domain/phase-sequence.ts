@@ -1,4 +1,4 @@
-import { plusDays } from "@/lib/domain/calendar-day";
+import { daysBetween, plusDays } from "@/lib/domain/calendar-day";
 import type { PhaseType } from "@/lib/domain/phase-type";
 import type { PlanPhase } from "@/lib/domain/publication";
 
@@ -55,4 +55,58 @@ export function nextPhaseDefaults({ phases, courses, semester }: {
 
   const shared = found[0].phase!;
   return { ...base, type: oppositeType[shared.type], startDate: plusDays(shared.endDate, 1), ambiguousPredecessors: [] };
+}
+
+export type PhaseNeighbour = {
+  code: string;
+  semester: number;
+  type: PhaseType;
+  startDate: string;
+  endDate: string;
+};
+
+export type UnplannedSpan = { code: string; from: string; to: string; days: number };
+
+export type SemesterContext = {
+  /** Per course the last phase belonging to an earlier semester. */
+  before: PhaseNeighbour[];
+  /** Per course the first phase belonging to a later semester. */
+  after: PhaseNeighbour[];
+  /** Per course the span between what is planned so far and the following semester. */
+  unplanned: UnplannedSpan[];
+};
+
+function neighbour(code: string, phase: PlanPhase): PhaseNeighbour {
+  return { code, semester: phase.semester, type: phase.type, startDate: phase.startDate, endDate: phase.endDate };
+}
+
+function earliest(phases: PlanPhase[]): PlanPhase | undefined {
+  return phases.reduce<PlanPhase | undefined>((first, phase) => (!first || phase.startDate < first.startDate ? phase : first), undefined);
+}
+
+/**
+ * What borders the opened semester. The editor shows one semester at a time, so planning the next block needs to see
+ * where the previous one ended and where an already planned following one begins. The unassigned span is measured
+ * from the latest phase up to and including the opened semester, which is what a continuing draft actually has to
+ * fill.
+ */
+export function semesterContext({ courses, phases, semester }: {
+  courses: { id: string; code: string }[];
+  phases: PlanPhase[];
+  semester: number;
+}): SemesterContext {
+  const context: SemesterContext = { before: [], after: [], unplanned: [] };
+  for (const course of courses) {
+    const ofCourse = phases.filter((phase) => phase.courseId === course.id);
+    const previous = predecessor(ofCourse, course.id, semester - 1);
+    const next = earliest(ofCourse.filter((phase) => phase.semester > semester));
+    if (previous) context.before.push(neighbour(course.code, previous));
+    if (next) context.after.push(neighbour(course.code, next));
+
+    const planned = predecessor(ofCourse, course.id, semester);
+    if (!planned || !next) continue;
+    const days = daysBetween(planned.endDate, next.startDate);
+    if (days > 0) context.unplanned.push({ code: course.code, from: planned.endDate, to: next.startDate, days });
+  }
+  return context;
 }
