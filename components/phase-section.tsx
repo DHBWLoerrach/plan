@@ -48,7 +48,9 @@ function CreatePhasesForm({ blockPlanId, courses, semesters, semester, defaults,
   const [state, formAction, isPending] = useActionState<PhaseFormState, FormData>(async (previous, formData) => {
     const result = await createPhasesAction(previous, formData);
     if (result.success) onSaved(result.success);
-    return result;
+    // A rejected save must keep the token of the last successful one, or the form remounts and the keyboard
+    // focus needed to fix the error is lost (it would land on the document instead of the invalid field).
+    return result.error ? { ...result, token: previous.token } : result;
   }, {});
   const ids = { error: useId(), consequence: useId(), semester: useId(), type: useId(), ambiguous: useId() };
   // After a save the server supplies the defaults for the next phase; a rejected save keeps what was entered.

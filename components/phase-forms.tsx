@@ -60,7 +60,9 @@ function EditPhaseForm({ blockPlanId, phase, semesters, openSemester, onSaved }:
 function DeletePhaseForm({ blockPlanId, phase, onSaved }: { blockPlanId: string; phase: EditablePhase; onSaved: (message: string) => void }) {
   const [state, formAction, isPending] = useActionState<PhaseFormState, FormData>(async (previous, formData) => {
     const result = await deletePhaseAction(previous, formData);
-    if (result.success) onSaved(`Die Kursphase von ${phase.code} wurde aus dem Entwurf gelöscht.`);
+    // The period makes the message unique even when two phases of the same course are deleted one after another,
+    // so the repeat is announced instead of silently matching the previous status text (BARRIEREFREIHEIT.md).
+    if (result.success) onSaved(`Die Kursphase von ${phase.code} vom ${formatCalendarPeriod(phase.startDate, phase.endDate)} wurde aus dem Entwurf gelöscht.`);
     return result;
   }, {});
   return <ConfirmDeleteForm action={formAction} error={state.error} isPending={isPending}

@@ -112,7 +112,9 @@ export default async function InternalBlockPlanPage({ params, searchParams }: Pa
     {requestedSemester && !knownSemester
       ? <p role="status">Semester {requestedSemester} gibt es in diesem Blockplan nicht. Angezeigt wird Semester 1.</p>
       : null}
-    <PhaseSection blockPlanId={plan.id} courses={courses} semesters={semesters} semester={semester}
+    {/* Keyed on the semester: switching semesters must reset the section's own client state (the status
+        message and the create form's in-progress values), not just receive new props. */}
+    <PhaseSection key={semester} blockPlanId={plan.id} courses={courses} semesters={semesters} semester={semester}
       overview={overview} phases={semesterPhases} context={context} nextDefaults={nextDefaults} />
 
     <section aria-labelledby="events-heading">

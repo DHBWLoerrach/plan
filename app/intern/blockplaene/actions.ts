@@ -10,6 +10,7 @@ import { FieldError } from "@/lib/domain/field-error";
 import { type EventField, type EventInput, createDraftEvent, deleteDraftEvent, updateDraftEvent } from "@/lib/services/event-admin";
 import { type PhaseDetails, type PhaseField, type PhaseInput, createDraftPhases, deleteDraftPhase, updateDraftPhase } from "@/lib/services/phase-admin";
 import { type NextPhaseDefaults, nextPhaseDefaults } from "@/lib/domain/phase-sequence";
+import { formatCalendarPeriod } from "@/lib/domain/calendar-format";
 
 import { blockPlanCourses, blockPlanDraftPhases } from "./data";
 
@@ -173,10 +174,13 @@ export async function createPhasesAction(_: PhaseFormState, formData: FormData):
   revalidateBlockPlan(blockPlanId);
   // The defaults for the next phase come from the saved draft, so they already include what was just created.
   const selected = blockPlanCourses(blockPlanId).filter((course) => input.courseIds.includes(course.id));
+  // The period is part of the message, not just decoration: two rapid, identical-looking saves in the capture
+  // rhythm this section exists for must still produce distinct text, or the repeat is never announced (BARRIEREFREIHEIT.md).
+  const period = formatCalendarPeriod(input.startDate, input.endDate);
   return {
     success: created.length > 1
-      ? `${created.length} eigenständige Kursphasen wurden angelegt — je ausgewähltem Kurs eine.`
-      : "Die Kursphase wurde angelegt.",
+      ? `${created.length} eigenständige Kursphasen vom ${period} wurden angelegt — je ausgewähltem Kurs eine.`
+      : `Die Kursphase vom ${period} wurde angelegt.`,
     next: nextPhaseDefaults({ phases: blockPlanDraftPhases(blockPlanId), courses: selected, semester: Number(input.semester) }),
     token: created[0],
   };
