@@ -116,6 +116,24 @@ describe("updateCourse", () => {
       at: "2030-05-05T00:00:00.000Z", by: "admin",
     });
   });
+
+  it("refuses a study period that would leave a saved course phase outside it", () => {
+    const sqlite = createDatabase();
+    insertAdmin(sqlite, "admin");
+    sqlite.prepare("INSERT INTO block_plans (id, area_id, draft_updated_at) VALUES ('plan-1', 'area-01', '2020-01-01T00:00:00.000Z')").run();
+    const id = createCourse(sqlite, { accountId: "admin", code: "TIF24A", programId: "prog-tif", studyStart: "2024-10-01", studyEnd: "2027-09-30" });
+    sqlite.prepare("UPDATE courses SET block_plan_id = 'plan-1' WHERE id = ?").run(id);
+    sqlite.prepare("INSERT INTO draft_phases (id, block_plan_id, course_id, semester, phase_type, start_date, end_date) VALUES ('ph-1', 'plan-1', ?, 1, 'THEORY', '2024-10-01', '2025-03-31')").run(id);
+    const course = { accountId: "admin", courseId: id, code: "TIF24A", programId: "prog-tif" };
+
+    expect(() => updateCourse(sqlite, { ...course, studyStart: "2024-11-01", studyEnd: "2027-09-30" })).toThrow("muss alle Kursphasen des Kurses umfassen");
+    expect(() => updateCourse(sqlite, { ...course, studyStart: "2024-10-01", studyEnd: "2025-03-30" })).toThrow("muss alle Kursphasen des Kurses umfassen");
+    expect(sqlite.prepare("SELECT study_start AS studyStart, study_end AS studyEnd FROM courses WHERE id = ?").get(id)).toEqual({ studyStart: "2024-10-01", studyEnd: "2027-09-30" });
+
+    // Widening the study period keeps every phase inside it, so it stays allowed.
+    updateCourse(sqlite, { ...course, studyStart: "2024-09-01", studyEnd: "2027-10-31" });
+    expect(sqlite.prepare("SELECT study_start AS studyStart, study_end AS studyEnd FROM courses WHERE id = ?").get(id)).toEqual({ studyStart: "2024-09-01", studyEnd: "2027-10-31" });
+  });
 });
 
 describe("deleteCourse", () => {

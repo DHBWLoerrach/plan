@@ -59,7 +59,7 @@ Werte werden bei einer Überschreitung abgelehnt und niemals abgeschnitten.
 
 Ein Kurs trägt keinen Veröffentlichungszustand. Er ist jederzeit:
 
-- in allen vier Angaben änderbar, wobei Studiengang und Studienbeginn nach einer Änderung weiterhin zu einer bestehenden Blockplanzuordnung passen müssen;
+- in allen vier Angaben änderbar, wobei Studiengang und Studienbeginn nach einer Änderung weiterhin zu einer bestehenden Blockplanzuordnung passen müssen und der geänderte Studienzeitraum weiterhin alle bereits erfassten Kursphasen des Kurses umfassen muss. Eine Änderung, die eine Kursphase aus dem Studienzeitraum fallen ließe, wird abgelehnt; die betroffenen Kursphasen sind zuerst anzupassen;
 - einem Blockplan zuordenbar und von ihm lösbar;
 - löschbar, sofern keine aktuell veröffentlichte Fassung ihn zeigt. Eine solche Löschung wird unter Nennung des Blockplans abgelehnt; nach einer Zurücknahme oder einer Neuveröffentlichung ohne den Kurs ist er wieder löschbar.
 

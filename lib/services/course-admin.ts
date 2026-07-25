@@ -5,7 +5,7 @@ import type Database from "better-sqlite3";
 import { normalizeCalendarDay } from "@/lib/domain/calendar-day";
 import { assertAreaEditPermission } from "@/lib/services/authorization";
 import { assertCourseFitsBlockPlan } from "@/lib/services/course-assignment";
-import { clearCourseFromDraft, touchDraft } from "@/lib/services/draft-changes";
+import { assertStudyPeriodCoversDraftPhases, clearCourseFromDraft, touchDraft } from "@/lib/services/draft-changes";
 
 const maximumCodeLength = 32;
 
@@ -37,6 +37,7 @@ export function updateCourse(sqlite: Database.Database, input: { accountId: stri
     const program = requireProgram(sqlite, normalized.programId);
     if (program.areaId !== currentProgram.areaId) assertAreaEditPermission(sqlite, input.accountId, program.areaId);
     assertCodeAvailable(sqlite, normalized.normalizedCode, input.courseId);
+    assertStudyPeriodCoversDraftPhases(sqlite, input.courseId, normalized);
     if (course.blockPlanId) {
       assertCourseFitsBlockPlan(sqlite, course.blockPlanId, { id: input.courseId, areaId: program.areaId, semesters: program.semesters, studyStart: normalized.studyStart });
     }

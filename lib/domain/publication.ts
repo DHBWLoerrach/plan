@@ -32,7 +32,6 @@ export interface PublicationIssue {
   code:
     | "coverage-gap"
     | "coverage-overlap"
-    | "phase-outside-study-period"
     | "semester-missing"
     | "semester-out-of-range"
     | "semester-not-monotonic"
@@ -88,13 +87,6 @@ export function validatePublication({
     for (const phase of coursePhases) {
       if (phase.semester < 1 || phase.semester > course.semesters) {
         issues.push({ code: "semester-out-of-range", courseId: course.id, message: `Semester ${phase.semester} von ${course.code} liegt außerhalb der Studiendauer.` });
-      }
-      if (phase.startDate < course.studyStart || phase.endDate > course.studyEnd) {
-        issues.push({
-          code: "phase-outside-study-period",
-          courseId: course.id,
-          message: `Eine Kursphase von ${course.code} liegt außerhalb des Studienzeitraums.`,
-        });
       }
       if (previous) {
         if (phase.startDate <= previous.endDate) {

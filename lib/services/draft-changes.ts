@@ -23,6 +23,15 @@ export function requireCoursesOfBlockPlan(sqlite: Database.Database, input: {
 }
 
 /**
+ * The structural rule that a course phase lies completely within the study period of its course, seen from the course
+ * (FACHLICHE_REGELN.md). It binds every write, so a changed study period must still cover the phases already saved.
+ */
+export function assertStudyPeriodCoversDraftPhases(sqlite: Database.Database, courseId: string, period: { studyStart: string; studyEnd: string }): void {
+  const outside = sqlite.prepare("SELECT 1 FROM draft_phases WHERE course_id = ? AND (start_date < ? OR end_date > ?)").get(courseId, period.studyStart, period.studyEnd);
+  if (outside) throw new Error("Der Studienzeitraum muss alle Kursphasen des Kurses umfassen. Passen Sie zuerst die Kursphasen an.");
+}
+
+/**
  * Removes everything a course contributes to a draft: its course phases and its links to examination-relevant events
  * (FACHLICHE_REGELN.md). A remaining event must still affect at least one course, so an event that would be left
  * without any course blocks the operation instead of being deleted.
