@@ -2,6 +2,8 @@
 
 import { useActionState, useId, useState } from "react";
 
+import { ConfirmAction } from "@/components/editor-controls";
+
 import {
   type AccountActionState,
   type CreateAccountState,
@@ -80,34 +82,26 @@ export function EditEmailForm({ userId, email }: { userId: string; email: string
 
 export function EditPermissionsForm({ userId, email, areas, initial }: { userId: string; email: string; areas: Area[]; initial: Permissions }) {
   const [state, formAction, isPending] = useActionState<AccountActionState, FormData>(updatePermissionsAction, {});
-  const [confirming, setConfirming] = useState(false);
   return <form action={formAction} className="account-form">
     <input type="hidden" name="userId" value={userId} />
     <PermissionsFields areas={areas} initial={initial} />
     <ActionMessages state={state} />
-    {confirming ? <div className="confirm-region" role="group" aria-label="Rechteänderung bestätigen">
-      <p>Rollen und Bereichszuordnungen von {email} werden sofort geändert. Das kann laufende Sitzungen dieser Person nicht beenden, wirkt aber ab der nächsten Berechtigungsprüfung.</p>
-      <button className="button" type="submit" disabled={isPending}>{isPending ? "Wird gespeichert …" : "Änderung bestätigen"}</button>
-      <button className="button button--ghost" type="button" onClick={() => setConfirming(false)}>Abbrechen</button>
-    </div> : <button className="button" type="button" onClick={() => setConfirming(true)}>Rollen und Bereiche speichern</button>}
+    <ConfirmAction openLabel="Rollen und Bereiche speichern" heading={`Rollen und Bereiche von ${email} ändern`}
+      consequence="Rollen und Bereichszuordnungen werden sofort geändert. Das kann laufende Sitzungen dieser Person nicht beenden, wirkt aber ab der nächsten Berechtigungsprüfung."
+      confirmLabel="Rechteänderung speichern" pendingLabel="Wird gespeichert …" isPending={isPending} />
   </form>;
 }
 
-function ConfirmActionForm({ action, userId, label, activeLabel, heading, description, danger }: {
+function ConfirmActionForm({ action, userId, openLabel, confirmLabel, pendingLabel, heading, consequence, danger }: {
   action: (state: AccountActionState, formData: FormData) => Promise<AccountActionState>;
-  userId: string; label: string; activeLabel: string; heading: string; description: string; danger?: boolean;
+  userId: string; openLabel: string; confirmLabel: string; pendingLabel: string; heading: string; consequence: string; danger?: boolean;
 }) {
   const [state, formAction, isPending] = useActionState<AccountActionState, FormData>(action, {});
-  const [confirming, setConfirming] = useState(false);
   return <form action={formAction} className="account-form">
     <input type="hidden" name="userId" value={userId} />
     <ActionMessages state={state} />
-    {confirming ? <div className="confirm-region" role="group" aria-label={heading}>
-      <p><strong>{heading}</strong></p>
-      <p>{description}</p>
-      <button className={danger ? "button button--danger" : "button"} type="submit" disabled={isPending}>{isPending ? activeLabel : "Bestätigen"}</button>
-      <button className="button button--ghost" type="button" onClick={() => setConfirming(false)}>Abbrechen</button>
-    </div> : <button className={danger ? "button button--danger" : "button"} type="button" onClick={() => setConfirming(true)}>{label}</button>}
+    <ConfirmAction openLabel={openLabel} heading={heading} consequence={consequence} confirmLabel={confirmLabel}
+      pendingLabel={pendingLabel} isPending={isPending} danger={danger} />
   </form>;
 }
 
@@ -115,10 +109,11 @@ export function IssueLinkForm({ userId, email, active }: { userId: string; email
   return <ConfirmActionForm
     action={issueLinkAction}
     userId={userId}
-    label={active ? "Passwort zurücksetzen und neuen Link ausstellen" : "Neuen Passwortlink ausstellen"}
-    activeLabel="Wird ausgestellt …"
+    openLabel={active ? "Passwort zurücksetzen und neuen Link ausstellen" : "Neuen Passwortlink ausstellen"}
+    confirmLabel="Passwortlink ausstellen"
+    pendingLabel="Wird ausgestellt …"
     heading="Neuen Passwortlink ausstellen"
-    description={active
+    consequence={active
       ? `Das bisherige Passwort und alle Sitzungen von ${email} werden sofort ungültig. Das Konto wartet danach auf die Passwortvergabe. Ein früherer Passwortlink verfällt.`
       : `Ein zuvor ausgestellter Passwortlink von ${email} verfällt. Der neue Link wird genau einmal angezeigt.`}
   />;
@@ -128,10 +123,11 @@ export function LockForm({ userId, email }: { userId: string; email: string }) {
   return <ConfirmActionForm
     action={lockAction}
     userId={userId}
-    label="Konto sperren"
-    activeLabel="Wird gesperrt …"
-    heading="Konto sperren"
-    description={`Die Anmeldung von ${email} wird gesperrt; Passwort, Sitzungen und offene Passwortlinks werden entfernt. Die fachlichen Zuordnungen bleiben erhalten.`}
+    openLabel="Konto sperren"
+    confirmLabel="Konto jetzt sperren"
+    pendingLabel="Wird gesperrt …"
+    heading={`Konto ${email} sperren`}
+    consequence={`Die Anmeldung von ${email} wird gesperrt; Passwort, Sitzungen und offene Passwortlinks werden entfernt. Die fachlichen Zuordnungen bleiben erhalten.`}
     danger
   />;
 }
@@ -140,9 +136,10 @@ export function UnlockForm({ userId, email }: { userId: string; email: string })
   return <ConfirmActionForm
     action={unlockAction}
     userId={userId}
-    label="Konto freigeben"
-    activeLabel="Wird freigegeben …"
-    heading="Konto freigeben"
-    description={`${email} wartet danach auf die Passwortvergabe und erhält einen neuen Passwortlink.`}
+    openLabel="Konto freigeben"
+    confirmLabel="Konto jetzt freigeben"
+    pendingLabel="Wird freigegeben …"
+    heading={`Konto ${email} freigeben`}
+    consequence={`${email} wartet danach auf die Passwortvergabe und erhält einen neuen Passwortlink.`}
   />;
 }

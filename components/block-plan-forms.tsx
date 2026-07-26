@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useId, useState } from "react";
+import { useActionState, useId } from "react";
 
+import { ConfirmAction } from "@/components/editor-controls";
 import type { AttachableCourse } from "@/lib/services/block-plan-admin";
 
 import {
@@ -60,32 +61,24 @@ export function AttachCourseForm({ blockPlanId, courses }: { blockPlanId: string
 
 export function DetachCourseForm({ blockPlanId, courseId, code }: { blockPlanId: string; courseId: string; code: string }) {
   const [state, formAction, isPending] = useActionState<BlockPlanFormState, FormData>(detachCourseAction, {});
-  const [confirming, setConfirming] = useState(false);
   return <form action={formAction}>
     <input type="hidden" name="blockPlanId" value={blockPlanId} />
     <input type="hidden" name="courseId" value={courseId} />
     {state.error ? <p role="alert">{state.error}</p> : null}
     {state.success ? <p role="status">{state.success}</p> : null}
-    {confirming ? <div className="confirm-region" role="group" aria-label={`Kurs ${code} lösen bestätigen`}>
-      <p><strong>Kurs {code} vom Blockplan lösen</strong></p>
-      <p>Der Kurs bleibt bestehen und wird blockplanlos. Seine Kursphasen und seine Zuordnungen zu prüfungsrelevanten Terminen in diesem Entwurf entfallen.</p>
-      <button className="button button--danger" type="submit" disabled={isPending}>{isPending ? "Wird gelöst …" : "Kurs lösen"}</button>
-      <button className="button button--ghost" type="button" onClick={() => setConfirming(false)}>Abbrechen</button>
-    </div> : <button className="button button--ghost" type="button" onClick={() => setConfirming(true)}>Kurs {code} lösen</button>}
+    <ConfirmAction openLabel={`Kurs ${code} lösen`} heading={`Kurs ${code} vom Blockplan lösen`}
+      consequence="Der Kurs bleibt bestehen und wird blockplanlos. Seine Kursphasen und seine Zuordnungen zu prüfungsrelevanten Terminen in diesem Entwurf entfallen."
+      confirmLabel="Kurs lösen" pendingLabel="Wird gelöst …" isPending={isPending} danger quietTrigger />
   </form>;
 }
 
 export function DeleteBlockPlanForm({ blockPlanId, displayName, courseCodes }: { blockPlanId: string; displayName: string; courseCodes: string[] }) {
   const [state, formAction, isPending] = useActionState<BlockPlanFormState, FormData>(deleteBlockPlanAction, {});
-  const [confirming, setConfirming] = useState(false);
   return <form action={formAction} className="account-form">
     <input type="hidden" name="blockPlanId" value={blockPlanId} />
     {state.error ? <p role="alert">{state.error}</p> : null}
-    {confirming ? <div className="confirm-region" role="group" aria-label={`Blockplan „${displayName}“ löschen bestätigen`}>
-      <p><strong>Blockplan „{displayName}“ löschen</strong></p>
-      <p>Der Blockplan wird mit seinem Entwurf, also allen Kursphasen und prüfungsrelevanten Terminen, dauerhaft entfernt. Die Kurse {courseCodes.join(", ")} bleiben bestehen und werden blockplanlos.</p>
-      <button className="button button--danger" type="submit" disabled={isPending}>{isPending ? "Wird gelöscht …" : "Endgültig löschen"}</button>
-      <button className="button button--ghost" type="button" onClick={() => setConfirming(false)}>Abbrechen</button>
-    </div> : <button className="button button--danger" type="button" onClick={() => setConfirming(true)}>Blockplan löschen</button>}
+    <ConfirmAction openLabel="Blockplan löschen" heading={`Blockplan „${displayName}“ löschen`}
+      consequence={`Der Blockplan wird mit seinem Entwurf, also allen Kursphasen und prüfungsrelevanten Terminen, dauerhaft entfernt. Die Kurse ${courseCodes.join(", ")} bleiben bestehen und werden blockplanlos.`}
+      confirmLabel="Endgültig löschen" pendingLabel="Wird gelöscht …" isPending={isPending} danger />
   </form>;
 }
