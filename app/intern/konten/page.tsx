@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 
 import { SiteShell } from "@/components/site-shell";
+import { sqlite } from "@/lib/db";
 import { getActiveAccount } from "@/lib/internal-auth";
 
 import { type AccountListRow, type AccountStatus, listAccounts } from "./data";
@@ -24,7 +25,7 @@ export default async function AccountsPage({ searchParams }: PageProps<"/intern/
   if (!account.systemAdmin) redirect("/intern");
   const requested = (await searchParams).status;
   const status = statusFilters.includes(requested as AccountStatus) ? (requested as AccountStatus) : undefined;
-  const accounts = listAccounts(status);
+  const accounts = listAccounts(sqlite, account, status);
 
   return <SiteShell><section className="search-panel" aria-labelledby="accounts-heading">
     <p className="eyebrow">Interner Bereich · Systemadministration</p>

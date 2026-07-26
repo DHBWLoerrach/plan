@@ -5,6 +5,7 @@ import { connection } from "next/server";
 import { CreateBlockPlanFromCourseForm } from "@/components/block-plan-forms";
 import { DeleteCourseForm, EditCourseForm } from "@/components/course-forms";
 import { SiteShell } from "@/components/site-shell";
+import { sqlite } from "@/lib/db";
 import { getActiveAccount } from "@/lib/internal-auth";
 
 import { blockPlanSummaries } from "../../blockplaene/data";
@@ -15,10 +16,10 @@ export default async function CourseDetailPage({ params, searchParams }: PagePro
   const account = await getActiveAccount();
   if (!account) redirect("/intern/anmelden");
   const { courseId } = await params;
-  const course = findInternalCourse(courseId, account);
+  const course = findInternalCourse(sqlite, courseId, account);
   if (!course) notFound();
   const created = searchParam(await searchParams, "angelegt") === "1";
-  const programs = programOptions(account);
+  const programs = programOptions(sqlite, account);
 
   return <SiteShell><section className="search-panel" aria-labelledby="course-detail-heading">
     <p className="eyebrow">Interner Bereich</p>
@@ -30,7 +31,7 @@ export default async function CourseDetailPage({ params, searchParams }: PagePro
 
     <h2>Blockplan</h2>
     {course.blockPlanId
-      ? <p>Dieser Kurs gehört zum Blockplan <Link className="text-link" href={`/intern/blockplaene/${course.blockPlanId}`}>{blockPlanSummaries([course.blockPlanId]).get(course.blockPlanId)?.displayName}</Link>. Dort können Sie ihn lösen und weitere Kurse zuordnen.</p>
+      ? <p>Dieser Kurs gehört zum Blockplan <Link className="text-link" href={`/intern/blockplaene/${course.blockPlanId}`}>{blockPlanSummaries(sqlite, [course.blockPlanId]).get(course.blockPlanId)?.displayName}</Link>. Dort können Sie ihn lösen und weitere Kurse zuordnen.</p>
       : <CreateBlockPlanFromCourseForm courseId={course.id} code={course.code} />}
 
     <h2>Löschen</h2>

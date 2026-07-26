@@ -4,6 +4,7 @@ import { connection } from "next/server";
 
 import { EditEmailForm, EditPermissionsForm, IssueLinkForm, LockForm, UnlockForm } from "@/components/account-forms";
 import { SiteShell } from "@/components/site-shell";
+import { sqlite } from "@/lib/db";
 import { getActiveAccount } from "@/lib/internal-auth";
 
 import { findManagedAccount } from "../data";
@@ -16,7 +17,7 @@ export default async function AccountDetailPage({ params }: PageProps<"/intern/k
   if (!account) redirect("/intern/anmelden");
   if (!account.systemAdmin) redirect("/intern");
   const { userId } = await params;
-  const details = findManagedAccount(userId);
+  const details = findManagedAccount(sqlite, account, userId);
   if (!details) notFound();
   const { account: managed, areas, areaIds } = details;
   const initial = { role: managed.role, systemAdmin: Boolean(managed.systemAdmin), areaIds };

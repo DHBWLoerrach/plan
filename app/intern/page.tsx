@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 
 import { SiteShell } from "@/components/site-shell";
+import { sqlite } from "@/lib/db";
 import { getActiveAccount } from "@/lib/internal-auth";
 
 import { blockPlanSummaries, listInternalBlockPlans, publicationStateLabel } from "./blockplaene/data";
@@ -13,8 +14,8 @@ export default async function InternalHome({ searchParams }: PageProps<"/intern"
   const account = await getActiveAccount();
   if (!account) redirect("/intern/anmelden");
   const deleted = searchParam(await searchParams, "blockplan-geloescht") === "1";
-  const plans = listInternalBlockPlans(account);
-  const summaries = blockPlanSummaries(plans.map((plan) => plan.id));
+  const plans = listInternalBlockPlans(sqlite, account);
+  const summaries = blockPlanSummaries(sqlite, plans.map((plan) => plan.id));
   return <SiteShell><section className="search-panel" aria-labelledby="internal-heading"><p className="eyebrow">Interner Bereich</p><h1 id="internal-heading">Blockpläne</h1>
     <p>Angemeldet als {account.email}. Änderungen bleiben Entwurf, bis Sie sie bewusst veröffentlichen.</p>
     <nav className="filter-actions" aria-label="Interne Navigation"><Link className="text-link" href="/intern/kurse">Kurse verwalten</Link><Link className="text-link" href="/intern/konto">Eigenes Konto</Link>{account.systemAdmin ? <Link className="text-link" href="/intern/konten">Konten verwalten</Link> : null}</nav>

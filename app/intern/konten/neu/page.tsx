@@ -4,6 +4,7 @@ import { connection } from "next/server";
 
 import { CreateAccountForm } from "@/components/account-forms";
 import { SiteShell } from "@/components/site-shell";
+import { sqlite } from "@/lib/db";
 import { getActiveAccount } from "@/lib/internal-auth";
 
 import { accountAreaOptions } from "../data";
@@ -13,7 +14,7 @@ export default async function NewAccountPage() {
   const account = await getActiveAccount();
   if (!account) redirect("/intern/anmelden");
   if (!account.systemAdmin) redirect("/intern");
-  const areas = accountAreaOptions();
+  const areas = accountAreaOptions(sqlite, account);
 
   return <SiteShell><section className="search-panel narrow-panel" aria-labelledby="new-account-heading">
     <p className="eyebrow">Interner Bereich · Systemadministration</p>

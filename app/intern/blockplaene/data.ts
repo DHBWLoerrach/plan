@@ -1,6 +1,7 @@
 import "server-only";
 
-import { sqlite } from "@/lib/db";
+import type Database from "better-sqlite3";
+
 import { blockPlanDisplayName } from "@/lib/domain/block-plan-name";
 import type { DraftEvent, PlanPhase } from "@/lib/domain/publication";
 
@@ -21,7 +22,7 @@ export type InternalBlockPlanDetails = {
 export type { PlanPhase };
 
 /** Block plans visible to the account, newest draft changes first. */
-export function listInternalBlockPlans(account: { id: string; systemAdmin: boolean }): InternalBlockPlan[] {
+export function listInternalBlockPlans(sqlite: Database.Database, account: { id: string; systemAdmin: boolean }): InternalBlockPlan[] {
   return sqlite.prepare(`SELECT plan.id, plan.has_ever_been_published AS hasEverBeenPublished, version.id AS versionId
     FROM block_plans plan LEFT JOIN published_versions version ON version.block_plan_id = plan.id
     WHERE ? = 1 OR plan.area_id IN (SELECT area_id FROM area_assignments WHERE user_id = ?)
@@ -29,7 +30,7 @@ export function listInternalBlockPlans(account: { id: string; systemAdmin: boole
 }
 
 /** Workspace header data for a block plan the account may manage. */
-export function findInternalBlockPlan(blockPlanId: string, account: { id: string; systemAdmin: boolean }): InternalBlockPlanDetails | undefined {
+export function findInternalBlockPlan(sqlite: Database.Database, blockPlanId: string, account: { id: string; systemAdmin: boolean }): InternalBlockPlanDetails | undefined {
   return sqlite.prepare(`SELECT plan.id, plan.name, area.name AS areaName, plan.draft_updated_at AS draftUpdatedAt,
       plan.has_ever_been_published AS hasEverBeenPublished, version.id AS versionId, version.published_at AS publishedAt,
       editor.email AS draftUpdatedBy
@@ -41,7 +42,7 @@ export function findInternalBlockPlan(blockPlanId: string, account: { id: string
 }
 
 /** The courses currently assigned to a block plan, in the order used for display and for the derived name. */
-export function blockPlanCourses(blockPlanId: string): PlanCourse[] {
+export function blockPlanCourses(sqlite: Database.Database, blockPlanId: string): PlanCourse[] {
   return sqlite.prepare(`SELECT course.id, course.code, program.name AS program, program.semesters,
       course.study_start AS studyStart, course.study_end AS studyEnd
     FROM courses course JOIN programs program ON program.id = course.program_id
@@ -49,7 +50,7 @@ export function blockPlanCourses(blockPlanId: string): PlanCourse[] {
 }
 
 /** The saved course phases of a draft, ordered as the semester editor lists them. */
-export function blockPlanDraftPhases(blockPlanId: string): PlanPhase[] {
+export function blockPlanDraftPhases(sqlite: Database.Database, blockPlanId: string): PlanPhase[] {
   return sqlite.prepare(`SELECT phase.id, phase.course_id AS courseId, phase.semester, phase.phase_type AS type,
       phase.start_date AS startDate, phase.end_date AS endDate, course.code
     FROM draft_phases phase JOIN courses course ON course.id = phase.course_id
@@ -57,7 +58,7 @@ export function blockPlanDraftPhases(blockPlanId: string): PlanPhase[] {
 }
 
 /** The examination-relevant events of a draft in chronological order, each with the courses it affects. */
-export function blockPlanDraftEvents(blockPlanId: string): DraftEvent[] {
+export function blockPlanDraftEvents(sqlite: Database.Database, blockPlanId: string): DraftEvent[] {
   const events = sqlite.prepare(`SELECT id, title, description, category, start_date AS startDate, end_date AS endDate, provisional
     FROM draft_events WHERE block_plan_id = ? ORDER BY start_date, title COLLATE NOCASE`).all(blockPlanId) as (Omit<DraftEvent, "courseIds" | "provisional"> & { provisional: number })[];
   const affectedCourses = sqlite.prepare(`SELECT link.course_id AS courseId FROM draft_event_courses link
@@ -73,7 +74,7 @@ export function blockPlanDraftEvents(blockPlanId: string): DraftEvent[] {
  * Name and course codes for several block plans at once. Lists show both, because designated names need not be
  * unique — stable IDs and the always visible course codes tell block plans apart (FACHLICHE_REGELN.md).
  */
-export function blockPlanSummaries(blockPlanIds: string[]): Map<string, PlanSummary> {
+export function blockPlanSummaries(sqlite: Database.Database, blockPlanIds: string[]): Map<string, PlanSummary> {
   const summaries = new Map<string, PlanSummary>();
   if (!blockPlanIds.length) return summaries;
   const placeholders = blockPlanIds.map(() => "?").join(", ");

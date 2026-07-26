@@ -53,7 +53,7 @@ export default async function InternalBlockPlanPage({ params, searchParams }: Pa
   const account = await getActiveAccount();
   if (!account) redirect("/intern/anmelden");
   const { blockPlanId } = await params;
-  const plan = findInternalBlockPlan(blockPlanId, account);
+  const plan = findInternalBlockPlan(sqlite, blockPlanId, account);
   if (!plan) notFound();
 
   const query = await searchParams;
@@ -63,13 +63,13 @@ export default async function InternalBlockPlanPage({ params, searchParams }: Pa
   const versionOutdated = searchParam(query, "fassung-veraltet") === "1";
   const requestedView = searchParam(query, "ansicht");
   const view: WorkspaceView = requestedView === "termine" || requestedView === "einstellungen" ? requestedView : "kursphasen";
-  const courses = blockPlanCourses(plan.id);
+  const courses = blockPlanCourses(sqlite, plan.id);
   const displayName = blockPlanDisplayName(plan.name, courses);
   const derivedName = blockPlanDisplayName(null, courses);
   const publicationState = publicationStateLabel({ hasEverBeenPublished: Boolean(plan.hasEverBeenPublished), publishedVersionId: plan.versionId });
   const attachable = courses.length < maximumCoursesPerBlockPlan ? listAttachableCourses(sqlite, plan.id) : [];
-  const phases = blockPlanDraftPhases(plan.id);
-  const events = blockPlanDraftEvents(plan.id);
+  const phases = blockPlanDraftPhases(sqlite, plan.id);
+  const events = blockPlanDraftEvents(sqlite, plan.id);
   const publicationIssues = publicationIssuesForDraft(sqlite, plan.id, { courses, phases, events });
   const courseCodes = new Map(courses.map((course) => [course.id, course.code]));
   // Every assigned course carries the same number of semesters (FACHLICHE_REGELN.md), so the first one answers for the plan.

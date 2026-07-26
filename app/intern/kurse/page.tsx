@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 
 import { SiteShell } from "@/components/site-shell";
+import { sqlite } from "@/lib/db";
 import { getActiveAccount } from "@/lib/internal-auth";
 
 import { courseListData, searchParam } from "./data";
@@ -17,7 +18,7 @@ export default async function CoursesPage({ searchParams }: PageProps<"/intern/k
   const year = searchParam(raw, "year");
   const rawAssignment = searchParam(raw, "assignment");
   const assignment = rawAssignment === "assigned" || rawAssignment === "unassigned" ? rawAssignment : null;
-  const { areas, programs, years, courses } = courseListData(account, { area, program, year, assignment });
+  const { areas, programs, years, courses } = courseListData(sqlite, account, { area, program, year, assignment });
 
   return <SiteShell><section className="search-panel" aria-labelledby="courses-heading">
     <p className="eyebrow">Interner Bereich</p>

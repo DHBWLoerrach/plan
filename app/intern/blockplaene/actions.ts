@@ -174,7 +174,7 @@ export async function createPhasesAction(_: PhaseFormState, formData: FormData):
   }
   revalidateBlockPlan(blockPlanId);
   // The defaults for the next phase come from the saved draft, so they already include what was just created.
-  const selected = blockPlanCourses(blockPlanId).filter((course) => input.courseIds.includes(course.id));
+  const selected = blockPlanCourses(sqlite, blockPlanId).filter((course) => input.courseIds.includes(course.id));
   // The period is part of the message, not just decoration: two rapid, identical-looking saves in the capture
   // rhythm this section exists for must still produce distinct text, or the repeat is never announced (BARRIEREFREIHEIT.md).
   const period = formatCalendarPeriod(input.startDate, input.endDate);
@@ -192,7 +192,7 @@ export async function createPhasesAction(_: PhaseFormState, formData: FormData):
       : `Die Kursphase vom ${period} wurde angelegt.`);
   return {
     success,
-    next: nextPhaseDefaults({ phases: blockPlanDraftPhases(blockPlanId), courses: selected, semester: target }),
+    next: nextPhaseDefaults({ phases: blockPlanDraftPhases(sqlite, blockPlanId), courses: selected, semester: target }),
     createdInSemester,
     token: created[0],
   };

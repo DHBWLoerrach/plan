@@ -1,6 +1,6 @@
 import "server-only";
 
-import { sqlite } from "@/lib/db";
+import type Database from "better-sqlite3";
 
 type AccountScope = { id: string; systemAdmin: boolean };
 
@@ -39,7 +39,7 @@ export type InternalCourse = {
 export type ProgramOption = { id: string; label: string };
 
 /** Filter options and matching courses within the account's manageable areas. */
-export function courseListData(account: AccountScope, filters: CourseListFilters): CourseListData {
+export function courseListData(sqlite: Database.Database, account: AccountScope, filters: CourseListFilters): CourseListData {
   const scope = account.systemAdmin ? 1 : 0;
   const areas = sqlite.prepare(`SELECT id, name FROM areas
     WHERE ? = 1 OR id IN (SELECT area_id FROM area_assignments WHERE user_id = ?)
@@ -74,7 +74,7 @@ export function courseListData(account: AccountScope, filters: CourseListFilters
 }
 
 /** Course details if the account may manage its area. */
-export function findInternalCourse(courseId: string, account: AccountScope): InternalCourse | undefined {
+export function findInternalCourse(sqlite: Database.Database, courseId: string, account: AccountScope): InternalCourse | undefined {
   return sqlite.prepare(`SELECT course.id, course.code, course.program_id AS programId,
       course.study_start AS studyStart, course.study_end AS studyEnd, course.block_plan_id AS blockPlanId,
       (SELECT version.block_plan_name FROM published_course_snapshots snapshot
@@ -87,7 +87,7 @@ export function findInternalCourse(courseId: string, account: AccountScope): Int
 }
 
 /** Programs the account may manage, as labelled select options (system administration sees all areas). */
-export function programOptions(account: AccountScope): ProgramOption[] {
+export function programOptions(sqlite: Database.Database, account: AccountScope): ProgramOption[] {
   const rows = sqlite.prepare(`SELECT program.id, program.name, program.abbreviation, area.name AS areaName
     FROM programs program JOIN areas area ON area.id = program.area_id
     WHERE ? = 1 OR program.area_id IN (SELECT area_id FROM area_assignments WHERE user_id = ?)

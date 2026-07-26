@@ -1,6 +1,10 @@
 import "server-only";
 
-import { sqlite } from "@/lib/db";
+import type Database from "better-sqlite3";
+
+type AccountScope = { systemAdmin: boolean };
+
+const notAuthorizedMessage = "Sie sind nicht zur Kontoverwaltung berechtigt.";
 
 export type AccountStatus = "PASSWORD_PENDING" | "ACTIVE" | "LOCKED";
 export type AccountListRow = {
@@ -26,7 +30,8 @@ export type ManagedAccountDetails = {
 };
 
 /** Internal accounts matching the optional status filter. */
-export function listAccounts(status?: AccountStatus): AccountListRow[] {
+export function listAccounts(sqlite: Database.Database, account: AccountScope, status?: AccountStatus): AccountListRow[] {
+  requireSystemAdmin(account);
   return sqlite.prepare(`SELECT user.id, user.email, user.role, user.system_admin AS systemAdmin, user.status,
       (SELECT GROUP_CONCAT(area.name, ', ') FROM area_assignments assignment
         JOIN areas area ON area.id = assignment.area_id WHERE assignment.user_id = user.id) AS areas
@@ -35,16 +40,26 @@ export function listAccounts(status?: AccountStatus): AccountListRow[] {
 }
 
 /** Areas available for account permission assignment. */
-export function accountAreaOptions(): AreaOption[] {
-  return sqlite.prepare("SELECT id, name FROM areas ORDER BY name COLLATE NOCASE").all() as AreaOption[];
+export function accountAreaOptions(sqlite: Database.Database, account: AccountScope): AreaOption[] {
+  requireSystemAdmin(account);
+  return readAccountAreaOptions(sqlite);
 }
 
 /** Account and permission data required by the administration form. */
-export function findManagedAccount(userId: string): ManagedAccountDetails | undefined {
-  const account = sqlite.prepare("SELECT id, email, role, system_admin AS systemAdmin, status FROM user WHERE id = ?")
+export function findManagedAccount(sqlite: Database.Database, account: AccountScope, userId: string): ManagedAccountDetails | undefined {
+  requireSystemAdmin(account);
+  const managedAccount = sqlite.prepare("SELECT id, email, role, system_admin AS systemAdmin, status FROM user WHERE id = ?")
     .get(userId) as ManagedAccount | undefined;
-  if (!account) return undefined;
+  if (!managedAccount) return undefined;
   const areaIds = (sqlite.prepare("SELECT area_id AS areaId FROM area_assignments WHERE user_id = ?")
     .all(userId) as { areaId: string }[]).map((row) => row.areaId);
-  return { account, areas: accountAreaOptions(), areaIds };
+  return { account: managedAccount, areas: readAccountAreaOptions(sqlite), areaIds };
+}
+
+function requireSystemAdmin(account: AccountScope): void {
+  if (!account.systemAdmin) throw new Error(notAuthorizedMessage);
+}
+
+function readAccountAreaOptions(sqlite: Database.Database): AreaOption[] {
+  return sqlite.prepare("SELECT id, name FROM areas ORDER BY name COLLATE NOCASE").all() as AreaOption[];
 }

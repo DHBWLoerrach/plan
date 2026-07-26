@@ -4,6 +4,7 @@ import { connection } from "next/server";
 
 import { CreateCourseForm } from "@/components/course-forms";
 import { SiteShell } from "@/components/site-shell";
+import { sqlite } from "@/lib/db";
 import { getActiveAccount } from "@/lib/internal-auth";
 
 import { programOptions } from "../data";
@@ -12,7 +13,7 @@ export default async function NewCoursePage() {
   await connection();
   const account = await getActiveAccount();
   if (!account) redirect("/intern/anmelden");
-  const programs = programOptions(account);
+  const programs = programOptions(sqlite, account);
 
   return <SiteShell><section className="search-panel narrow-panel" aria-labelledby="new-course-heading">
     <p className="eyebrow">Interner Bereich</p>
