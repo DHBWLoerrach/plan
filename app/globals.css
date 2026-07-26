@@ -73,6 +73,13 @@ p[role="status"] { margin: 0; color: var(--success); }
 .button:disabled { background: #b3bcc1; cursor: default; }
 .button--ghost { background: #fff; color: var(--ink); border: 1px solid var(--field-border); }
 .button--ghost:hover { background: #eceeef; }
+/* Destruktiv wird nicht über einen zweiten Rotton unterschieden — DHBW-Rot ist bereits die Primärfarbe, zwei
+   gefüllte Rottöne wären auf einen Blick verwechselbar. Der Unterschied liegt in der Form: die vorwärts führende
+   Aktion ist gefüllt, die zerstörende umrissen. Sie bleibt dadurch eindeutig erkennbar, ohne einladender zu wirken
+   als der sichere Weg. Die Bedeutung selbst tragen immer die Beschriftung und die Bestätigung, nie die Farbe. */
+.button--danger { background: #fff; color: var(--error); border: 2px solid var(--error); }
+.button--danger:hover { background: var(--error); color: #fff; }
+.button--danger:disabled { background: #fff; color: var(--gray); border-color: var(--field-border); }
 
 .text-link { color: var(--red); font-weight: 700; font-size: .92rem; text-decoration-thickness: 1px; text-underline-offset: .25rem; }
 .text-link[aria-current] { color: var(--ink); text-decoration-thickness: 3px; text-decoration-color: var(--red); }

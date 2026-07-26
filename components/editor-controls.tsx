@@ -30,7 +30,7 @@ export function CollapsibleEditor({ heading, openLabel, closeLabel, children }: 
  * opens; Escape and „Abbrechen“ close it and return focus to the button that opened it. It renders the submit
  * button of the surrounding form, so the caller keeps its own form, action and hidden fields.
  */
-export function ConfirmAction({ openLabel, heading, consequence, confirmLabel, pendingLabel, isPending, danger, quietTrigger }: {
+export function ConfirmAction({ openLabel, heading, consequence, confirmLabel, pendingLabel, isPending, danger }: {
   openLabel: string;
   heading: string;
   consequence: ReactNode;
@@ -38,8 +38,6 @@ export function ConfirmAction({ openLabel, heading, consequence, confirmLabel, p
   pendingLabel: string;
   isPending: boolean;
   danger?: boolean;
-  /** Keeps the opening button unobtrusive where it repeats per list entry and must not dominate the entry. */
-  quietTrigger?: boolean;
 }) {
   const [confirming, setConfirming] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -54,7 +52,7 @@ export function ConfirmAction({ openLabel, heading, consequence, confirmLabel, p
   }, [confirming]);
   const buttonClass = danger ? "button button--danger" : "button";
   return <>
-    <button ref={trigger} hidden={confirming} className={quietTrigger ? "button button--ghost" : buttonClass}
+    <button ref={trigger} hidden={confirming} className={buttonClass}
       type="button" onClick={() => setConfirming(true)}>{openLabel}</button>
     <div ref={region} hidden={!confirming} className="confirm-region" role="group" tabIndex={-1}
       aria-label={heading} aria-describedby={consequenceId}

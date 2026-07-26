@@ -61,8 +61,6 @@ export function WithdrawForm({ blockPlanId, publishedVersionId, displayName }: {
       pendingLabel="Wird zurückgenommen …"
       isPending={isPending}
       danger
-      // The prominent action of the section is the preview that leads to publishing, not the withdrawal.
-      quietTrigger
     />
   </form>;
 }

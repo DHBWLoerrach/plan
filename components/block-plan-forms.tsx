@@ -68,7 +68,7 @@ export function DetachCourseForm({ blockPlanId, courseId, code }: { blockPlanId:
     {state.success ? <p role="status">{state.success}</p> : null}
     <ConfirmAction openLabel={`Kurs ${code} lösen`} heading={`Kurs ${code} vom Blockplan lösen`}
       consequence="Der Kurs bleibt bestehen und wird blockplanlos. Seine Kursphasen und seine Zuordnungen zu prüfungsrelevanten Terminen in diesem Entwurf entfallen."
-      confirmLabel="Kurs lösen" pendingLabel="Wird gelöst …" isPending={isPending} danger quietTrigger />
+      confirmLabel="Kurs lösen" pendingLabel="Wird gelöst …" isPending={isPending} danger />
   </form>;
 }
 
