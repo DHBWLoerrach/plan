@@ -1,5 +1,6 @@
 import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
+// Keep the Drizzle adapter and all auth date columns in timestamp_ms mode: direct application SQL writes epoch milliseconds, while Better Auth's raw SQLite/Kysely adapter would store ISO date strings in the same columns.
 const user = sqliteTable("user", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
