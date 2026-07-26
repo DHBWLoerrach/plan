@@ -1,2 +1,3 @@
 import type { MetadataRoute } from "next";
-export default function robots(): MetadataRoute.Robots { return { rules: [{ userAgent: "*", allow: "/", disallow: ["/intern/", "/anmelden/"] }] }; }
+/** Public search and detail pages stay indexable; every internal path — the sign-in page included — is excluded. */
+export default function robots(): MetadataRoute.Robots { return { rules: [{ userAgent: "*", allow: "/", disallow: ["/intern/", "/api/"] }] }; }

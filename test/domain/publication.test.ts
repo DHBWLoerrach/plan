@@ -162,6 +162,39 @@ describe("buildSemesterMatrix", () => {
       },
     ]);
   });
+
+  it("merges adjacent intervals into the maximal period in which no cell changes", () => {
+    const split: DraftPhase[] = [
+      { courseId: "course-a", semester: 1, type: "THEORY", startDate: "2026-10-01", endDate: "2026-11-30" },
+      { courseId: "course-a", semester: 1, type: "THEORY", startDate: "2026-12-01", endDate: "2026-12-31" },
+      { courseId: "course-b", semester: 1, type: "THEORY", startDate: "2026-10-01", endDate: "2026-12-31" },
+    ];
+
+    expect(buildSemesterMatrix(courses, split, 1)).toEqual([
+      { startDate: "2026-10-01", endDate: "2026-12-31", cells: ["Theorie", "Theorie"] },
+    ]);
+  });
+
+  it("names a period lying outside the semester of a course textually", () => {
+    const staggered: DraftPhase[] = [
+      { courseId: "course-a", semester: 1, type: "THEORY", startDate: "2026-10-01", endDate: "2026-12-31" },
+      { courseId: "course-b", semester: 1, type: "PRACTICE", startDate: "2026-10-01", endDate: "2026-11-30" },
+      { courseId: "course-b", semester: 2, type: "THEORY", startDate: "2026-12-01", endDate: "2027-03-31" },
+    ];
+
+    expect(buildSemesterMatrix(courses, staggered, 1)).toEqual([
+      { startDate: "2026-10-01", endDate: "2026-11-30", cells: ["Theorie", "Praxis"] },
+      { startDate: "2026-12-01", endDate: "2026-12-31", cells: ["Theorie", "Nicht in diesem Semester"] },
+    ]);
+  });
+
+  it("keeps the maximal periods of the courses that a reduced course selection still shows", () => {
+    // The public detail view may hide course columns; the rows then follow the visible courses alone
+    // (MVP-SPEZIFIKATION.md).
+    expect(buildSemesterMatrix([courses[0]], completePhases, 1)).toEqual([
+      { startDate: "2026-10-01", endDate: "2026-12-31", cells: ["Theorie"] },
+    ]);
+  });
 });
 
 describe("deriveEventSemester", () => {
