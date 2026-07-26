@@ -18,7 +18,7 @@ function createDatabase({ email = "admin@dhbw-loerrach.de", systemAdmin = 1, sta
   temporaryDirectories.push(directory);
   const databasePath = path.join(directory, "database.sqlite");
   const sqlite = new Database(databasePath);
-  sqlite.exec(readFileSync(path.join(process.cwd(), "drizzle/0000_initial.sql"), "utf8"));
+  sqlite.exec(readFileSync(path.join(process.cwd(), "migrations/0000_initial.sql"), "utf8"));
   sqlite.prepare("INSERT INTO user (id, name, email, emailVerified, role, system_admin, status, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
     "admin-1", email, email, 0, "NONE", systemAdmin, status, 1000, 1000,
   );

@@ -4,12 +4,11 @@ import { connection } from "next/server";
 
 import { EditEmailForm, EditPermissionsForm, IssueLinkForm, LockForm, UnlockForm } from "@/components/account-forms";
 import { SiteShell } from "@/components/site-shell";
-import { sqlite } from "@/lib/db";
 import { getActiveAccount } from "@/lib/internal-auth";
 
-const statusLabels = { PASSWORD_PENDING: "Passwortvergabe ausstehend", ACTIVE: "Aktiv", LOCKED: "Gesperrt" } as const;
+import { findManagedAccount } from "../data";
 
-type AccountStatus = keyof typeof statusLabels;
+const statusLabels = { PASSWORD_PENDING: "Passwortvergabe ausstehend", ACTIVE: "Aktiv", LOCKED: "Gesperrt" } as const;
 
 export default async function AccountDetailPage({ params }: PageProps<"/intern/konten/[userId]">) {
   await connection();
@@ -17,12 +16,9 @@ export default async function AccountDetailPage({ params }: PageProps<"/intern/k
   if (!account) redirect("/intern/anmelden");
   if (!account.systemAdmin) redirect("/intern");
   const { userId } = await params;
-  const managed = sqlite.prepare("SELECT id, email, role, system_admin AS systemAdmin, status FROM user WHERE id = ?").get(userId) as
-    | { id: string; email: string; role: "NONE" | "AREA_EDITOR"; systemAdmin: number; status: AccountStatus }
-    | undefined;
-  if (!managed) notFound();
-  const areas = sqlite.prepare("SELECT id, name FROM areas ORDER BY name COLLATE NOCASE").all() as { id: string; name: string }[];
-  const areaIds = (sqlite.prepare("SELECT area_id AS areaId FROM area_assignments WHERE user_id = ?").all(userId) as { areaId: string }[]).map((row) => row.areaId);
+  const details = findManagedAccount(userId);
+  if (!details) notFound();
+  const { account: managed, areas, areaIds } = details;
   const initial = { role: managed.role, systemAdmin: Boolean(managed.systemAdmin), areaIds };
 
   return <SiteShell><section className="search-panel" aria-labelledby="account-detail-heading">

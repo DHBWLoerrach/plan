@@ -4,15 +4,16 @@ import { connection } from "next/server";
 
 import { CreateAccountForm } from "@/components/account-forms";
 import { SiteShell } from "@/components/site-shell";
-import { sqlite } from "@/lib/db";
 import { getActiveAccount } from "@/lib/internal-auth";
+
+import { accountAreaOptions } from "../data";
 
 export default async function NewAccountPage() {
   await connection();
   const account = await getActiveAccount();
   if (!account) redirect("/intern/anmelden");
   if (!account.systemAdmin) redirect("/intern");
-  const areas = sqlite.prepare("SELECT id, name FROM areas ORDER BY name COLLATE NOCASE").all() as { id: string; name: string }[];
+  const areas = accountAreaOptions();
 
   return <SiteShell><section className="search-panel narrow-panel" aria-labelledby="new-account-heading">
     <p className="eyebrow">Interner Bereich · Systemadministration</p>

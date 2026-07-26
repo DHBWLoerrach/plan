@@ -17,7 +17,7 @@ import { getActiveAccount } from "@/lib/internal-auth";
 import { listAttachableCourses, maximumCoursesPerBlockPlan } from "@/lib/services/block-plan-admin";
 import { publicationIssuesForDraft } from "@/lib/services/publication";
 
-import { type PlanPhase, blockPlanCourses, blockPlanDraftEvents, blockPlanDraftPhases, publicationStateLabel } from "../data";
+import { type PlanPhase, blockPlanCourses, blockPlanDraftEvents, blockPlanDraftPhases, findInternalBlockPlan, publicationStateLabel } from "../data";
 import { searchParam } from "../../kurse/data";
 
 type WorkspaceView = "kursphasen" | "termine" | "einstellungen";
@@ -53,16 +53,8 @@ export default async function InternalBlockPlanPage({ params, searchParams }: Pa
   const account = await getActiveAccount();
   if (!account) redirect("/intern/anmelden");
   const { blockPlanId } = await params;
-  const plan = sqlite.prepare(`SELECT plan.id, plan.name, plan.area_id AS areaId, area.name AS areaName, plan.draft_updated_at AS draftUpdatedAt,
-      plan.has_ever_been_published AS hasEverBeenPublished, version.id AS versionId, version.published_at AS publishedAt,
-      editor.email AS draftUpdatedBy
-    FROM block_plans plan JOIN areas area ON area.id = plan.area_id
-    LEFT JOIN user editor ON editor.id = plan.draft_updated_by_account_id
-    LEFT JOIN published_versions version ON version.block_plan_id = plan.id WHERE plan.id = ?`).get(blockPlanId) as
-    | { id: string; name: string | null; areaId: string; areaName: string; draftUpdatedAt: string; hasEverBeenPublished: number; versionId: string | null; publishedAt: string | null; draftUpdatedBy: string | null }
-    | undefined;
+  const plan = findInternalBlockPlan(blockPlanId, account);
   if (!plan) notFound();
-  if (!account.systemAdmin && !account.areaIds.includes(plan.areaId)) notFound();
 
   const query = await searchParams;
   const created = searchParam(query, "angelegt") === "1";

@@ -4,7 +4,7 @@
 
 Das MVP ist ein modularer Next.js-Monolith in einem Docker-Container. Öffentliche Ansichten, interner Editor, Fachlogik, lokale Anmeldung und Datenzugriff sind eine Anwendung, aber klar getrennte Module. Das MVP stellt keine öffentliche REST-API bereit.
 
-Drizzle ORM, versionierte SQL-Migrationen und der serverseitige `better-sqlite3`-Treiber kapseln SQLite. Die Anwendung läuft vorerst in genau einer Instanz. Datenbank und Bereitstellungsmodell werden erst neu bewertet, wenn mehrere Instanzen oder deutlich mehr gleichzeitige Schreibvorgänge tatsächlich erforderlich werden.
+Die Anwendung greift serverseitig über `better-sqlite3` und explizite SQL-Abfragen auf SQLite zu. Versionierte SQL-Migrationen definieren das vollständige Datenbankschema. Drizzle ORM wird ausschließlich als Datenbankadapter und Tabellenmodell für Better Auth verwendet. Die Anwendung läuft vorerst in genau einer Instanz. Datenbank und Bereitstellungsmodell werden erst neu bewertet, wenn mehrere Instanzen oder deutlich mehr gleichzeitige Schreibvorgänge tatsächlich erforderlich werden.
 
 Die produktive Datenbank verwendet `PRAGMA journal_mode=WAL` und verifiziert diesen persistenten Modus beim Anwendungsstart. Jede geöffnete Verbindung aktiviert `PRAGMA foreign_keys=ON` und `PRAGMA busy_timeout=5000`. WAL erlaubt parallele Lesezugriffe, serialisiert Schreibvorgänge jedoch weiterhin; deshalb bleiben Schreibtransaktionen kurz. Ein nach Ablauf des Timeouts verbleibendes `SQLITE_BUSY` wird als vorübergehender, strukturierter Konflikt behandelt und nicht unbegrenzt wiederholt.
 

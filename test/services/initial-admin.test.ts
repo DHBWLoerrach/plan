@@ -17,7 +17,7 @@ function createDatabase({ migrated = true }: { migrated?: boolean } = {}) {
   const databasePath = path.join(directory, "database.sqlite");
   const sqlite = new Database(databasePath);
   sqlite.exec("CREATE TABLE _migrations (id TEXT PRIMARY KEY NOT NULL, applied_at TEXT NOT NULL)");
-  sqlite.exec(readFileSync(path.join(process.cwd(), "drizzle/0000_initial.sql"), "utf8"));
+  sqlite.exec(readFileSync(path.join(process.cwd(), "migrations/0000_initial.sql"), "utf8"));
   if (migrated) sqlite.prepare("INSERT INTO _migrations (id, applied_at) VALUES (?, ?)").run("0000_initial", new Date().toISOString());
   sqlite.close();
   return databasePath;

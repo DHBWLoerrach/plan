@@ -10,7 +10,7 @@ const draftUpdatedAt = "2026-01-01T00:00:00.000Z";
 
 function databaseWithPublishablePlan() {
   const sqlite = new Database(":memory:");
-  sqlite.exec(readFileSync(path.join(process.cwd(), "drizzle/0000_initial.sql"), "utf8"));
+  sqlite.exec(readFileSync(path.join(process.cwd(), "migrations/0000_initial.sql"), "utf8"));
   sqlite.exec(`
     INSERT INTO areas VALUES ('area-1', 'Informatik', 'informatik');
     INSERT INTO programs VALUES ('program-1', 'area-1', 'Informatik', 'TIF', 6);

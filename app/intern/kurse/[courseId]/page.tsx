@@ -5,25 +5,18 @@ import { connection } from "next/server";
 import { CreateBlockPlanFromCourseForm } from "@/components/block-plan-forms";
 import { DeleteCourseForm, EditCourseForm } from "@/components/course-forms";
 import { SiteShell } from "@/components/site-shell";
-import { sqlite } from "@/lib/db";
 import { getActiveAccount } from "@/lib/internal-auth";
 
 import { blockPlanSummaries } from "../../blockplaene/data";
-import { programOptions, searchParam } from "../data";
+import { findInternalCourse, programOptions, searchParam } from "../data";
 
 export default async function CourseDetailPage({ params, searchParams }: PageProps<"/intern/kurse/[courseId]">) {
   await connection();
   const account = await getActiveAccount();
   if (!account) redirect("/intern/anmelden");
   const { courseId } = await params;
-  const course = sqlite.prepare(`SELECT course.id, course.code, course.program_id AS programId, course.study_start AS studyStart, course.study_end AS studyEnd,
-      course.block_plan_id AS blockPlanId, program.area_id AS areaId,
-      (SELECT version.block_plan_name FROM published_course_snapshots snap JOIN published_versions version ON version.id = snap.version_id WHERE snap.source_course_id = course.id) AS publishedIn
-    FROM courses course JOIN programs program ON program.id = course.program_id WHERE course.id = ?`).get(courseId) as
-    | { id: string; code: string; programId: string; studyStart: string; studyEnd: string; blockPlanId: string | null; areaId: string; publishedIn: string | null }
-    | undefined;
+  const course = findInternalCourse(courseId, account);
   if (!course) notFound();
-  if (!account.systemAdmin && !account.areaIds.includes(course.areaId)) notFound();
   const created = searchParam(await searchParams, "angelegt") === "1";
   const programs = programOptions(account);
 

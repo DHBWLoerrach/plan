@@ -6,8 +6,39 @@ import type { DraftEvent, PlanPhase } from "@/lib/domain/publication";
 
 export type PlanCourse = { id: string; code: string; program: string; semesters: number; studyStart: string; studyEnd: string };
 export type PlanSummary = { displayName: string; courseCodes: string[] };
+export type InternalBlockPlan = { id: string; hasEverBeenPublished: number; versionId: string | null };
+export type InternalBlockPlanDetails = {
+  id: string;
+  name: string | null;
+  areaName: string;
+  draftUpdatedAt: string;
+  hasEverBeenPublished: number;
+  versionId: string | null;
+  publishedAt: string | null;
+  draftUpdatedBy: string | null;
+};
 
 export type { PlanPhase };
+
+/** Block plans visible to the account, newest draft changes first. */
+export function listInternalBlockPlans(account: { id: string; systemAdmin: boolean }): InternalBlockPlan[] {
+  return sqlite.prepare(`SELECT plan.id, plan.has_ever_been_published AS hasEverBeenPublished, version.id AS versionId
+    FROM block_plans plan LEFT JOIN published_versions version ON version.block_plan_id = plan.id
+    WHERE ? = 1 OR plan.area_id IN (SELECT area_id FROM area_assignments WHERE user_id = ?)
+    ORDER BY plan.draft_updated_at DESC`).all(account.systemAdmin ? 1 : 0, account.id) as InternalBlockPlan[];
+}
+
+/** Workspace header data for a block plan the account may manage. */
+export function findInternalBlockPlan(blockPlanId: string, account: { id: string; systemAdmin: boolean }): InternalBlockPlanDetails | undefined {
+  return sqlite.prepare(`SELECT plan.id, plan.name, area.name AS areaName, plan.draft_updated_at AS draftUpdatedAt,
+      plan.has_ever_been_published AS hasEverBeenPublished, version.id AS versionId, version.published_at AS publishedAt,
+      editor.email AS draftUpdatedBy
+    FROM block_plans plan JOIN areas area ON area.id = plan.area_id
+    LEFT JOIN user editor ON editor.id = plan.draft_updated_by_account_id
+    LEFT JOIN published_versions version ON version.block_plan_id = plan.id
+    WHERE plan.id = ? AND (? = 1 OR plan.area_id IN (SELECT area_id FROM area_assignments WHERE user_id = ?))`)
+    .get(blockPlanId, account.systemAdmin ? 1 : 0, account.id) as InternalBlockPlanDetails | undefined;
+}
 
 /** The courses currently assigned to a block plan, in the order used for display and for the derived name. */
 export function blockPlanCourses(blockPlanId: string): PlanCourse[] {

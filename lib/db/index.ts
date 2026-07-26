@@ -19,7 +19,7 @@ function createDatabase() {
   sqlite.exec("CREATE TABLE IF NOT EXISTS _migrations (id TEXT PRIMARY KEY NOT NULL, applied_at TEXT NOT NULL)");
   const applied = sqlite.prepare("SELECT 1 FROM _migrations WHERE id = ?").get("0000_initial");
   if (!applied) {
-    sqlite.exec(readFileSync(path.join(process.cwd(), "drizzle/0000_initial.sql"), "utf8"));
+    sqlite.exec(readFileSync(path.join(process.cwd(), "migrations/0000_initial.sql"), "utf8"));
     sqlite.prepare("INSERT OR IGNORE INTO _migrations (id, applied_at) VALUES (?, ?)").run("0000_initial", new Date().toISOString());
   }
   seedMasterData(sqlite);

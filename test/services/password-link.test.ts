@@ -12,7 +12,7 @@ const databases: Database.Database[] = [];
 function databaseWithPasswordLink({ expiresAt = "2030-01-08T00:00:00.000Z", status = "PASSWORD_PENDING" }: { expiresAt?: string; status?: string } = {}) {
   const sqlite = new Database(":memory:");
   databases.push(sqlite);
-  sqlite.exec(readFileSync(path.join(process.cwd(), "drizzle/0000_initial.sql"), "utf8"));
+  sqlite.exec(readFileSync(path.join(process.cwd(), "migrations/0000_initial.sql"), "utf8"));
   sqlite.prepare("INSERT INTO user (id, name, email, emailVerified, role, system_admin, status, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
     "user-1", "admin@example.test", "admin@example.test", 0, "NONE", 1, status, Date.now(), Date.now(),
   );

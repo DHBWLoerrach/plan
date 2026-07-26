@@ -5,11 +5,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 
 import { internalAuthOptions, parseTrustedProxies } from "@/lib/auth-options";
 import { db } from "@/lib/db";
-import { accounts, sessions, users, verifications } from "@/lib/db/schema";
-
-// Better Auth resolves its models by singular model name (schema["user"]),
-// while our Drizzle tables are exported under plural names. Map them explicitly.
-const authSchema = { user: users, account: accounts, session: sessions, verification: verifications };
+import { authSchema } from "@/lib/db/auth-schema";
 
 const isProductionBuild = process.env.NEXT_PHASE === "phase-production-build";
 const secret = process.env.BETTER_AUTH_SECRET ?? (process.env.NODE_ENV === "production" && !isProductionBuild ? undefined : "development-only-secret-change-before-production");

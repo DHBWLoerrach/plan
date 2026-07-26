@@ -3,17 +3,14 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 
 import { SiteShell } from "@/components/site-shell";
-import { sqlite } from "@/lib/db";
 import { getActiveAccount } from "@/lib/internal-auth";
+
+import { type AccountListRow, type AccountStatus, listAccounts } from "./data";
 
 const statusLabels = { PASSWORD_PENDING: "Passwortvergabe ausstehend", ACTIVE: "Aktiv", LOCKED: "Gesperrt" } as const;
 const statusFilters = ["PASSWORD_PENDING", "ACTIVE", "LOCKED"] as const;
 
-type AccountStatus = keyof typeof statusLabels;
-
-type AccountRow = { id: string; email: string; role: string; systemAdmin: number; status: AccountStatus; areas: string | null };
-
-function roleSummary(account: AccountRow) {
+function roleSummary(account: AccountListRow) {
   const roles: string[] = [];
   if (account.role === "AREA_EDITOR") roles.push("Bereichsbearbeitung");
   if (account.systemAdmin) roles.push("Systemadministration");
@@ -27,9 +24,7 @@ export default async function AccountsPage({ searchParams }: PageProps<"/intern/
   if (!account.systemAdmin) redirect("/intern");
   const requested = (await searchParams).status;
   const status = statusFilters.includes(requested as AccountStatus) ? (requested as AccountStatus) : undefined;
-  const accounts = sqlite.prepare(`SELECT u.id, u.email, u.role, u.system_admin AS systemAdmin, u.status,
-      (SELECT GROUP_CONCAT(a.name, ', ') FROM area_assignments aa JOIN areas a ON a.id = aa.area_id WHERE aa.user_id = u.id) AS areas
-    FROM user u WHERE (? IS NULL OR u.status = ?) ORDER BY u.email COLLATE NOCASE`).all(status ?? null, status ?? null) as AccountRow[];
+  const accounts = listAccounts(status);
 
   return <SiteShell><section className="search-panel" aria-labelledby="accounts-heading">
     <p className="eyebrow">Interner Bereich · Systemadministration</p>

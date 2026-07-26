@@ -9,7 +9,7 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { internalAuthOptions, parseTrustedProxies } from "@/lib/auth-options";
-import { accounts, sessions, users, verifications } from "@/lib/db/schema";
+import { authSchema } from "@/lib/db/auth-schema";
 
 const baseUrl = "https://blockplan.dhbw-loerrach.de";
 const traefikAddress = "10.0.0.7";
@@ -20,10 +20,10 @@ function createAuth(trustedProxies = parseTrustedProxies("10.0.0.0/24")) {
   const directory = mkdtempSync(path.join(os.tmpdir(), "dhbw-mgmt-rate-limit-"));
   temporaryDirectories.push(directory);
   const sqlite = new Database(path.join(directory, "database.sqlite"));
-  sqlite.exec(readFileSync(path.join(process.cwd(), "drizzle/0000_initial.sql"), "utf8"));
+  sqlite.exec(readFileSync(path.join(process.cwd(), "migrations/0000_initial.sql"), "utf8"));
   const options = internalAuthOptions({
     secret: "a".repeat(32),
-    database: drizzleAdapter(drizzle(sqlite), { provider: "sqlite", schema: { user: users, account: accounts, session: sessions, verification: verifications } }),
+    database: drizzleAdapter(drizzle(sqlite), { provider: "sqlite", schema: authSchema }),
     trustedProxies,
   });
   return betterAuth({ ...options, baseURL: baseUrl });
