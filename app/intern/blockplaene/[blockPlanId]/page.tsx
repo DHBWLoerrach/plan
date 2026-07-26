@@ -15,9 +15,18 @@ import { nextPhaseDefaults, semesterContext } from "@/lib/domain/phase-sequence"
 import { semesterOverview } from "@/lib/domain/semester-overview";
 import { getActiveAccount } from "@/lib/internal-auth";
 import { listAttachableCourses, maximumCoursesPerBlockPlan } from "@/lib/services/block-plan-admin";
+import { publicationIssuesForDraft } from "@/lib/services/publication";
 
 import { type PlanPhase, blockPlanCourses, blockPlanDraftEvents, blockPlanDraftPhases, publicationStateLabel } from "../data";
 import { searchParam } from "../../kurse/data";
+
+type WorkspaceView = "kursphasen" | "termine" | "einstellungen";
+
+function workspaceUrl(blockPlanId: string, view: WorkspaceView, semester?: number): string {
+  const query = new URLSearchParams({ ansicht: view });
+  if (view === "kursphasen" && semester) query.set("semester", String(semester));
+  return `/intern/blockplaene/${blockPlanId}?${query}`;
+}
 
 /**
  * Groups the affected courses of an event by the semester derived from their course phases. In an incomplete draft a
@@ -45,12 +54,12 @@ export default async function InternalBlockPlanPage({ params, searchParams }: Pa
   if (!account) redirect("/intern/anmelden");
   const { blockPlanId } = await params;
   const plan = sqlite.prepare(`SELECT plan.id, plan.name, plan.area_id AS areaId, area.name AS areaName, plan.draft_updated_at AS draftUpdatedAt,
-      plan.has_ever_been_published AS hasEverBeenPublished, version.id AS versionId,
+      plan.has_ever_been_published AS hasEverBeenPublished, version.id AS versionId, version.published_at AS publishedAt,
       editor.email AS draftUpdatedBy
     FROM block_plans plan JOIN areas area ON area.id = plan.area_id
     LEFT JOIN user editor ON editor.id = plan.draft_updated_by_account_id
     LEFT JOIN published_versions version ON version.block_plan_id = plan.id WHERE plan.id = ?`).get(blockPlanId) as
-    | { id: string; name: string | null; areaId: string; areaName: string; draftUpdatedAt: string; hasEverBeenPublished: number; versionId: string | null; draftUpdatedBy: string | null }
+    | { id: string; name: string | null; areaId: string; areaName: string; draftUpdatedAt: string; hasEverBeenPublished: number; versionId: string | null; publishedAt: string | null; draftUpdatedBy: string | null }
     | undefined;
   if (!plan) notFound();
   if (!account.systemAdmin && !account.areaIds.includes(plan.areaId)) notFound();
@@ -60,6 +69,8 @@ export default async function InternalBlockPlanPage({ params, searchParams }: Pa
   const published = searchParam(query, "veroeffentlicht") === "1";
   const withdrawn = searchParam(query, "zurueckgenommen") === "1";
   const versionOutdated = searchParam(query, "fassung-veraltet") === "1";
+  const requestedView = searchParam(query, "ansicht");
+  const view: WorkspaceView = requestedView === "termine" || requestedView === "einstellungen" ? requestedView : "kursphasen";
   const courses = blockPlanCourses(plan.id);
   const displayName = blockPlanDisplayName(plan.name, courses);
   const derivedName = blockPlanDisplayName(null, courses);
@@ -67,6 +78,7 @@ export default async function InternalBlockPlanPage({ params, searchParams }: Pa
   const attachable = courses.length < maximumCoursesPerBlockPlan ? listAttachableCourses(sqlite, plan.id) : [];
   const phases = blockPlanDraftPhases(plan.id);
   const events = blockPlanDraftEvents(plan.id);
+  const publicationIssues = publicationIssuesForDraft(sqlite, plan.id, { courses, phases, events });
   const courseCodes = new Map(courses.map((course) => [course.id, course.code]));
   // Every assigned course carries the same number of semesters (FACHLICHE_REGELN.md), so the first one answers for the plan.
   const semesters = courses[0]?.semesters ?? 0;
@@ -84,10 +96,35 @@ export default async function InternalBlockPlanPage({ params, searchParams }: Pa
   // validated against, so a divergence must be visible per course rather than hidden behind a de-duplicated chip.
   const studyPeriods = courses.map((course) => ({ code: course.code, period: formatCalendarPeriod(course.studyStart, course.studyEnd) }));
   const identicalStudyPeriod = new Set(studyPeriods.map((entry) => entry.period)).size <= 1;
+  const draftState = publicationIssues.length
+    ? publicationIssues.length === 1 ? "Entwurf: 1 offener Punkt" : `Entwurf: ${publicationIssues.length} offene Punkte`
+    : "Entwurf ist bereit zur Veröffentlichung";
+  const publicState = plan.versionId
+    ? plan.publishedAt && plan.draftUpdatedAt > plan.publishedAt
+      ? "Veröffentlicht · Entwurf danach geändert"
+      : "Veröffentlicht · keine neueren Änderungen"
+    : publicationState;
 
   return <SiteShell><article className="plan-detail">
-    <p className="eyebrow">Interner Entwurf</p>
-    <h1>{displayName}</h1>
+    <header className="plan-workspace-header">
+      <div>
+        <p className="eyebrow">Interner Entwurf</p>
+        <h1>{displayName}</h1>
+        <p className="plan-area">{plan.areaName} · Jahrgang {courses[0]?.studyStart.slice(0, 4)}</p>
+      </div>
+      <aside className="publication-panel" aria-label="Arbeits- und Veröffentlichungsstand">
+        <p className={publicationIssues.length ? "status-badge status-badge--warning" : "status-badge status-badge--ready"}>{draftState}</p>
+        <p><strong>{publicState}</strong></p>
+        <p>Gespeicherte Änderungen werden erst durch eine Freigabe öffentlich.</p>
+        <Link className="button" href={`/intern/blockplaene/${plan.id}/vorschau`}>
+          {publicationIssues.length ? "Entwurf prüfen" : "Vorschau und Veröffentlichung"}
+        </Link>
+        {plan.versionId ? <p><Link className="text-link" href={`/${plan.id}`}>Öffentliche Fassung ansehen</Link></p> : null}
+        {plan.versionId
+          ? <WithdrawForm blockPlanId={plan.id} publishedVersionId={plan.versionId} displayName={displayName} />
+          : null}
+      </aside>
+    </header>
     {created ? <p role="status">Der Blockplan wurde mit dem Kurs {courses[0]?.code} angelegt.</p> : null}
     {published ? <p role="status">Die Vorschau wurde veröffentlicht. Der Blockplan ist jetzt <Link className="text-link" href={`/${plan.id}`}>öffentlich sichtbar</Link>; der Entwurf bleibt unverändert bearbeitbar.</p> : null}
     {withdrawn ? <p role="status">Die Veröffentlichung wurde zurückgenommen. Der Blockplan ist nicht mehr öffentlich sichtbar; der Entwurf ist vollständig erhalten.</p> : null}
@@ -95,68 +132,81 @@ export default async function InternalBlockPlanPage({ params, searchParams }: Pa
       Die Veröffentlichung, die Sie zurücknehmen wollten, war nicht mehr die angezeigte Fassung. Es wurde nichts
       geändert. Hier steht der aktuelle Veröffentlichungszustand: {publicationState}.
     </p> : null}
-    <p className="plan-area">{plan.areaName} · Jahrgang {courses[0]?.studyStart.slice(0, 4)}</p>
     <dl className="course-list">
       <dt>Zugeordnete Kurse</dt><dd>{courses.map((course) => <span key={course.id}>{course.code}</span>)}</dd>
       <dt>Studienzeitraum</dt><dd>{identicalStudyPeriod
         ? <span>{studyPeriods[0]?.period}</span>
         : studyPeriods.map((entry) => <span key={entry.code}>{entry.code}: {entry.period}</span>)}</dd>
-      <dt>Veröffentlichungszustand</dt><dd>{publicationState}</dd>
       <dt>Letzte Entwurfsänderung</dt><dd>{new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" }).format(new Date(plan.draftUpdatedAt))}{plan.draftUpdatedBy ? ` durch ${plan.draftUpdatedBy}` : ""}</dd>
     </dl>
 
-    {requestedSemester && !knownSemester
+    {view === "kursphasen" && requestedSemester && !knownSemester
       ? <p role="status">Semester {requestedSemester} gibt es in diesem Blockplan nicht. Angezeigt wird Semester 1.</p>
       : null}
-    {/* Keyed on the semester: switching semesters must reset the section's own client state (the status
-        message and the create form's in-progress values), not just receive new props. */}
-    <PhaseSection key={semester} blockPlanId={plan.id} courses={courses} semesters={semesters} semester={semester}
-      overview={overview} phases={semesterPhases} context={context} nextDefaults={nextDefaults} />
 
-    <EventSection blockPlanId={plan.id} courses={courses} entries={entries} missingPhaseSemester={missingPhaseSemester} />
+    <nav className="workspace-nav" aria-label="Arbeitsbereiche des Blockplans">
+      <Link href={workspaceUrl(plan.id, "kursphasen", semester)} aria-current={view === "kursphasen" ? "page" : undefined}>
+        Kursphasen
+      </Link>
+      <Link href={workspaceUrl(plan.id, "termine")} aria-current={view === "termine" ? "page" : undefined}>
+        Termine <span aria-label={`${events.length} ${events.length === 1 ? "Termin" : "Termine"}`}>{events.length}</span>
+      </Link>
+      <Link href={workspaceUrl(plan.id, "einstellungen")} aria-current={view === "einstellungen" ? "page" : undefined}>
+        Planeinstellungen
+      </Link>
+    </nav>
 
-    <section aria-labelledby="publication-heading">
-      <h2 id="publication-heading">Veröffentlichung</h2>
-      <p>Zustand: {publicationState}</p>
-      <p><Link className="button" href={`/intern/blockplaene/${plan.id}/vorschau`}>Vorschau prüfen und veröffentlichen</Link></p>
-      <p>Die Vorschau zeigt den gespeicherten Entwurf so, wie externe Nutzende ihn sähen — und solange er noch Regeln verletzt, stattdessen die Fehlerübersicht mit Verweisen auf die betroffenen Semester und Felder.</p>
-      {plan.versionId
-        ? <WithdrawForm blockPlanId={plan.id} publishedVersionId={plan.versionId} displayName={displayName} />
-        : null}
-    </section>
+    {view === "kursphasen" ? <>
+      {/* Keyed on the semester: switching semesters must reset the section's own client state (the status
+          message and the create form's in-progress values), not just receive new props. */}
+      <PhaseSection key={semester} blockPlanId={plan.id} courses={courses} semesters={semesters} semester={semester}
+        overview={overview} phases={semesterPhases} context={context} nextDefaults={nextDefaults} issues={publicationIssues} />
+    </> : null}
 
-    <details className="plan-settings">
-      <summary>Planeinstellungen</summary>
-      <p>Bezeichnung, Kurszuordnung und Löschung ändern Sie selten — meist nur beim Anlegen des Blockplans.</p>
+    {view === "termine"
+      ? <EventSection blockPlanId={plan.id} courses={courses} entries={entries} missingPhaseSemester={missingPhaseSemester} />
+      : null}
 
-      <section aria-labelledby="name-heading">
-        <h2 id="name-heading">Bezeichnung</h2>
-        <RenameBlockPlanForm blockPlanId={plan.id} name={plan.name} derivedName={derivedName} />
-      </section>
+    {view === "einstellungen" ? <section className="workspace-panel plan-settings" aria-labelledby="settings-heading">
+      <div className="workspace-heading">
+        <div>
+          <p className="eyebrow">Selten benötigte Verwaltung</p>
+          <h2 id="settings-heading">Planeinstellungen</h2>
+          <p>Hier ändern Sie die Bezeichnung und Kurszuordnung des gesamten Blockplans.</p>
+        </div>
+      </div>
 
-      <section aria-labelledby="courses-heading">
-        <h2 id="courses-heading">Kurse</h2>
-        <ul className="entry-list">{courses.map((course) => <li key={course.id}>
-          <p><strong><Link className="text-link" href={`/intern/kurse/${course.id}`}>{course.code}</Link></strong></p>
-          <p className="entry-meta">{course.program} · {formatCalendarPeriod(course.studyStart, course.studyEnd)}</p>
-          {courses.length > 1
-            ? <DetachCourseForm blockPlanId={plan.id} courseId={course.id} code={course.code} />
-            : <p className="entry-meta">Letzter Kurs — nicht lösbar</p>}
-        </li>)}</ul>
-        {courses.length >= maximumCoursesPerBlockPlan
-          ? <p className="empty-note">Dieser Blockplan enthält die Höchstzahl von {maximumCoursesPerBlockPlan} Kursen.</p>
-          : attachable.length
-            ? <AttachCourseForm blockPlanId={plan.id} courses={attachable} />
-            : <p className="empty-note">Es gibt derzeit keinen blockplanlosen Kurs mit demselben Bereich, Jahrgang und derselben Studiendauer.</p>}
-      </section>
+      <div className="settings-grid">
+        <section aria-labelledby="name-heading">
+          <h3 id="name-heading">Bezeichnung</h3>
+          <RenameBlockPlanForm blockPlanId={plan.id} name={plan.name} derivedName={derivedName} />
+        </section>
 
-      <section aria-labelledby="delete-heading">
-        <h2 id="delete-heading">Löschen</h2>
+        <section aria-labelledby="courses-heading">
+          <h3 id="courses-heading">Zugeordnete Kurse</h3>
+          <ul className="entry-list">{courses.map((course) => <li key={course.id}>
+            <p><strong><Link className="text-link" href={`/intern/kurse/${course.id}`}>{course.code}</Link></strong></p>
+            <p className="entry-meta">{course.program} · {formatCalendarPeriod(course.studyStart, course.studyEnd)}</p>
+            {courses.length > 1
+              ? <DetachCourseForm blockPlanId={plan.id} courseId={course.id} code={course.code} />
+              : <p className="entry-meta">Letzter Kurs — nicht lösbar</p>}
+          </li>)}</ul>
+          {courses.length >= maximumCoursesPerBlockPlan
+            ? <p className="empty-note">Dieser Blockplan enthält die Höchstzahl von {maximumCoursesPerBlockPlan} Kursen.</p>
+            : attachable.length
+              ? <AttachCourseForm blockPlanId={plan.id} courses={attachable} />
+              : <p className="empty-note">Es gibt derzeit keinen blockplanlosen Kurs mit demselben Bereich, Jahrgang und derselben Studiendauer.</p>}
+        </section>
+      </div>
+
+      <section className="danger-zone" aria-labelledby="delete-heading">
+        <h3 id="delete-heading">Gefahrenbereich</h3>
+        <p>Das Löschen betrifft den gesamten Blockplan und kann nicht rückgängig gemacht werden.</p>
         {plan.versionId
           ? <p className="empty-note">Dieser Blockplan besitzt eine veröffentlichte Fassung und kann nicht gelöscht werden. Nehmen Sie die Veröffentlichung zuerst zurück.</p>
           : <DeleteBlockPlanForm blockPlanId={plan.id} displayName={displayName} courseCodes={courses.map((course) => course.code)} />}
       </section>
-    </details>
+    </section> : null}
 
     <p><Link className="text-link" href="/intern">Zurück zu den Blockplänen</Link></p>
   </article></SiteShell>;

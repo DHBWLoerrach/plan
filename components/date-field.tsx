@@ -17,7 +17,7 @@ export function DateField({ label, name, defaultValue, required, invalid, errorI
   invalid?: boolean;
   errorId?: string;
   hint?: string;
-  /** Set on the first empty required field after a save, so capturing continues without reaching for the mouse. */
+  /** Set after explicitly opening or continuing a create form, so capturing proceeds without reaching for the mouse. */
   autoFocus?: boolean;
   /** Extra id(s) to associate, e.g. a note explaining why the field was left empty. */
   describedBy?: string;

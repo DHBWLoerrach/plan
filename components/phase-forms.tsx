@@ -28,7 +28,7 @@ function EditPhaseForm({ blockPlanId, phase, semesters, openSemester, onSaved }:
       // does not read as though the entry vanished by accident (blockplan-editor-ux-design.md).
       onSaved(result.movedToSemester
         ? <>Die Kursphase von {phase.code} wurde nach Semester {result.movedToSemester} verschoben. <Link
-            className="text-link" href={`/intern/blockplaene/${blockPlanId}?semester=${result.movedToSemester}`}>Zu Semester {result.movedToSemester}</Link></>
+            className="text-link" href={`/intern/blockplaene/${blockPlanId}?ansicht=kursphasen&semester=${result.movedToSemester}`}>Zu Semester {result.movedToSemester}</Link></>
         : result.success);
     }
     return result;

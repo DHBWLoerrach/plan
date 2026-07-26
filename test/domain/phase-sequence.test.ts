@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { nextPhaseDefaults, semesterContext } from "@/lib/domain/phase-sequence";
+import {
+  nextPhaseDefaults,
+  phaseGapsForSemester,
+  semesterContext,
+  suggestedPhaseTypeForGap,
+} from "@/lib/domain/phase-sequence";
 import type { PlanPhase } from "@/lib/domain/publication";
 
 const courses = [
@@ -157,31 +162,6 @@ describe("semesterContext", () => {
     ]);
   });
 
-  it("counts the days the draft leaves unassigned before the following semester", () => {
-    expect(semesterContext({ courses, phases: spanning, semester: 2 }).unplanned).toEqual([
-      { code: "TIF26A", from: "2027-06-19", to: "2027-09-14", days: 86 },
-      { code: "TIF26B", from: "2027-06-19", to: "2027-09-14", days: 86 },
-    ]);
-  });
-
-  it("reports no unassigned span when the following semester starts the next day", () => {
-    const seamless: PlanPhase[] = [
-      spanning[0],
-      spanning[2],
-      { id: "s7", code: "TIF26A", courseId: "course-a", semester: 3, type: "THEORY", startDate: "2027-06-20", endDate: "2027-12-31" },
-    ];
-
-    expect(semesterContext({ courses: [courses[0]], phases: seamless, semester: 2 }).unplanned).toEqual([]);
-  });
-
-  it("measures the gap from the opened semester, not from the one before it", () => {
-    const emptySecond: PlanPhase[] = [spanning[0], spanning[4]];
-
-    expect(semesterContext({ courses: [courses[0]], phases: emptySecond, semester: 2 }).unplanned).toEqual([
-      { code: "TIF26A", from: "2027-03-31", to: "2027-09-14", days: 166 },
-    ]);
-  });
-
   it("has no predecessor in the first semester", () => {
     const context = semesterContext({ courses, phases: spanning, semester: 1 });
 
@@ -193,7 +173,6 @@ describe("semesterContext", () => {
     const context = semesterContext({ courses, phases: spanning, semester: 3 });
 
     expect(context.after).toEqual([]);
-    expect(context.unplanned).toEqual([]);
     expect(context.before).toHaveLength(2);
   });
 
@@ -211,6 +190,77 @@ describe("semesterContext", () => {
   });
 
   it("returns empty context for a draft without any phase", () => {
-    expect(semesterContext({ courses, phases: [], semester: 1 })).toEqual({ before: [], after: [], unplanned: [] });
+    expect(semesterContext({ courses, phases: [], semester: 1 })).toEqual({ before: [], after: [] });
+  });
+});
+
+describe("phaseGapsForSemester", () => {
+  const course = { ...courses[0], studyStart: "2026-10-01", studyEnd: "2029-09-30" };
+  const before = { code: "TIF26A", semester: 1, type: "THEORY" as const, startDate: "2026-10-01", endDate: "2027-03-31" };
+  const after = { code: "TIF26A", semester: 3, type: "THEORY" as const, startDate: "2027-09-14", endDate: "2027-12-31" };
+
+  it("returns one bounded gap for an empty semester between two phases", () => {
+    expect(phaseGapsForSemester({ course, phases: [spanning[0], spanning[4]], semester: 2, semesters: 6, before, after })).toEqual([
+      {
+        from: "2027-04-01",
+        to: "2027-09-13",
+        days: 166,
+        predecessor: before,
+        successor: after,
+      },
+    ]);
+  });
+
+  it("returns one open gap for an empty semester without a known successor", () => {
+    expect(phaseGapsForSemester({ course, phases: [spanning[0]], semester: 2, semesters: 6, before })).toEqual([
+      {
+        from: "2027-04-01",
+        predecessor: before,
+      },
+    ]);
+  });
+
+  it("uses the study end as the single boundary in an empty final semester", () => {
+    expect(phaseGapsForSemester({ course, phases: [spanning[0]], semester: 6, semesters: 6, before })).toEqual([
+      {
+        from: "2027-04-01",
+        to: "2029-09-30",
+        days: 914,
+        predecessor: before,
+      },
+    ]);
+  });
+
+  it("finds gaps before, between, and after phases without duplicating them", () => {
+    const current: PlanPhase[] = [
+      { id: "g1", code: "TIF26A", courseId: "course-a", semester: 2, type: "PRACTICE", startDate: "2027-04-03", endDate: "2027-04-30" },
+      { id: "g2", code: "TIF26A", courseId: "course-a", semester: 2, type: "THEORY", startDate: "2027-05-03", endDate: "2027-06-30" },
+    ];
+
+    expect(phaseGapsForSemester({ course, phases: current, semester: 2, semesters: 6, before, after })).toMatchObject([
+      { from: "2027-04-01", to: "2027-04-02", days: 2 },
+      { from: "2027-05-01", to: "2027-05-02", days: 2 },
+      { from: "2027-07-01", to: "2027-09-13", days: 75 },
+    ]);
+  });
+
+  it("returns no gap when predecessor and successor are directly adjacent", () => {
+    const adjacentAfter = { ...after, startDate: "2027-04-01" };
+
+    expect(phaseGapsForSemester({
+      course,
+      phases: [spanning[0]],
+      semester: 2,
+      semesters: 6,
+      before,
+      after: adjacentAfter,
+    })).toEqual([]);
+  });
+
+  it("considers the successor when suggesting the phase type for a bounded gap", () => {
+    expect(suggestedPhaseTypeForGap({
+      predecessor: { type: "THEORY", startDate: "2026-10-01", endDate: "2027-03-31" },
+      successor: { type: "PRACTICE", startDate: "2027-09-14", endDate: "2027-12-31" },
+    })).toBe("THEORY");
   });
 });

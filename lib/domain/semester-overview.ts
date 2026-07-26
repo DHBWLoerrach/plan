@@ -1,5 +1,5 @@
 import { type PhaseType, phaseTypes } from "@/lib/domain/phase-type";
-import type { DraftPhase } from "@/lib/domain/publication";
+import type { DraftPhase, PublicationIssue } from "@/lib/domain/publication";
 
 /** How often a phase type occurs per course, as the range over all courses of the block plan. */
 export interface PhaseTypeSpread {
@@ -12,16 +12,36 @@ export interface SemesterEntry {
   semester: number;
   phaseCount: number;
   codesWithoutPhase: string[];
-  codesWithOverlap: string[];
   phasesPerCourse: PhaseTypeSpread[];
+}
+
+export type SemesterWorkState = {
+  kind: "not-started" | "issues" | "ready";
+  label: string;
+  issueCount: number;
+};
+
+/**
+ * The action-oriented state shown in the editor's semester navigation. The release check is the canonical source for
+ * work that remains; phase composition is useful context but must not imply that a semester can already be released.
+ */
+export function semesterWorkState(entry: SemesterEntry, issues: PublicationIssue[]): SemesterWorkState {
+  const issueCount = issues.filter((issue) => !issue.eventId && issue.semester === entry.semester).length;
+  if (!entry.phaseCount) return { kind: "not-started", label: "Nicht begonnen", issueCount };
+  if (issueCount) {
+    return {
+      kind: "issues",
+      label: issueCount === 1 ? "1 offener Punkt" : `${issueCount} offene Punkte`,
+      issueCount,
+    };
+  }
+  return { kind: "ready", label: "Bereit", issueCount: 0 };
 }
 
 /**
  * The state of every semester for the semester navigation of the editor (MVP-SPEZIFIKATION.md): how many course
- * phases it holds, how they are composed, which courses have none there yet and which ones already contradict
- * themselves. Overlapping phases of one course are the error the editor can name semester by semester; the complete
- * publication check belongs to the preview. Phases of the same kind may follow one another directly
- * (FACHLICHE_REGELN.md), so only real overlaps count.
+ * phases it holds, how they are composed, and which courses have none there yet. Actionable errors come from the
+ * canonical publication check rather than being calculated a second time here.
  */
 export function semesterOverview(courses: { id: string; code: string }[], phases: DraftPhase[], semesters: number): SemesterEntry[] {
   return Array.from({ length: semesters }, (_, index) => {
@@ -31,7 +51,6 @@ export function semesterOverview(courses: { id: string; code: string }[], phases
       semester,
       phaseCount: ofSemester.length,
       codesWithoutPhase: courses.filter((course) => !ofSemester.some((phase) => phase.courseId === course.id)).map((course) => course.code),
-      codesWithOverlap: courses.filter((course) => overlaps(ofSemester.filter((phase) => phase.courseId === course.id))).map((course) => course.code),
       phasesPerCourse: spreadPerCourse(courses, ofSemester),
     };
   });
@@ -50,9 +69,4 @@ function spreadPerCourse(courses: { id: string }[], ofSemester: DraftPhase[]): P
     const max = Math.max(...counts);
     return max ? [{ type: value, min: Math.min(...counts), max }] : [];
   });
-}
-
-function overlaps(phases: DraftPhase[]): boolean {
-  const ordered = phases.toSorted((left, right) => left.startDate.localeCompare(right.startDate));
-  return ordered.some((phase, index) => index > 0 && phase.startDate <= ordered[index - 1].endDate);
 }

@@ -65,21 +65,21 @@ export function PublicationIssueOverview({ blockPlanId, issues, courses, events,
     {planIssues.length ? <div className="issue-group">
       <h3>Blockplan</h3>
       <IssueList issues={planIssues} subjects={subjects} />
-      <Link className="text-link" href={`/intern/blockplaene/${blockPlanId}`}>Zu den Planeinstellungen</Link>
+      <Link className="text-link" href={`/intern/blockplaene/${blockPlanId}?ansicht=einstellungen`}>Zu den Planeinstellungen</Link>
     </div> : null}
 
     {semesterNumbers.map((semester) => <div className="issue-group" key={semester}>
       <h3>Semester {semester}</h3>
       <IssueList issues={bySemester.get(semester) ?? []} subjects={subjects} />
       {semester >= 1 && semester <= semesters
-        ? <Link className="text-link" href={`/intern/blockplaene/${blockPlanId}?semester=${semester}`}>Semester {semester} bearbeiten</Link>
+        ? <Link className="text-link" href={`/intern/blockplaene/${blockPlanId}?ansicht=kursphasen&semester=${semester}`}>Semester {semester} bearbeiten</Link>
         : <p className="entry-meta">Dieses Semester liegt außerhalb der Studiendauer und hat keinen eigenen Editor.</p>}
     </div>)}
 
     {eventIssues.length ? <div className="issue-group">
       <h3>Prüfungsrelevante Termine</h3>
       <IssueList issues={eventIssues} subjects={subjects}>
-        {(issue) => <Link className="text-link" href={`/intern/blockplaene/${blockPlanId}#termin-${issue.eventId}`}>Zum Termin</Link>}
+        {(issue) => <Link className="text-link" href={`/intern/blockplaene/${blockPlanId}?ansicht=termine#termin-${issue.eventId}`}>Zum Termin</Link>}
       </IssueList>
     </div> : null}
   </section>;

@@ -65,16 +65,36 @@ export type PhaseNeighbour = {
   endDate: string;
 };
 
-export type UnplannedSpan = { code: string; from: string; to: string; days: number };
-
 export type SemesterContext = {
   /** Per course the last phase belonging to an earlier semester. */
   before: PhaseNeighbour[];
   /** Per course the first phase belonging to a later semester. */
   after: PhaseNeighbour[];
-  /** Per course the span between what is planned so far and the following semester. */
-  unplanned: UnplannedSpan[];
 };
+
+export type PhaseGapBoundary = Pick<PlanPhase, "type" | "startDate" | "endDate">;
+
+export type PhaseGap = {
+  from: string;
+  /** Missing for an open gap whose end is not known yet. */
+  to?: string;
+  /** Missing together with `to`; bounded gaps always carry their inclusive day count. */
+  days?: number;
+  predecessor?: PhaseGapBoundary;
+  successor?: PhaseGapBoundary;
+};
+
+/**
+ * Equal types at both boundaries allow the opposite type to alternate with both. Different boundary types make that
+ * impossible; in that case the suggestion avoids duplicating the already planned successor.
+ */
+export function suggestedPhaseTypeForGap(gap: Pick<PhaseGap, "predecessor" | "successor">): PhaseType | "" {
+  if (!gap.predecessor) return gap.successor ? oppositeType[gap.successor.type] : "";
+  if (gap.successor && oppositeType[gap.predecessor.type] === gap.successor.type) {
+    return oppositeType[gap.successor.type];
+  }
+  return oppositeType[gap.predecessor.type];
+}
 
 function neighbour(code: string, phase: PlanPhase): PhaseNeighbour {
   return { code, semester: phase.semester, type: phase.type, startDate: phase.startDate, endDate: phase.endDate };
@@ -86,27 +106,93 @@ function earliest(phases: PlanPhase[]): PlanPhase | undefined {
 
 /**
  * What borders the opened semester. The editor shows one semester at a time, so planning the next block needs to see
- * where the previous one ended and where an already planned following one begins. The unassigned span is measured
- * from the latest phase up to and including the opened semester, which is what a continuing draft actually has to
- * fill.
+ * where the previous one ended and where an already planned following one begins.
  */
 export function semesterContext({ courses, phases, semester }: {
   courses: { id: string; code: string }[];
   phases: PlanPhase[];
   semester: number;
 }): SemesterContext {
-  const context: SemesterContext = { before: [], after: [], unplanned: [] };
+  const context: SemesterContext = { before: [], after: [] };
   for (const course of courses) {
     const ofCourse = phases.filter((phase) => phase.courseId === course.id);
     const previous = predecessor(ofCourse, course.id, semester - 1);
     const next = earliest(ofCourse.filter((phase) => phase.semester > semester));
     if (previous) context.before.push(neighbour(course.code, previous));
     if (next) context.after.push(neighbour(course.code, next));
-
-    const planned = predecessor(ofCourse, course.id, semester);
-    if (!planned || !next) continue;
-    const days = daysBetween(planned.endDate, next.startDate);
-    if (days > 0) context.unplanned.push({ code: course.code, from: planned.endDate, to: next.startDate, days });
   }
   return context;
+}
+
+function boundedGap(
+  from: string,
+  to: string,
+  predecessor?: PhaseGapBoundary,
+  successor?: PhaseGapBoundary,
+): PhaseGap | null {
+  if (from > to) return null;
+  return {
+    from,
+    to,
+    days: daysBetween(plusDays(from, -1), plusDays(to, 1)),
+    predecessor,
+    successor,
+  };
+}
+
+/**
+ * Every unassigned span shown for one course in the opened semester. Keeping this calculation out of the component
+ * guarantees that an empty semester produces one gap only, regardless of whether it has a predecessor, a successor,
+ * both, or the study end as its boundary.
+ */
+export function phaseGapsForSemester({
+  course,
+  phases,
+  semester,
+  semesters,
+  before,
+  after,
+}: {
+  course: { id: string; studyStart: string; studyEnd: string };
+  phases: PlanPhase[];
+  semester: number;
+  semesters: number;
+  before?: PhaseNeighbour;
+  after?: PhaseNeighbour;
+}): PhaseGap[] {
+  const gaps: PhaseGap[] = [];
+  const ordered = phases
+    .filter((phase) => phase.courseId === course.id && phase.semester === semester)
+    .toSorted((left, right) => left.startDate.localeCompare(right.startDate));
+  let previous: PhaseGapBoundary | undefined = before;
+  let expectedStart = before
+    ? plusDays(before.endDate, 1)
+    : semester === 1
+      ? course.studyStart
+      : null;
+
+  for (const phase of ordered) {
+    if (expectedStart) {
+      const gap = boundedGap(expectedStart, plusDays(phase.startDate, -1), previous, phase);
+      if (gap) gaps.push(gap);
+    }
+    if (!previous || phase.endDate > previous.endDate) {
+      previous = phase;
+      expectedStart = plusDays(phase.endDate, 1);
+    }
+  }
+
+  if (!expectedStart) return gaps;
+  if (after) {
+    const gap = boundedGap(expectedStart, plusDays(after.startDate, -1), previous, after);
+    if (gap) gaps.push(gap);
+    return gaps;
+  }
+  if (semester === semesters) {
+    const gap = boundedGap(expectedStart, course.studyEnd, previous);
+    if (gap) gaps.push(gap);
+    return gaps;
+  }
+  if (expectedStart <= course.studyEnd) gaps.push({ from: expectedStart, predecessor: previous });
+  return gaps;
 }

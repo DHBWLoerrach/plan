@@ -28,11 +28,12 @@ export function eventDefaults(event?: DraftEvent): EventInput {
   };
 }
 
-export function EventFields({ courses, defaults, state, errorId }: {
+export function EventFields({ courses, defaults, state, errorId, autoFocusTitle }: {
   courses: EventCourse[];
   defaults: EventInput;
   state: EventFormState;
   errorId: string;
+  autoFocusTitle?: boolean;
 }) {
   const ids = { title: useId(), description: useId(), category: useId(), hint: useId() };
   const affected = new Set(defaults.courseIds);
@@ -41,7 +42,7 @@ export function EventFields({ courses, defaults, state, errorId }: {
     <p id={ids.hint}>Titel, Kategorie und Startdatum sind erforderlich. Der Titel fasst höchstens 160, die Beschreibung höchstens 2000 Zeichen.</p>
     {state.error ? <p id={errorId} role="alert">{state.error}</p> : null}
     <label htmlFor={ids.title}>Titel</label>
-    <input id={ids.title} name="title" type="text" required maxLength={160} defaultValue={defaults.title} autoComplete="off"
+    <input id={ids.title} name="title" type="text" required maxLength={160} defaultValue={defaults.title} autoComplete="off" autoFocus={autoFocusTitle}
       aria-invalid={invalid("title") || undefined} aria-describedby={invalid("title") ? errorId : undefined} />
     <label htmlFor={ids.description}>Beschreibung (optional)</label>
     <textarea id={ids.description} name="description" rows={3} maxLength={2000} defaultValue={defaults.description}

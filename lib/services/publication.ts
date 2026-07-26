@@ -66,6 +66,19 @@ export function readPublicationPreview(sqlite: Database.Database, blockPlanId: s
   const draft = readDraft(sqlite, blockPlanId);
   if (!draft) return null;
   const { plan, courses, phases, events } = draft;
+  const issues = publicationIssuesForDraft(sqlite, plan.id, { courses, phases, events });
+  return { plan, courses, phases, events, issues };
+}
+
+/**
+ * Checks draft data that a caller already loaded. Database access remains necessary only for the cross-plan rule
+ * about courses that are part of another published version.
+ */
+export function publicationIssuesForDraft(
+  sqlite: Database.Database,
+  blockPlanId: string,
+  { courses, phases, events }: { courses: DraftCourse[]; phases: DraftPhase[]; events: DraftEvent[] },
+): PublicationIssue[] {
   const issues: PublicationIssue[] = [];
   if (!courses.length) {
     issues.push({
@@ -79,7 +92,7 @@ export function readPublicationPreview(sqlite: Database.Database, blockPlanId: s
     JOIN published_versions version ON version.id = snapshot.version_id
     WHERE snapshot.source_course_id = ? AND version.block_plan_id <> ?`);
   for (const course of courses) {
-    if (publishedElsewhere.get(course.id, plan.id)) {
+    if (publishedElsewhere.get(course.id, blockPlanId)) {
       issues.push({
         code: "course-published-elsewhere",
         courseId: course.id,
@@ -90,7 +103,7 @@ export function readPublicationPreview(sqlite: Database.Database, blockPlanId: s
     }
   }
   issues.push(...validatePublication({ courses, phases, events }));
-  return { plan, courses, phases, events, issues };
+  return issues;
 }
 
 export function publishBlockPlan(sqlite: Database.Database, request: PublicationRequest) {

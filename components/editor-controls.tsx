@@ -8,7 +8,7 @@ import { type ReactNode, useEffect, useId, useRef, useState } from "react";
  */
 export function CollapsibleEditor({ heading, openLabel, closeLabel, children }: {
   /** Omit when the entry already renders its own heading; the toggle's accessible name still names the entry via `openLabel`/`closeLabel`. */
-  heading?: string;
+  heading?: ReactNode;
   openLabel: string;
   closeLabel: string;
   children: ReactNode;

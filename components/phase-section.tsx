@@ -1,73 +1,98 @@
 "use client";
 
 import Link from "next/link";
-import { type ReactNode, useActionState, useId, useState } from "react";
+import { Fragment, type ReactNode, useActionState, useId, useState } from "react";
 
 import { type PhaseFormState, createPhasesAction } from "@/app/intern/blockplaene/actions";
 import { DateField } from "@/components/date-field";
 import { CollapsibleEditor } from "@/components/editor-controls";
 import { type EditablePhase, PhaseEditorForms } from "@/components/phase-forms";
 import { formatCalendarDay, formatCalendarPeriod } from "@/lib/domain/calendar-format";
-import type { NextPhaseDefaults, SemesterContext } from "@/lib/domain/phase-sequence";
+import {
+  type NextPhaseDefaults,
+  type PhaseGap,
+  type SemesterContext,
+  phaseGapsForSemester,
+  suggestedPhaseTypeForGap,
+} from "@/lib/domain/phase-sequence";
 import { phaseTypeLabel, phaseTypes } from "@/lib/domain/phase-type";
-import type { SemesterEntry } from "@/lib/domain/semester-overview";
+import type { PublicationIssue } from "@/lib/domain/publication";
+import { semesterWorkState, type SemesterEntry } from "@/lib/domain/semester-overview";
 import type { PhaseField } from "@/lib/services/phase-admin";
 
-type PhaseCourse = { id: string; code: string };
+type PhaseCourse = { id: string; code: string; studyStart: string; studyEnd: string };
 
-/**
- * The composition of a semester as "je 1 Theorie, 0–1 Praxis". A range names the courses that deviate from the rest,
- * "je" only makes sense once several courses share the number.
- */
+function phaseWorkspaceUrl(blockPlanId: string, semester: number): string {
+  return `/intern/blockplaene/${blockPlanId}?ansicht=kursphasen&semester=${semester}`;
+}
+
+/** The phase composition is useful context, but the release check decides whether work remains. */
 function composition(entry: SemesterEntry, courseCount: number): string {
-  return entry.phasesPerCourse.map(({ type, min, max }) => {
+  const parts = entry.phasesPerCourse.map(({ type, min, max }) => {
     const label = phaseTypeLabel(type);
     if (min !== max) return `${min}–${max} ${label}`;
     return courseCount > 1 ? `je ${min} ${label}` : `${min} ${label}`;
-  }).join(", ");
+  });
+  return parts.length ? parts.join(", ") : "keine Kursphase";
 }
 
-/** Composition and errors of a semester as text, never by colour or position alone (BARRIEREFREIHEIT.md). */
-function shortStatus(entry: SemesterEntry, courseCount: number): string {
-  if (entry.codesWithOverlap.length) return `Fehler: überlappende Kursphasen (${entry.codesWithOverlap.join(", ")})`;
-  if (!entry.phaseCount) return "noch keine Kursphase";
-  if (entry.codesWithoutPhase.length) {
-    return entry.codesWithoutPhase.length === 1
-      ? `1 Kurs ohne Kursphase (${entry.codesWithoutPhase[0]})`
-      : `${entry.codesWithoutPhase.length} Kurse ohne Kursphase (${entry.codesWithoutPhase.join(", ")})`;
-  }
-  return composition(entry, courseCount);
+function continuationDefaults(
+  base: NextPhaseDefaults,
+  course: PhaseCourse,
+  semester: number,
+  gap: PhaseGap,
+): NextPhaseDefaults {
+  return {
+    ...base,
+    courseIds: [course.id],
+    semester: String(semester),
+    type: suggestedPhaseTypeForGap(gap),
+    startDate: gap.from,
+    endDate: "",
+    ambiguousPredecessors: [],
+  };
 }
 
-function fullStatus(entry: SemesterEntry, courseCount: number): string {
-  if (!entry.phaseCount) return "In diesem Semester ist noch keine Kursphase gespeichert.";
-  const parts = [entry.phaseCount === 1 ? "1 Kursphase" : `${entry.phaseCount} Kursphasen`];
-  parts.push(entry.codesWithoutPhase.length
-    ? `ohne Kursphase: ${entry.codesWithoutPhase.join(", ")}`
-    : composition(entry, courseCount));
-  if (entry.codesWithOverlap.length) parts.push(`Fehler — überlappende Kursphasen: ${entry.codesWithOverlap.join(", ")}`);
-  return parts.join(" · ");
+function GapEntry({ from, to, days, onContinue }: {
+  from: string;
+  to?: string;
+  days?: number;
+  onContinue: () => void;
+}) {
+  return <li className="phase-gap">
+    <div>
+      <strong>Lücke im Verlauf</strong>
+      <span>
+        {to
+          ? `${formatCalendarDay(from, { weekday: true })} bis ${formatCalendarDay(to, { weekday: true })}${days ? ` · ${days} Tage` : ""}`
+          : `ab ${formatCalendarDay(from, { weekday: true })}`}
+      </span>
+    </div>
+    <button className="button button--ghost button--compact" type="button" onClick={onContinue}>Kursphase direkt anschließen</button>
+  </li>;
 }
 
-function CreatePhasesForm({ blockPlanId, courses, semesters, semester, defaults, onSaved }: {
+function CreatePhasesForm({ blockPlanId, courses, semesters, semester, defaults, focusOnOpen, onSaved, onClose }: {
   blockPlanId: string;
   courses: PhaseCourse[];
   semesters: number;
   semester: number;
   defaults: NextPhaseDefaults;
+  focusOnOpen: boolean;
   onSaved: (message: ReactNode) => void;
+  onClose: () => void;
 }) {
   const [state, formAction, isPending] = useActionState<PhaseFormState, FormData>(async (previous, formData) => {
+    const continueCapturing = formData.get("afterSave") === "continue";
     const result = await createPhasesAction(previous, formData);
     if (result.success) {
-      // A phase created into another semester than the one open would otherwise leave the list without a trace;
-      // the message says where it went and links there (blockplan-editor-ux-design.md).
       onSaved(result.createdInSemester
-        ? <>{result.success} <Link className="text-link" href={`/intern/blockplaene/${blockPlanId}?semester=${result.createdInSemester}`}>Zu Semester {result.createdInSemester}</Link></>
+        ? <>{result.success} <Link className="text-link" href={phaseWorkspaceUrl(blockPlanId, result.createdInSemester)}>Zu Semester {result.createdInSemester}</Link></>
         : result.success);
+      if (!continueCapturing) onClose();
     }
-    // A rejected save must keep the token of the last successful one, or the form remounts and the keyboard
-    // focus needed to fix the error is lost (it would land on the document instead of the invalid field).
+    // A rejected save must keep the token of the last successful one, or the form remounts and the keyboard focus
+    // needed to fix the error is lost instead of remaining at the invalid field.
     return result.error ? { ...result, token: previous.token } : result;
   }, {});
   const ids = { error: useId(), consequence: useId(), semester: useId(), type: useId(), ambiguous: useId() };
@@ -76,28 +101,25 @@ function CreatePhasesForm({ blockPlanId, courses, semesters, semester, defaults,
   const active = state.next ?? defaults;
   const selected = new Set(values.courseIds);
   const invalid = (field: PhaseField) => state.field === field;
-  const periodHint = "Der Zeitraum gilt einschließlich beider Grenztage; Start- und Enddatum dürfen derselbe Tag sein.";
+  const periodHint = "Start- und Endtag gehören zur Kursphase.";
+  const shouldFocusEmptyField = focusOnOpen || Boolean(state.token);
   return <form key={state.token ?? "initial"} action={formAction} className="account-form">
     <input type="hidden" name="blockPlanId" value={blockPlanId} />
     <input type="hidden" name="openSemester" value={semester} />
-    <p>Alle Angaben sind erforderlich. Die Kursphase entsteht zunächst in Semester {semester}; Sie können ein anderes Semester wählen.</p>
     {state.error ? <p id={ids.error} role="alert">{state.error}</p> : null}
     <fieldset className="account-fieldset" aria-describedby={`${ids.consequence}${invalid("courseIds") ? ` ${ids.error}` : ""}`}>
-      <legend>Kurse für die neue Kursphase</legend>
-      <p id={ids.consequence}>
-        Für jeden ausgewählten Kurs entsteht eine eigenständige Kursphase mit zunächst gleichen Angaben. Danach besteht keine
-        gemeinsame Identität: Eine spätere Änderung oder Löschung wirkt nur auf die jeweils bearbeitete Kursphase.
-      </p>
+      <legend>Kurse</legend>
+      <p id={ids.consequence}>Bei mehreren Kursen entstehen eigenständige Kursphasen. Spätere Änderungen wirken jeweils nur auf eine davon.</p>
       {courses.map((course) => <label key={course.id}>
         <input type="checkbox" name="courseIds" value={course.id} defaultChecked={selected.has(course.id)} /> {course.code}
       </label>)}
     </fieldset>
     {active.ambiguousPredecessors.length ? <p id={ids.ambiguous} className="empty-note">
-      Startdatum und Phasentyp bleiben leer, weil die ausgewählten Kurse unterschiedlich weit geplant sind: {active.ambiguousPredecessors
+      Die ausgewählten Kurse sind unterschiedlich weit geplant: {active.ambiguousPredecessors
         .map((entry) => entry.endDate
           ? `${entry.code} bis ${formatCalendarDay(entry.endDate, { weekday: true })}`
           : `${entry.code} noch ohne Kursphase`)
-        .join(", ")}.
+        .join(", ")}. Startdatum und Phasentyp bleiben deshalb leer.
     </p> : null}
     <label htmlFor={ids.semester}>Semester</label>
     <select id={ids.semester} name="semester" required defaultValue={values.semester}
@@ -114,16 +136,23 @@ function CreatePhasesForm({ blockPlanId, courses, semesters, semester, defaults,
     <DateField label="Startdatum" name="startDate" defaultValue={values.startDate} required
       invalid={invalid("startDate")} errorId={ids.error} hint={periodHint}
       describedBy={active.ambiguousPredecessors.length ? ids.ambiguous : undefined}
-      autoFocus={Boolean(state.token) && !values.startDate} />
+      autoFocus={shouldFocusEmptyField && !values.startDate} />
     <DateField label="Enddatum" name="endDate" defaultValue={values.endDate} required
       invalid={invalid("endDate")} errorId={ids.error}
       describedBy={active.ambiguousPredecessors.length ? ids.ambiguous : undefined}
-      autoFocus={Boolean(state.token) && Boolean(values.startDate)} />
-    <button className="button" type="submit" disabled={isPending}>{isPending ? "Kursphasen werden angelegt …" : "Anlegen und nächste erfassen"}</button>
+      autoFocus={shouldFocusEmptyField && Boolean(values.startDate) && !values.endDate} />
+    <div className="form-actions">
+      <button className="button" type="submit" name="afterSave" value="continue" disabled={isPending}>
+        {isPending ? "Wird gespeichert …" : "Speichern und weitere erfassen"}
+      </button>
+      <button className="button button--ghost" type="submit" name="afterSave" value="close" disabled={isPending}>
+        Speichern und schließen
+      </button>
+    </div>
   </form>;
 }
 
-export function PhaseSection({ blockPlanId, courses, semesters, semester, overview, phases, context, nextDefaults }: {
+export function PhaseSection({ blockPlanId, courses, semesters, semester, overview, phases, context, nextDefaults, issues }: {
   blockPlanId: string;
   courses: PhaseCourse[];
   semesters: number;
@@ -132,62 +161,146 @@ export function PhaseSection({ blockPlanId, courses, semesters, semester, overvi
   phases: EditablePhase[];
   context: SemesterContext;
   nextDefaults: NextPhaseDefaults;
+  issues: PublicationIssue[];
 }) {
-  // The status lives on the section, because a moved or deleted phase takes its own editor and state with it.
+  type CreateTarget = { courseId: string; from: string };
   const [status, setStatus] = useState<ReactNode>(null);
+  const [createOpen, setCreateOpen] = useState(phases.length === 0);
+  const [createTarget, setCreateTarget] = useState<CreateTarget | null>(null);
+  const [focusCreateForm, setFocusCreateForm] = useState(false);
   const statusIdBase = useId();
+  const createHeadingId = useId();
   const entry = overview[semester - 1];
-  return <section aria-labelledby="draft-heading">
-    <h2 id="draft-heading">Kursphasen</h2>
-    <p>Der Verlauf wird semesterweise erfasst. Jede Anlage, Änderung und Löschung wird einzeln gespeichert.</p>
+  const currentState = entry ? semesterWorkState(entry, issues) : null;
+  const timelines = courses.map((course) => {
+    const coursePhases = phases.filter((phase) => phase.courseId === course.id)
+      .toSorted((left, right) => left.startDate.localeCompare(right.startDate));
+    const before = context.before.find((item) => item.code === course.code);
+    const after = context.after.find((item) => item.code === course.code);
+    const gaps = phaseGapsForSemester({ course, phases, semester, semesters, before, after });
+    return { course, coursePhases, before, after, gaps };
+  });
+  const selectedTimeline = createTarget
+    ? timelines.find(({ course }) => course.id === createTarget.courseId)
+    : undefined;
+  const selectedGap = selectedTimeline?.gaps.find((gap) => gap.from === createTarget?.from);
+  const createDefaults = selectedTimeline && selectedGap
+    ? continuationDefaults(nextDefaults, selectedTimeline.course, semester, selectedGap)
+    : nextDefaults;
+  // The component identity follows the user's selected target. Server revalidation may change defaults, but must not
+  // discard the form's action state or trigger autofocus; the inner token still resets fields after its own save.
+  const createFormKey = createTarget ? `${createTarget.courseId}-${createTarget.from}` : "generic";
+  const openCreate = (target: CreateTarget | null = null) => {
+    setCreateTarget(target);
+    setFocusCreateForm(true);
+    setCreateOpen(true);
+  };
+  const closeCreate = () => {
+    setCreateOpen(false);
+    setCreateTarget(null);
+    setFocusCreateForm(false);
+  };
+
+  return <section className="workspace-panel phase-workspace" aria-labelledby="draft-heading">
+    <div className="workspace-heading">
+      <div>
+        <p className="eyebrow">Studienverlauf</p>
+        <h2 id="draft-heading">Kursphasen</h2>
+        <p>Wählen Sie ein Semester und ergänzen Sie den Verlauf jedes Kurses ohne zeitliche Lücken.</p>
+      </div>
+      {!createOpen
+        ? <button className="button" type="button" onClick={() => openCreate()}>Kursphase hinzufügen</button>
+        : null}
+    </div>
     <p role="status">{status ?? ""}</p>
 
     <nav aria-label="Semester des Blockplans">
       <ul className="semester-bar">{overview.map((item) => {
         const statusId = `${statusIdBase}-${item.semester}`;
-        return <li key={item.semester}>
-          <Link className="text-link" href={`/intern/blockplaene/${blockPlanId}?semester=${item.semester}`}
+        const workState = semesterWorkState(item, issues);
+        return <li key={item.semester} data-status={workState.kind}>
+          <Link href={phaseWorkspaceUrl(blockPlanId, item.semester)}
             aria-current={item.semester === semester ? "page" : undefined} aria-describedby={statusId}>
-            Semester {item.semester}
+            <strong>Semester {item.semester}</strong>
+            <span id={statusId}>{workState.label}</span>
           </Link>
-          <span id={statusId}>{shortStatus(item, courses.length)}</span>
         </li>;
       })}</ul>
     </nav>
 
-    <h3>Semester {semester}</h3>
-    {entry ? <p>{fullStatus(entry, courses.length)}</p> : null}
+    <div className="semester-heading">
+      <div>
+        <p className="eyebrow">Ausgewählt</p>
+        <h3>Semester {semester}</h3>
+      </div>
+      {entry && currentState
+        ? <p className={`status-badge status-badge--${currentState.kind}`}>{currentState.label} · {composition(entry, courses.length)}</p>
+        : null}
+    </div>
 
-    {context.before.length ? <div className="entry-context">
-      <h4>Vor diesem Semester</h4>
-      <ul>{context.before.map((item) => <li key={item.code}>
-        {item.code}: Semester {item.semester} · {phaseTypeLabel(item.type)} bis {formatCalendarDay(item.endDate, { weekday: true })}
-        {" "}<Link className="text-link" href={`/intern/blockplaene/${blockPlanId}?semester=${item.semester}`}>Zu Semester {item.semester}</Link>
-      </li>)}</ul>
-    </div> : null}
+    <div className="phase-courses">{timelines.map(({ course, coursePhases, before, after, gaps }) => {
+      return <section className="phase-course" aria-labelledby={`course-${course.id}`} key={course.id}>
+        <header>
+          <h4 id={`course-${course.id}`}>{course.code}</h4>
+          <span>{coursePhases.length === 1 ? "1 Kursphase" : `${coursePhases.length} Kursphasen`}</span>
+        </header>
+        <ul className="phase-timeline">
+          {before ? <li className="phase-context-row">
+            <span>Vorher</span>
+            <strong>{phaseTypeLabel(before.type)}</strong>
+            <span>bis {formatCalendarDay(before.endDate, { weekday: true })}</span>
+            <Link className="text-link" href={phaseWorkspaceUrl(blockPlanId, before.semester)}>Semester {before.semester}</Link>
+          </li> : null}
 
-    {phases.length ? <ul className="entry-list">{phases.map((phase) => <li key={phase.id}>
-      <CollapsibleEditor
-        heading={`${phase.code}: ${phaseTypeLabel(phase.type)} ${formatCalendarPeriod(phase.startDate, phase.endDate, { weekday: true })}`}
-        openLabel={`Kursphase bearbeiten (${phase.code}, ${formatCalendarPeriod(phase.startDate, phase.endDate)})`}
-        closeLabel={`Bearbeitung schließen (${phase.code}, ${formatCalendarPeriod(phase.startDate, phase.endDate)})`}>
-        <PhaseEditorForms blockPlanId={blockPlanId} phase={phase} semesters={semesters} openSemester={semester} onSaved={setStatus} />
-      </CollapsibleEditor>
-    </li>)}</ul> : <p className="empty-note">In Semester {semester} ist noch keine Kursphase gespeichert.</p>}
+          {coursePhases.map((phase) => {
+            const precedingGaps = gaps.filter((gap) => gap.successor === phase);
+            return <Fragment key={phase.id}>
+              {precedingGaps.map((gap) => <GapEntry key={gap.from}
+                from={gap.from} to={gap.to} days={gap.days}
+                onContinue={() => openCreate({ courseId: course.id, from: gap.from })}
+              />)}
+              <li className="phase-current-row"><CollapsibleEditor
+                heading={<>
+                  <span className={`phase-badge phase-badge--${phase.type.toLowerCase()}`}>{phaseTypeLabel(phase.type)}</span>
+                  <span>{formatCalendarPeriod(phase.startDate, phase.endDate, { weekday: true })}</span>
+                </>}
+                openLabel={`Kursphase bearbeiten (${course.code}, ${formatCalendarPeriod(phase.startDate, phase.endDate)})`}
+                closeLabel={`Bearbeitung schließen (${course.code}, ${formatCalendarPeriod(phase.startDate, phase.endDate)})`}>
+                <PhaseEditorForms blockPlanId={blockPlanId} phase={phase} semesters={semesters} openSemester={semester} onSaved={setStatus} />
+              </CollapsibleEditor></li>
+            </Fragment>;
+          })}
 
-    {context.after.length ? <div className="entry-context">
-      <h4>Nach diesem Semester</h4>
-      <ul>{context.after.map((item) => <li key={item.code}>
-        {item.code}: Semester {item.semester} · {phaseTypeLabel(item.type)} ab {formatCalendarDay(item.startDate, { weekday: true })}
-        {" "}<Link className="text-link" href={`/intern/blockplaene/${blockPlanId}?semester=${item.semester}`}>Zu Semester {item.semester}</Link>
-      </li>)}</ul>
-      {context.unplanned.map((span) => <p key={span.code}>
-        Bei {span.code} sind zwischen {formatCalendarDay(span.from)} und {formatCalendarDay(span.to)} noch {span.days} Tage keiner Kursphase zugeordnet.
-      </p>)}
-    </div> : null}
+          {gaps.filter((gap) => !coursePhases.some((phase) => gap.successor === phase)).map((gap) => <GapEntry key={gap.from}
+            from={gap.from} to={gap.to} days={gap.days}
+            onContinue={() => openCreate({ courseId: course.id, from: gap.from })}
+          />)}
 
-    <h4>Nächste Kursphase anlegen</h4>
-    <CreatePhasesForm blockPlanId={blockPlanId} courses={courses} semesters={semesters} semester={semester}
-      defaults={nextDefaults} onSaved={setStatus} />
+          {after ? <li className="phase-context-row">
+            <span>Danach</span>
+            <strong>{phaseTypeLabel(after.type)}</strong>
+            <span>ab {formatCalendarDay(after.startDate, { weekday: true })}</span>
+            <Link className="text-link" href={phaseWorkspaceUrl(blockPlanId, after.semester)}>Semester {after.semester}</Link>
+          </li> : null}
+
+          {!coursePhases.length && !gaps.length && !after ? <li className="phase-empty-row">
+            Für {course.code} ist in diesem Semester noch keine Kursphase erfasst.
+          </li> : null}
+        </ul>
+      </section>;
+    })}</div>
+
+    {createOpen ? <aside className="create-panel" aria-labelledby={createHeadingId}>
+      <div className="create-panel__heading">
+        <div>
+          <p className="eyebrow">Erfassungsmodus</p>
+          <h3 id={createHeadingId}>Kursphase hinzufügen</h3>
+        </div>
+        {phases.length ? <button className="button button--ghost button--compact" type="button" onClick={closeCreate}>Schließen</button> : null}
+      </div>
+      <CreatePhasesForm key={createFormKey}
+        blockPlanId={blockPlanId} courses={courses} semesters={semesters} semester={semester}
+        defaults={createDefaults} focusOnOpen={focusCreateForm} onSaved={setStatus} onClose={closeCreate} />
+    </aside> : null}
   </section>;
 }
