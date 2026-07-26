@@ -41,6 +41,7 @@ function errorMessage(error: unknown) {
 
 function revalidateBlockPlan(blockPlanId: string) {
   revalidatePath("/intern");
+  revalidatePath("/intern/blockplaene");
   revalidatePath("/intern/kurse");
   revalidatePath(`/intern/blockplaene/${blockPlanId}`);
 }
@@ -234,5 +235,5 @@ export async function deleteBlockPlanAction(_: BlockPlanFormState, formData: For
     return { error: errorMessage(error) };
   }
   revalidateBlockPlan(blockPlanId);
-  redirect("/intern?blockplan-geloescht=1");
+  redirect("/intern/blockplaene?blockplan-geloescht=1");
 }

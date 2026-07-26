@@ -2,6 +2,8 @@ import "server-only";
 
 import type Database from "better-sqlite3";
 
+import { type AreaOption, manageableAreas } from "../data";
+
 type AccountScope = { id: string; systemAdmin: boolean };
 
 export type CourseAssignmentFilter = "assigned" | "unassigned";
@@ -22,7 +24,7 @@ export type CourseListRow = {
   publishedIn: string | null;
 };
 export type CourseListData = {
-  areas: { id: string; name: string }[];
+  areas: AreaOption[];
   programs: { id: string; name: string }[];
   years: { year: string }[];
   courses: CourseListRow[];
@@ -37,13 +39,28 @@ export type InternalCourse = {
   publishedIn: string | null;
 };
 export type ProgramOption = { id: string; label: string };
+export type CourseSort = "code" | "year";
 
-/** Filter options and matching courses within the account's manageable areas. */
-export function courseListData(sqlite: Database.Database, account: AccountScope, filters: CourseListFilters): CourseListData {
+/** The orders the list offers; each is reproducible, so a shared URL shows the same list again (MVP-SPEZIFIKATION.md). */
+export const courseSortLabels: Record<CourseSort, string> = {
+  code: "Kurskennung",
+  year: "Jahrgang, dann Kurskennung",
+};
+
+/** Course codes are unique, so ending every order with them makes each one a total order. */
+const courseOrderClauses: Record<CourseSort, string> = {
+  code: "course.code COLLATE NOCASE",
+  year: "substr(course.study_start, 1, 4) DESC, course.code COLLATE NOCASE",
+};
+
+export function isCourseSort(value: string | null): value is CourseSort {
+  return value !== null && Object.hasOwn(courseSortLabels, value);
+}
+
+/** Filter options and matching courses within the account's manageable areas, in the requested order. */
+export function courseListData(sqlite: Database.Database, account: AccountScope, filters: CourseListFilters, sort: CourseSort): CourseListData {
   const scope = account.systemAdmin ? 1 : 0;
-  const areas = sqlite.prepare(`SELECT id, name FROM areas
-    WHERE ? = 1 OR id IN (SELECT area_id FROM area_assignments WHERE user_id = ?)
-    ORDER BY name COLLATE NOCASE`).all(scope, account.id) as CourseListData["areas"];
+  const areas = manageableAreas(sqlite, account);
   const programs = sqlite.prepare(`SELECT id, name FROM programs
     WHERE ? = 1 OR area_id IN (SELECT area_id FROM area_assignments WHERE user_id = ?)
     ORDER BY name COLLATE NOCASE`).all(scope, account.id) as CourseListData["programs"];
@@ -63,7 +80,7 @@ export function courseListData(sqlite: Database.Database, account: AccountScope,
       AND (? IS NULL OR course.program_id = ?)
       AND (? IS NULL OR substr(course.study_start, 1, 4) = ?)
       AND (? IS NULL OR (CASE WHEN course.block_plan_id IS NULL THEN 'unassigned' ELSE 'assigned' END) = ?)
-    ORDER BY course.code COLLATE NOCASE`).all(
+    ORDER BY ${courseOrderClauses[sort]}`).all(
     scope, account.id,
     filters.area, filters.area,
     filters.program, filters.program,
@@ -94,9 +111,4 @@ export function programOptions(sqlite: Database.Database, account: AccountScope)
     ORDER BY area.name COLLATE NOCASE, program.name COLLATE NOCASE`).all(account.systemAdmin ? 1 : 0, account.id) as
     { id: string; name: string; abbreviation: string; areaName: string }[];
   return rows.map((program) => ({ id: program.id, label: `${program.abbreviation} — ${program.name} (${program.areaName})` }));
-}
-
-export function searchParam(searchParams: Record<string, string | string[] | undefined>, key: string): string | null {
-  const value = searchParams[key];
-  return typeof value === "string" && value ? value : null;
 }

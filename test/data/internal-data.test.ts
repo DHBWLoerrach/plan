@@ -5,12 +5,14 @@ import Database from "better-sqlite3";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  type BlockPlanListFilters,
   blockPlanCourses,
   blockPlanDraftEvents,
   blockPlanDraftPhases,
+  blockPlanListData,
   blockPlanSummaries,
   findInternalBlockPlan,
-  listInternalBlockPlans,
+  incompleteDrafts,
 } from "@/app/intern/blockplaene/data";
 import {
   accountAreaOptions,
@@ -18,6 +20,7 @@ import {
   listAccounts,
 } from "@/app/intern/konten/data";
 import {
+  type CourseSort,
   courseListData,
   findInternalCourse,
   programOptions,
@@ -27,6 +30,17 @@ const databases: Database.Database[] = [];
 const systemAdmin = { id: "admin", systemAdmin: true };
 const technicalEditor = { id: "editor-tech", systemAdmin: false };
 const noFilters = { area: null, program: null, year: null, assignment: null } as const;
+const noPlanFilters: BlockPlanListFilters = { area: null, year: null, course: null, state: null };
+
+/** A draft that covers the whole study period contiguously and therefore violates no publication rule. */
+const completeDraft = [
+  { semester: 1, type: "THEORY", startDate: "2024-10-01", endDate: "2025-03-31" },
+  { semester: 2, type: "PRACTICE", startDate: "2025-04-01", endDate: "2025-09-30" },
+  { semester: 3, type: "THEORY", startDate: "2025-10-01", endDate: "2026-03-31" },
+  { semester: 4, type: "PRACTICE", startDate: "2026-04-01", endDate: "2026-09-30" },
+  { semester: 5, type: "THEORY", startDate: "2026-10-01", endDate: "2027-03-31" },
+  { semester: 6, type: "PRACTICE", startDate: "2027-04-01", endDate: "2027-09-30" },
+] as const;
 
 function createDatabase() {
   const sqlite = new Database(":memory:");
@@ -58,7 +72,13 @@ function createDatabase() {
   sqlite.prepare(`INSERT INTO block_plans
     (id, area_id, name, normalized_name, has_ever_been_published, draft_updated_at, draft_updated_by_account_id)
     VALUES (?, ?, ?, ?, ?, ?, ?)`).run(
-    "plan-business", "area-business", "Wirtschaftsplan", "wirtschaftsplan", 0, "2030-01-02T10:00:00.000Z", "editor-business",
+    "plan-business", "area-business", "Wirtschaftsplan", "wirtschaftsplan", 1, "2030-01-02T10:00:00.000Z", "editor-business",
+  );
+  // Withdrawn: published once, without a published version today.
+  sqlite.prepare(`INSERT INTO block_plans
+    (id, area_id, name, normalized_name, has_ever_been_published, draft_updated_at, draft_updated_by_account_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?)`).run(
+    "plan-tech-2025", "area-tech", null, null, 1, "2030-01-03T10:00:00.000Z", "editor-tech",
   );
 
   insertCourse(sqlite, {
@@ -74,11 +94,28 @@ function createDatabase() {
     code: "TIF24B",
   });
   insertCourse(sqlite, {
+    id: "course-tech-2025",
+    programId: "program-tech",
+    blockPlanId: "plan-tech-2025",
+    code: "TIF25A",
+    studyStart: "2025-10-01",
+    studyEnd: "2028-09-30",
+  });
+  insertCourse(sqlite, {
     id: "course-business",
     programId: "program-business",
     blockPlanId: "plan-business",
     code: "WWI24A",
   });
+
+  publish(sqlite, { versionId: "version-business", blockPlanId: "plan-business", name: "Wirtschaftsplan", areaName: "Wirtschaft", courseId: "course-business", code: "WWI24A" });
+  for (const [index, phase] of completeDraft.entries()) {
+    sqlite.prepare(`INSERT INTO draft_phases
+      (id, block_plan_id, course_id, semester, phase_type, start_date, end_date)
+      VALUES (?, ?, ?, ?, ?, ?, ?)`).run(
+      `phase-business-${index}`, "plan-business", "course-business", phase.semester, phase.type, phase.startDate, phase.endDate,
+    );
+  }
 
   sqlite.prepare(`INSERT INTO draft_phases
     (id, block_plan_id, course_id, semester, phase_type, start_date, end_date)
@@ -123,6 +160,8 @@ function insertCourse(sqlite: Database.Database, input: {
   programId: string;
   blockPlanId: string | null;
   code: string;
+  studyStart?: string;
+  studyEnd?: string;
 }) {
   sqlite.prepare(`INSERT INTO courses
     (id, program_id, block_plan_id, code, normalized_code, study_start, study_end)
@@ -132,8 +171,25 @@ function insertCourse(sqlite: Database.Database, input: {
     input.blockPlanId,
     input.code,
     input.code.toLowerCase(),
-    "2024-10-01",
-    "2027-09-30",
+    input.studyStart ?? "2024-10-01",
+    input.studyEnd ?? "2027-09-30",
+  );
+}
+
+function publish(sqlite: Database.Database, input: {
+  versionId: string;
+  blockPlanId: string;
+  name: string;
+  areaName: string;
+  courseId: string;
+  code: string;
+}) {
+  sqlite.prepare("INSERT INTO published_versions (id, block_plan_id, published_at, block_plan_name, area_name) VALUES (?, ?, ?, ?, ?)")
+    .run(input.versionId, input.blockPlanId, "2030-01-02T11:00:00.000Z", input.name, input.areaName);
+  sqlite.prepare(`INSERT INTO published_course_snapshots
+    (id, version_id, source_course_id, code, program_name, program_abbreviation, study_start, study_end, semesters)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+    `snapshot-${input.courseId}`, input.versionId, input.courseId, input.code, "Wirtschaftsinformatik", "WWI", "2024-10-01", "2027-09-30", 6,
   );
 }
 
@@ -186,17 +242,26 @@ describe("internal course data", () => {
   it("limits list data, filters and program options to manageable areas", () => {
     const sqlite = createDatabase();
 
-    const list = courseListData(sqlite, technicalEditor, noFilters);
+    const list = courseListData(sqlite, technicalEditor, noFilters, "code");
     expect(list.areas).toEqual([{ id: "area-tech", name: "Technik" }]);
     expect(list.programs).toEqual([{ id: "program-tech", name: "Informatik" }]);
-    expect(list.years).toEqual([{ year: "2024" }]);
-    expect(list.courses.map((course) => course.code)).toEqual(["TIF24A", "TIF24B"]);
-    expect(courseListData(sqlite, technicalEditor, { ...noFilters, assignment: "unassigned" }).courses)
+    expect(list.years).toEqual([{ year: "2025" }, { year: "2024" }]);
+    expect(list.courses.map((course) => course.code)).toEqual(["TIF24A", "TIF24B", "TIF25A"]);
+    expect(courseListData(sqlite, technicalEditor, { ...noFilters, assignment: "unassigned" }, "code").courses)
       .toMatchObject([{ id: "course-tech-unassigned", code: "TIF24B", blockPlanId: null }]);
     expect(programOptions(sqlite, technicalEditor)).toEqual([{
       id: "program-tech",
       label: "TIF — Informatik (Technik)",
     }]);
+  });
+
+  it("sorts the course list reproducibly by the requested order", () => {
+    const sqlite = createDatabase();
+    const codes = (sort: CourseSort) => courseListData(sqlite, systemAdmin, noFilters, sort).courses.map((course) => course.code);
+
+    expect(codes("code")).toEqual(["TIF24A", "TIF24B", "TIF25A", "WWI24A"]);
+    // Same year: the course code decides, so the order never depends on insertion or query chance.
+    expect(codes("year")).toEqual(["TIF25A", "TIF24A", "TIF24B", "WWI24A"]);
   });
 
   it("hides foreign course details while system administration may read them", () => {
@@ -212,12 +277,19 @@ describe("internal course data", () => {
 });
 
 describe("internal block plan data", () => {
-  it("limits plan lists and details to manageable areas", () => {
+  it("limits plan lists, filter options and details to manageable areas", () => {
     const sqlite = createDatabase();
 
-    expect(listInternalBlockPlans(sqlite, technicalEditor).map((plan) => plan.id)).toEqual(["plan-tech"]);
+    const list = blockPlanListData(sqlite, technicalEditor, noPlanFilters, "draft");
+    expect(list.areas).toEqual([{ id: "area-tech", name: "Technik" }]);
+    expect(list.years).toEqual([2025, 2024]);
+    expect(list.plans.map((plan) => plan.id)).toEqual(["plan-tech-2025", "plan-tech"]);
+    // A filter naming a foreign area returns nothing instead of that area's plans.
+    expect(blockPlanListData(sqlite, technicalEditor, { ...noPlanFilters, area: "area-business" }, "draft").plans).toEqual([]);
     expect(findInternalBlockPlan(sqlite, "plan-business", technicalEditor)).toBeUndefined();
-    expect(listInternalBlockPlans(sqlite, systemAdmin).map((plan) => plan.id)).toEqual([
+
+    expect(blockPlanListData(sqlite, systemAdmin, noPlanFilters, "draft").plans.map((plan) => plan.id)).toEqual([
+      "plan-tech-2025",
       "plan-business",
       "plan-tech",
     ]);
@@ -226,6 +298,93 @@ describe("internal block plan data", () => {
       name: "Wirtschaftsplan",
       areaName: "Wirtschaft",
     });
+  });
+
+  it("describes every listed plan by its display name, year and publication state", () => {
+    const sqlite = createDatabase();
+
+    expect(blockPlanListData(sqlite, systemAdmin, noPlanFilters, "draft").plans).toEqual([
+      {
+        id: "plan-tech-2025",
+        displayName: "2025 · TIF25A",
+        courseCodes: ["TIF25A"],
+        areaId: "area-tech",
+        areaName: "Technik",
+        year: 2025,
+        state: "withdrawn",
+        draftUpdatedAt: "2030-01-03T10:00:00.000Z",
+        draftUpdatedBy: "tech@example.test",
+      },
+      {
+        id: "plan-business",
+        displayName: "Wirtschaftsplan",
+        courseCodes: ["WWI24A"],
+        areaId: "area-business",
+        areaName: "Wirtschaft",
+        year: 2024,
+        state: "published",
+        draftUpdatedAt: "2030-01-02T10:00:00.000Z",
+        draftUpdatedBy: "business@example.test",
+      },
+      {
+        id: "plan-tech",
+        displayName: "Technikplan",
+        courseCodes: ["TIF24A"],
+        areaId: "area-tech",
+        areaName: "Technik",
+        year: 2024,
+        state: "never-published",
+        draftUpdatedAt: "2030-01-01T10:00:00.000Z",
+        draftUpdatedBy: "tech@example.test",
+      },
+    ]);
+  });
+
+  it("combines area, year, course code and publication state filters with AND", () => {
+    const sqlite = createDatabase();
+    const ids = (filters: Partial<BlockPlanListFilters>) =>
+      blockPlanListData(sqlite, systemAdmin, { ...noPlanFilters, ...filters }, "draft").plans.map((plan) => plan.id);
+
+    expect(ids({ area: "area-tech" })).toEqual(["plan-tech-2025", "plan-tech"]);
+    expect(ids({ year: "2024" })).toEqual(["plan-business", "plan-tech"]);
+    // The course filter matches the beginning of a course code without regard to case.
+    expect(ids({ course: "tif" })).toEqual(["plan-tech-2025", "plan-tech"]);
+    expect(ids({ course: "TIF24" })).toEqual(["plan-tech"]);
+    expect(ids({ course: "24A" })).toEqual([]);
+    expect(ids({ state: "published" })).toEqual(["plan-business"]);
+    expect(ids({ state: "withdrawn" })).toEqual(["plan-tech-2025"]);
+    expect(ids({ state: "never-published" })).toEqual(["plan-tech"]);
+    expect(ids({ area: "area-tech", year: "2024" })).toEqual(["plan-tech"]);
+    expect(ids({ area: "area-tech", state: "published" })).toEqual([]);
+  });
+
+  it("sorts reproducibly by the requested order", () => {
+    const sqlite = createDatabase();
+
+    expect(blockPlanListData(sqlite, systemAdmin, noPlanFilters, "name").plans.map((plan) => plan.displayName)).toEqual([
+      "2025 · TIF25A",
+      "Technikplan",
+      "Wirtschaftsplan",
+    ]);
+    // Same year: the display name decides, so the order never depends on insertion or query chance.
+    expect(blockPlanListData(sqlite, systemAdmin, noPlanFilters, "year").plans.map((plan) => plan.id)).toEqual([
+      "plan-tech-2025",
+      "plan-tech",
+      "plan-business",
+    ]);
+  });
+
+  it("names the drafts that still violate publication rules", () => {
+    const sqlite = createDatabase();
+
+    const plans = blockPlanListData(sqlite, systemAdmin, noPlanFilters, "draft").plans;
+    const incomplete = incompleteDrafts(sqlite, plans);
+
+    // The complete draft of plan-business is absent; the other two keep the hint with a countable number of issues.
+    expect(incomplete.map((draft) => draft.id)).toEqual(["plan-tech-2025", "plan-tech"]);
+    for (const draft of incomplete) expect(draft.issueCount).toBeGreaterThan(0);
+    expect(incompleteDrafts(sqlite, blockPlanListData(sqlite, technicalEditor, noPlanFilters, "draft").plans)
+      .map((draft) => draft.id)).toEqual(["plan-tech-2025", "plan-tech"]);
   });
 
   it("returns the minimal draft data and summaries used by the workspace", () => {

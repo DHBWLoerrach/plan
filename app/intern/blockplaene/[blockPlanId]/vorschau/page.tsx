@@ -2,19 +2,19 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 
+import { InternalNav } from "@/components/internal-nav";
 import { PlanMatrix } from "@/components/plan-matrix";
 import { PublishForm } from "@/components/publication-forms";
 import { PublicationIssueOverview } from "@/components/publication-issues";
 import { SiteShell } from "@/components/site-shell";
 import { sqlite } from "@/lib/db";
 import { blockPlanDisplayName } from "@/lib/domain/block-plan-name";
+import { formatTimestamp } from "@/lib/domain/calendar-format";
 import { getActiveAccount } from "@/lib/internal-auth";
 import { readPublicationPreview } from "@/lib/services/publication";
 
+import { searchParam } from "../../../search-params";
 import { publicationStateLabel } from "../../data";
-import { searchParam } from "../../../kurse/data";
-
-const draftTimestamp = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" });
 
 export default async function PublicationPreviewPage({ params, searchParams }: PageProps<"/intern/blockplaene/[blockPlanId]/vorschau">) {
   await connection();
@@ -28,11 +28,11 @@ export default async function PublicationPreviewPage({ params, searchParams }: P
 
   const changed = searchParam(await searchParams, "geaendert") === "1";
   const displayName = blockPlanDisplayName(plan.name, courses);
-  const draftState = `${draftTimestamp.format(new Date(plan.draftUpdatedAt))} Uhr`;
+  const draftState = formatTimestamp(plan.draftUpdatedAt);
   // Every assigned course carries the same number of semesters (FACHLICHE_REGELN.md), so the first one answers for the plan.
   const semesters = courses[0]?.semesters ?? 0;
 
-  return <SiteShell><article className="plan-detail">
+  return <SiteShell><InternalNav account={account} current="blockplaene" /><article className="plan-detail">
     <p className="eyebrow">Vorschau der Veröffentlichung</p>
     <h1>{displayName}</h1>
     {changed ? <p role="alert" className="notice">

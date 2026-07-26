@@ -28,6 +28,17 @@ function errorMessage(error: unknown) {
 
 export type CourseFormState = { error?: string; success?: string };
 
+/**
+ * Every view a course change reaches: its own pages, and the block plan views — course codes and study periods feed
+ * the derived block plan name and its year, and a block-plan-less course is what a new block plan starts from.
+ */
+function revalidateCourseViews(courseId: string) {
+  revalidatePath("/intern");
+  revalidatePath("/intern/kurse");
+  revalidatePath(`/intern/kurse/${courseId}`);
+  revalidatePath("/intern/blockplaene");
+}
+
 export async function createCourseAction(_: CourseFormState, formData: FormData): Promise<CourseFormState> {
   let courseId: string;
   try {
@@ -35,7 +46,7 @@ export async function createCourseAction(_: CourseFormState, formData: FormData)
   } catch (error) {
     return { error: errorMessage(error) };
   }
-  revalidatePath("/intern/kurse");
+  revalidateCourseViews(courseId);
   redirect(`/intern/kurse/${courseId}?angelegt=1`);
 }
 
@@ -46,8 +57,7 @@ export async function updateCourseAction(_: CourseFormState, formData: FormData)
   } catch (error) {
     return { error: errorMessage(error) };
   }
-  revalidatePath("/intern/kurse");
-  revalidatePath(`/intern/kurse/${courseId}`);
+  revalidateCourseViews(courseId);
   return { success: "Die Kursangaben wurden gespeichert." };
 }
 
@@ -58,6 +68,6 @@ export async function deleteCourseAction(_: CourseFormState, formData: FormData)
   } catch (error) {
     return { error: errorMessage(error) };
   }
-  revalidatePath("/intern/kurse");
+  revalidateCourseViews(courseId);
   redirect("/intern/kurse?geloescht=1");
 }

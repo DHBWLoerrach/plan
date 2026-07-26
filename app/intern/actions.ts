@@ -24,6 +24,7 @@ function revalidatePublicationViews(blockPlanId: string) {
   revalidatePath("/");
   revalidatePath(`/${blockPlanId}`);
   revalidatePath("/intern");
+  revalidatePath("/intern/blockplaene");
   revalidatePath(`/intern/blockplaene/${blockPlanId}`);
   revalidatePath(`/intern/blockplaene/${blockPlanId}/vorschau`);
 }

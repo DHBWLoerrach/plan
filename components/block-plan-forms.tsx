@@ -3,6 +3,7 @@
 import { useActionState, useId } from "react";
 
 import { ConfirmAction } from "@/components/editor-controls";
+import { formatCalendarPeriod } from "@/lib/domain/calendar-format";
 import type { AttachableCourse } from "@/lib/services/block-plan-admin";
 
 import {
@@ -21,6 +22,26 @@ export function CreateBlockPlanFromCourseForm({ courseId, code }: { courseId: st
     <p>Der Blockplan entsteht gemeinsam mit der Zuordnung von Kurs {code}. Weitere Kurse desselben Bereichs, Jahrgangs und derselben Studiendauer können Sie danach zuordnen.</p>
     {state.error ? <p role="alert">{state.error}</p> : null}
     <button className="button" type="submit" disabled={isPending}>{isPending ? "Blockplan wird angelegt …" : "Blockplan aus diesem Kurs anlegen"}</button>
+  </form>;
+}
+
+/**
+ * Creating a block plan from the list: it always starts from a block-plan-less course, because creation and the first
+ * course assignment are one operation (FACHLICHE_REGELN.md).
+ */
+export function CreateBlockPlanForm({ courses }: { courses: AttachableCourse[] }) {
+  const [state, formAction, isPending] = useActionState<BlockPlanFormState, FormData>(createBlockPlanFromCourseAction, {});
+  const courseFieldId = useId();
+  const errorId = useId();
+  return <form action={formAction} className="account-form">
+    <label htmlFor={courseFieldId}>Blockplan aus blockplanlosem Kurs anlegen</label>
+    <select id={courseFieldId} name="courseId" required defaultValue=""
+      aria-describedby={state.error ? errorId : undefined} aria-invalid={state.error ? true : undefined}>
+      <option value="" disabled>Bitte wählen</option>
+      {courses.map((course) => <option key={course.id} value={course.id}>{course.code} — {course.program} ({formatCalendarPeriod(course.studyStart, course.studyEnd)})</option>)}
+    </select>
+    {state.error ? <p id={errorId} role="alert">{state.error}</p> : null}
+    <button className="button" type="submit" disabled={isPending}>{isPending ? "Blockplan wird angelegt …" : "Blockplan anlegen"}</button>
   </form>;
 }
 
@@ -51,7 +72,7 @@ export function AttachCourseForm({ blockPlanId, courses }: { blockPlanId: string
     <select id={courseFieldId} name="courseId" required defaultValue=""
       aria-describedby={state.error ? errorId : undefined} aria-invalid={state.error ? true : undefined}>
       <option value="" disabled>Bitte wählen</option>
-      {courses.map((course) => <option key={course.id} value={course.id}>{course.code} — {course.program} ({course.studyStart} – {course.studyEnd})</option>)}
+      {courses.map((course) => <option key={course.id} value={course.id}>{course.code} — {course.program} ({formatCalendarPeriod(course.studyStart, course.studyEnd)})</option>)}
     </select>
     {state.error ? <p id={errorId} role="alert">{state.error}</p> : null}
     {state.success ? <p role="status">{state.success}</p> : null}

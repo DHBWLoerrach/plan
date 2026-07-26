@@ -4,12 +4,13 @@ import { connection } from "next/server";
 
 import { AttachCourseForm, DeleteBlockPlanForm, DetachCourseForm, RenameBlockPlanForm } from "@/components/block-plan-forms";
 import { type EventEntry, EventSection } from "@/components/event-section";
+import { InternalNav } from "@/components/internal-nav";
 import { PhaseSection } from "@/components/phase-section";
 import { WithdrawForm } from "@/components/publication-forms";
 import { SiteShell } from "@/components/site-shell";
 import { sqlite } from "@/lib/db";
 import { blockPlanDisplayName } from "@/lib/domain/block-plan-name";
-import { formatCalendarPeriod } from "@/lib/domain/calendar-format";
+import { formatCalendarPeriod, formatTimestamp } from "@/lib/domain/calendar-format";
 import { type DraftEvent, deriveEventSemester } from "@/lib/domain/publication";
 import { nextPhaseDefaults, semesterContext } from "@/lib/domain/phase-sequence";
 import { semesterOverview } from "@/lib/domain/semester-overview";
@@ -17,8 +18,8 @@ import { getActiveAccount } from "@/lib/internal-auth";
 import { listAttachableCourses, maximumCoursesPerBlockPlan } from "@/lib/services/block-plan-admin";
 import { publicationIssuesForDraft } from "@/lib/services/publication";
 
+import { searchParam } from "../../search-params";
 import { type PlanPhase, blockPlanCourses, blockPlanDraftEvents, blockPlanDraftPhases, findInternalBlockPlan, publicationStateLabel } from "../data";
-import { searchParam } from "../../kurse/data";
 
 type WorkspaceView = "kursphasen" | "termine" | "einstellungen";
 
@@ -97,7 +98,7 @@ export default async function InternalBlockPlanPage({ params, searchParams }: Pa
       : "Veröffentlicht · keine neueren Änderungen"
     : publicationState;
 
-  return <SiteShell><article className="plan-detail">
+  return <SiteShell><InternalNav account={account} current="blockplaene" /><article className="plan-detail">
     <header className="plan-workspace-header">
       <div>
         <p className="eyebrow">Interner Entwurf</p>
@@ -129,7 +130,7 @@ export default async function InternalBlockPlanPage({ params, searchParams }: Pa
       <dt>Studienzeitraum</dt><dd>{identicalStudyPeriod
         ? <span>{studyPeriods[0]?.period}</span>
         : studyPeriods.map((entry) => <span key={entry.code}>{entry.code}: {entry.period}</span>)}</dd>
-      <dt>Letzte Entwurfsänderung</dt><dd>{new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" }).format(new Date(plan.draftUpdatedAt))}{plan.draftUpdatedBy ? ` durch ${plan.draftUpdatedBy}` : ""}</dd>
+      <dt>Letzte Entwurfsänderung</dt><dd>{formatTimestamp(plan.draftUpdatedAt)}{plan.draftUpdatedBy ? ` durch ${plan.draftUpdatedBy}` : ""}</dd>
     </dl>
 
     {view === "kursphasen" && requestedSemester && !knownSemester
@@ -200,6 +201,6 @@ export default async function InternalBlockPlanPage({ params, searchParams }: Pa
       </section>
     </section> : null}
 
-    <p><Link className="text-link" href="/intern">Zurück zu den Blockplänen</Link></p>
+    <p><Link className="text-link" href="/intern/blockplaene">Zurück zu den Blockplänen</Link></p>
   </article></SiteShell>;
 }

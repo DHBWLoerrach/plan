@@ -7,6 +7,15 @@ import { sqlite } from "@/lib/db";
 
 export type ActiveAccount = { id: string; email: string; role: "NONE" | "AREA_EDITOR"; systemAdmin: boolean; areaIds: string[] };
 
+/**
+ * Whether the account may manage at least one area: system administration always, an area editor with at least one
+ * assigned area. It mirrors what `assertAreaEditPermission` grants and only decides what to show — every target page
+ * and every server operation checks the permission again (MVP-SPEZIFIKATION.md).
+ */
+export function managesAnyArea(account: ActiveAccount): boolean {
+  return account.systemAdmin || (account.role === "AREA_EDITOR" && account.areaIds.length > 0);
+}
+
 export async function getActiveAccount(): Promise<ActiveAccount | null> {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return null;

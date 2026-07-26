@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 
 import { EditEmailForm, EditPermissionsForm, IssueLinkForm, LockForm, UnlockForm } from "@/components/account-forms";
+import { InternalNav } from "@/components/internal-nav";
 import { SiteShell } from "@/components/site-shell";
 import { sqlite } from "@/lib/db";
 import { getActiveAccount } from "@/lib/internal-auth";
@@ -22,7 +23,7 @@ export default async function AccountDetailPage({ params }: PageProps<"/intern/k
   const { account: managed, areas, areaIds } = details;
   const initial = { role: managed.role, systemAdmin: Boolean(managed.systemAdmin), areaIds };
 
-  return <SiteShell><section className="search-panel" aria-labelledby="account-detail-heading">
+  return <SiteShell><InternalNav account={account} current="konten" /><section className="search-panel" aria-labelledby="account-detail-heading">
     <p className="eyebrow">Interner Bereich · Systemadministration</p>
     <h1 id="account-detail-heading">{managed.email}</h1>
     <p>Zustand: {statusLabels[managed.status]}</p>

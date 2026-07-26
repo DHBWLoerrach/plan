@@ -1,5 +1,6 @@
 import type Database from "better-sqlite3";
 
+import { matchesCodePrefix, normalizeCodePrefix } from "@/lib/domain/course-code";
 import type { DraftCourse, DraftEvent, DraftPhase } from "@/lib/domain/publication";
 
 /** Server-side pagination of the public search (MVP-SPEZIFIKATION.md). */
@@ -152,13 +153,11 @@ function normalizeFilters(filters: PublicFilters): PublicFilters {
   return normalized;
 }
 
-function matchesFilters(plan: PublicPlan, filters: PublicFilters, coursePrefix: string | undefined): boolean {
+function matchesFilters(plan: PublicPlan, filters: PublicFilters, coursePrefix: string | null): boolean {
   if (filters.area && plan.area !== filters.area) return false;
   if (filters.year && plan.year !== Number(filters.year)) return false;
   if (filters.program && !plan.courses.some((course) => course.program === filters.program)) return false;
-  // The course filter searches the beginning of the course code without regard to case, so `tif24` finds both
-  // `TIF24A` and `TIF24B` (MVP-SPEZIFIKATION.md).
-  if (coursePrefix && !plan.courses.some((course) => course.code.toLocaleLowerCase("de-DE").startsWith(coursePrefix))) return false;
+  if (coursePrefix && !plan.courses.some((course) => matchesCodePrefix(course.code, coursePrefix))) return false;
   return true;
 }
 
@@ -177,7 +176,7 @@ export function searchPublicPlans(
   today: string,
 ): PublicSearchResult {
   const filters = normalizeFilters(request);
-  const coursePrefix = filters.course?.toLocaleLowerCase("de-DE");
+  const coursePrefix = normalizeCodePrefix(filters.course);
   const matching = readPublishedPlans(sqlite).filter((plan) => matchesFilters(plan, filters, coursePrefix));
   const grouped: Record<PublicPlanGroupKey, PublicPlan[]> = { current: [], future: [], past: [] };
   for (const plan of matching) grouped[groupOfPlan(plan, today)].push(plan);

@@ -4,12 +4,14 @@ import { connection } from "next/server";
 
 import { CreateBlockPlanFromCourseForm } from "@/components/block-plan-forms";
 import { DeleteCourseForm, EditCourseForm } from "@/components/course-forms";
+import { InternalNav } from "@/components/internal-nav";
 import { SiteShell } from "@/components/site-shell";
 import { sqlite } from "@/lib/db";
 import { getActiveAccount } from "@/lib/internal-auth";
 
 import { blockPlanSummaries } from "../../blockplaene/data";
-import { findInternalCourse, programOptions, searchParam } from "../data";
+import { searchParam } from "../../search-params";
+import { findInternalCourse, programOptions } from "../data";
 
 export default async function CourseDetailPage({ params, searchParams }: PageProps<"/intern/kurse/[courseId]">) {
   await connection();
@@ -21,7 +23,7 @@ export default async function CourseDetailPage({ params, searchParams }: PagePro
   const created = searchParam(await searchParams, "angelegt") === "1";
   const programs = programOptions(sqlite, account);
 
-  return <SiteShell><section className="search-panel" aria-labelledby="course-detail-heading">
+  return <SiteShell><InternalNav account={account} current="kurse" /><section className="search-panel" aria-labelledby="course-detail-heading">
     <p className="eyebrow">Interner Bereich</p>
     <h1 id="course-detail-heading">Kurs {course.code}</h1>
     {created ? <p role="status">Der Kurs wurde angelegt.</p> : null}
