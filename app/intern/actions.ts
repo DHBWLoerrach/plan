@@ -8,7 +8,7 @@ import { auth } from "@/lib/auth";
 import { sqlite } from "@/lib/db";
 import { getActiveAccount } from "@/lib/internal-auth";
 import { changeAccountPassword, redeemPasswordLink } from "@/lib/services/password-link";
-import { StalePreviewError, publishBlockPlan, withdrawBlockPlan } from "@/lib/services/publication";
+import { StaleStateError, publishBlockPlan, withdrawBlockPlan } from "@/lib/services/publication";
 import { hashPassword, verifyPassword } from "better-auth/crypto";
 
 async function accountId() {
@@ -17,9 +17,18 @@ async function accountId() {
   return account.id;
 }
 
-export type PublishFormState = { error?: string };
+export type PublicationFormState = { error?: string };
 
-export async function publishAction(_: PublishFormState, formData: FormData): Promise<PublishFormState> {
+/** Every view a publication or withdrawal changes: the public search and detail page, and the internal pages naming the state. */
+function revalidatePublicationViews(blockPlanId: string) {
+  revalidatePath("/");
+  revalidatePath(`/${blockPlanId}`);
+  revalidatePath("/intern");
+  revalidatePath(`/intern/blockplaene/${blockPlanId}`);
+  revalidatePath(`/intern/blockplaene/${blockPlanId}/vorschau`);
+}
+
+export async function publishAction(_: PublicationFormState, formData: FormData): Promise<PublicationFormState> {
   const blockPlanId = String(formData.get("blockPlanId") ?? "");
   const previewPath = `/intern/blockplaene/${blockPlanId}/vorschau`;
   let stale = false;
@@ -32,31 +41,43 @@ export async function publishAction(_: PublishFormState, formData: FormData): Pr
     });
   } catch (error) {
     // Only a draft that changed under the shown preview gets the reload; every other refusal stays at the button.
-    if (!(error instanceof StalePreviewError)) {
+    if (!(error instanceof StaleStateError)) {
       return { error: error instanceof Error ? error.message : "Der Blockplan konnte nicht veröffentlicht werden." };
     }
     stale = true;
   }
-  revalidatePath(previewPath);
-  // A stale preview wrote nothing, so only the preview itself needs to be read again.
-  if (stale) redirect(`${previewPath}?geaendert=1`);
-  revalidatePath("/");
-  revalidatePath(`/${blockPlanId}`);
-  revalidatePath("/intern");
-  revalidatePath(`/intern/blockplaene/${blockPlanId}`);
+  // A stale publication wrote nothing, so only the preview itself needs to be read again.
+  if (stale) {
+    revalidatePath(previewPath);
+    redirect(`${previewPath}?geaendert=1`);
+  }
+  revalidatePublicationViews(blockPlanId);
   redirect(`/intern/blockplaene/${blockPlanId}?veroeffentlicht=1`);
 }
 
-export async function withdrawAction(formData: FormData) {
+export async function withdrawAction(_: PublicationFormState, formData: FormData): Promise<PublicationFormState> {
   const blockPlanId = String(formData.get("blockPlanId") ?? "");
-  withdrawBlockPlan(sqlite, {
-    blockPlanId,
-    accountId: await accountId(),
-    seenPublishedVersionId: String(formData.get("publishedVersionId") ?? ""),
-  });
-  revalidatePath("/");
-  revalidatePath(`/${blockPlanId}`);
-  revalidatePath(`/intern/blockplaene/${blockPlanId}`);
+  const editorPath = `/intern/blockplaene/${blockPlanId}`;
+  let stale = false;
+  try {
+    withdrawBlockPlan(sqlite, {
+      blockPlanId,
+      accountId: await accountId(),
+      seenPublishedVersionId: String(formData.get("publishedVersionId") ?? ""),
+    });
+  } catch (error) {
+    if (!(error instanceof StaleStateError)) {
+      return { error: error instanceof Error ? error.message : "Die Veröffentlichung konnte nicht zurückgenommen werden." };
+    }
+    stale = true;
+  }
+  // A withdrawal aimed at a version that is no longer shown wrote nothing; the editor reloads and says so.
+  if (stale) {
+    revalidatePath(editorPath);
+    redirect(`${editorPath}?fassung-veraltet=1`);
+  }
+  revalidatePublicationViews(blockPlanId);
+  redirect(`${editorPath}?zurueckgenommen=1`);
 }
 
 export type PasswordLinkActionState = { error?: string };

@@ -25,13 +25,15 @@ type PlanRow = {
 type CourseRow = DraftCourse & { program: string; programAbbreviation: string };
 
 /**
- * The refusal to publish a draft that changed after the preview was rendered. The editor tells it apart from every
- * other refusal, because only here it reloads the preview and asks for a fresh release (MVP-SPEZIFIKATION.md).
+ * The refusal to act on a state that changed since it was shown — a draft edited after its preview was rendered, or
+ * a published version replaced since it was displayed. The editor tells this apart from every other refusal, because
+ * only here it leaves everything unchanged, reloads the current state and asks for a fresh decision
+ * (MVP-SPEZIFIKATION.md).
  */
-export class StalePreviewError extends Error {
+export class StaleStateError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = "StalePreviewError";
+    this.name = "StaleStateError";
   }
 }
 
@@ -98,7 +100,7 @@ export function publishBlockPlan(sqlite: Database.Database, request: Publication
     const { plan, courses, phases, events, issues } = preview;
     assertAreaEditPermission(sqlite, request.accountId, plan.areaId);
     if (plan.draftUpdatedAt !== request.seenDraftUpdatedAt || plan.publishedVersionId !== request.seenPublishedVersionId) {
-      throw new StalePreviewError("Die Vorschau ist nicht mehr aktuell. Laden Sie den aktuellen Entwurf erneut.");
+      throw new StaleStateError("Die Vorschau ist nicht mehr aktuell. Laden Sie den aktuellen Entwurf erneut.");
     }
     if (issues.length) throw new Error(issues.map((issue) => issue.message).join(" "));
 
@@ -135,8 +137,14 @@ export function withdrawBlockPlan(sqlite: Database.Database, { blockPlanId, acco
     const plan = sqlite.prepare("SELECT area_id AS areaId FROM block_plans WHERE id = ?").get(blockPlanId) as { areaId: string } | undefined;
     if (!plan) throw new Error("Der Blockplan wurde nicht gefunden.");
     assertAreaEditPermission(sqlite, accountId, plan.areaId);
+    // Addressing the displayed version — not merely "the" version of the plan — is what makes a double click and a
+    // meanwhile replaced version harmless (ARCHITEKTUR_UND_BETRIEB.md).
     const version = sqlite.prepare("SELECT id FROM published_versions WHERE block_plan_id = ?").get(blockPlanId) as { id: string } | undefined;
-    if (!version || version.id !== seenPublishedVersionId) throw new Error("Die angezeigte Veröffentlichung ist nicht mehr aktuell.");
+    if (!version || version.id !== seenPublishedVersionId) {
+      throw new StaleStateError("Die angezeigte Veröffentlichung ist nicht mehr aktuell.");
+    }
+    // The draft, its course phases and its events hang off the block plan, not off the version: deleting the version
+    // takes exactly the public copy with it (ADR 0009).
     sqlite.prepare("DELETE FROM published_versions WHERE id = ?").run(version.id);
   })();
 }

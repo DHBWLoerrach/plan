@@ -5,6 +5,7 @@ import { connection } from "next/server";
 import { AttachCourseForm, DeleteBlockPlanForm, DetachCourseForm, RenameBlockPlanForm } from "@/components/block-plan-forms";
 import { type EventEntry, EventSection } from "@/components/event-section";
 import { PhaseSection } from "@/components/phase-section";
+import { WithdrawForm } from "@/components/publication-forms";
 import { SiteShell } from "@/components/site-shell";
 import { sqlite } from "@/lib/db";
 import { blockPlanDisplayName } from "@/lib/domain/block-plan-name";
@@ -17,7 +18,6 @@ import { listAttachableCourses, maximumCoursesPerBlockPlan } from "@/lib/service
 
 import { type PlanPhase, blockPlanCourses, blockPlanDraftEvents, blockPlanDraftPhases, publicationStateLabel } from "../data";
 import { searchParam } from "../../kurse/data";
-import { withdrawAction } from "../../actions";
 
 /**
  * Groups the affected courses of an event by the semester derived from their course phases. In an incomplete draft a
@@ -58,6 +58,8 @@ export default async function InternalBlockPlanPage({ params, searchParams }: Pa
   const query = await searchParams;
   const created = searchParam(query, "angelegt") === "1";
   const published = searchParam(query, "veroeffentlicht") === "1";
+  const withdrawn = searchParam(query, "zurueckgenommen") === "1";
+  const versionOutdated = searchParam(query, "fassung-veraltet") === "1";
   const courses = blockPlanCourses(plan.id);
   const displayName = blockPlanDisplayName(plan.name, courses);
   const derivedName = blockPlanDisplayName(null, courses);
@@ -88,6 +90,11 @@ export default async function InternalBlockPlanPage({ params, searchParams }: Pa
     <h1>{displayName}</h1>
     {created ? <p role="status">Der Blockplan wurde mit dem Kurs {courses[0]?.code} angelegt.</p> : null}
     {published ? <p role="status">Die Vorschau wurde veröffentlicht. Der Blockplan ist jetzt <Link className="text-link" href={`/${plan.id}`}>öffentlich sichtbar</Link>; der Entwurf bleibt unverändert bearbeitbar.</p> : null}
+    {withdrawn ? <p role="status">Die Veröffentlichung wurde zurückgenommen. Der Blockplan ist nicht mehr öffentlich sichtbar; der Entwurf ist vollständig erhalten.</p> : null}
+    {versionOutdated ? <p role="alert" className="notice">
+      Die Veröffentlichung, die Sie zurücknehmen wollten, war nicht mehr die angezeigte Fassung. Es wurde nichts
+      geändert. Hier steht der aktuelle Veröffentlichungszustand: {publicationState}.
+    </p> : null}
     <p className="plan-area">{plan.areaName} · Jahrgang {courses[0]?.studyStart.slice(0, 4)}</p>
     <dl className="course-list">
       <dt>Zugeordnete Kurse</dt><dd>{courses.map((course) => <span key={course.id}>{course.code}</span>)}</dd>
@@ -113,7 +120,9 @@ export default async function InternalBlockPlanPage({ params, searchParams }: Pa
       <p>Zustand: {publicationState}</p>
       <p><Link className="button" href={`/intern/blockplaene/${plan.id}/vorschau`}>Vorschau prüfen und veröffentlichen</Link></p>
       <p>Die Vorschau zeigt den gespeicherten Entwurf so, wie externe Nutzende ihn sähen — und solange er noch Regeln verletzt, stattdessen die Fehlerübersicht mit Verweisen auf die betroffenen Semester und Felder.</p>
-      {plan.versionId ? <form action={withdrawAction}><input type="hidden" name="blockPlanId" value={plan.id} /><input type="hidden" name="publishedVersionId" value={plan.versionId} /><button className="button button--ghost" type="submit">Veröffentlichung zurücknehmen</button></form> : null}
+      {plan.versionId
+        ? <WithdrawForm blockPlanId={plan.id} publishedVersionId={plan.versionId} displayName={displayName} />
+        : null}
     </section>
 
     <details className="plan-settings">

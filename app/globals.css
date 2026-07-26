@@ -160,6 +160,8 @@ p[role="status"] { margin: 0; color: var(--success); }
 .editor-card > p { margin: .35rem 0 .9rem; color: var(--gray); font-size: .92rem; }
 
 .confirm-region { display: grid; gap: .6rem; padding: 1rem 1.1rem; border: 1px solid var(--warning-border); border-left-width: 4px; background: var(--warning-bg); }
+/* Both set `display`, which would otherwise outrank the `hidden` attribute a confirmation toggles them with. */
+.button[hidden], .confirm-region[hidden] { display: none; }
 .confirm-region p { margin: 0; }
 .confirm-region .button { justify-self: start; }
 .password-link-reveal { display: grid; gap: .6rem; padding: 1rem 1.1rem; border: 1px solid var(--warning-border); border-left-width: 4px; background: var(--warning-bg); color: var(--ink); }
