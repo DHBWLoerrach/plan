@@ -3,6 +3,7 @@ import "server-only";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 
+import { internalAuthOptions, parseTrustedProxies } from "@/lib/auth-options";
 import { db } from "@/lib/db";
 import { accounts, sessions, users, verifications } from "@/lib/db/schema";
 
@@ -17,18 +18,8 @@ if (!secret) {
   throw new Error("BETTER_AUTH_SECRET must be configured in production.");
 }
 
-export const auth = betterAuth({
+export const auth = betterAuth(internalAuthOptions({
   secret,
   database: drizzleAdapter(db, { provider: "sqlite", schema: authSchema }),
-  disabledPaths: ["/change-password", "/request-password-reset", "/reset-password", "/set-password"],
-  emailAndPassword: {
-    enabled: true,
-    disableSignUp: true,
-    minPasswordLength: 15,
-    maxPasswordLength: 128,
-  },
-  session: {
-    expiresIn: 60 * 60 * 24 * 7,
-    disableSessionRefresh: true,
-  },
-});
+  trustedProxies: parseTrustedProxies(process.env.TRUSTED_PROXY_IPS),
+}));
