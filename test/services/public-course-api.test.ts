@@ -16,6 +16,7 @@ function databaseWithPublishedCourse() {
     INSERT INTO published_phases VALUES ('phase-2', 'version-1', 'snapshot-1', 1, 'PRACTICE', '2025-12-20', '2026-03-31');
     INSERT INTO published_phases VALUES ('phase-3', 'version-1', 'snapshot-1', 2, 'THEORY', '2026-04-01', '2026-09-30');
     INSERT INTO published_phases VALUES ('phase-4', 'version-1', 'snapshot-1', 3, 'PRACTICE', '2026-10-01', '2028-09-30');
+    INSERT INTO published_course_search_keys VALUES ('snapshot-1', 'tif25a');
   `);
   return sqlite;
 }
@@ -47,6 +48,15 @@ describe("readPublicCourseBlockPlan", () => {
     });
   });
 
+  it("finds a course through its stored normalized search key", () => {
+    const sqlite = databaseWithPublishedCourse();
+
+    expect(readPublicCourseBlockPlan(sqlite, " tif25a ")).toMatchObject({
+      kind: "found",
+      data: { course: { code: "TIF25A" } },
+    });
+  });
+
   it("does not reveal a draft-only or unknown course", () => {
     const sqlite = databaseWithPublishedCourse();
     sqlite.exec(`
@@ -64,6 +74,7 @@ describe("readPublicCourseBlockPlan", () => {
       INSERT INTO block_plans VALUES ('plan-2', 'area-1', NULL, NULL, 1, '2026-01-01T00:00:00.000Z', NULL);
       INSERT INTO published_versions VALUES ('version-2', 'plan-2', '2026-01-01T00:00:00.000Z', 'Zweiter Plan', 'Technik');
       INSERT INTO published_course_snapshots VALUES ('snapshot-2', 'version-2', 'course-2', 'tIf25a', 'Informatik', 'TIF', '2025-10-01', '2028-09-30', 3);
+      INSERT INTO published_course_search_keys VALUES ('snapshot-2', 'tif25a');
     `);
 
     expect(readPublicCourseBlockPlan(sqlite, "TIF25A")).toEqual({ kind: "ambiguous" });

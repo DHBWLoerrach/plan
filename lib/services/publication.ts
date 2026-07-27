@@ -149,10 +149,13 @@ export function publishBlockPlan(sqlite: Database.Database, request: Publication
     const addSnapshot = sqlite.prepare(`INSERT INTO published_course_snapshots
       (id, version_id, source_course_id, code, program_name, program_abbreviation, study_start, study_end, semesters)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    const addSearchKey = sqlite.prepare(`INSERT INTO published_course_search_keys (course_snapshot_id, normalized_code)
+      VALUES (?, ?)`);
     for (const course of courses) {
       const snapshotId = randomUUID();
       snapshotIds.set(course.id, snapshotId);
       addSnapshot.run(snapshotId, versionId, course.id, course.code, course.program, course.programAbbreviation, course.studyStart, course.studyEnd, course.semesters);
+      addSearchKey.run(snapshotId, normalizeCodePrefix(course.code));
     }
     const addPhase = sqlite.prepare("INSERT INTO published_phases (id, version_id, course_snapshot_id, semester, phase_type, start_date, end_date) VALUES (?, ?, ?, ?, ?, ?, ?)");
     for (const phase of phases) addPhase.run(randomUUID(), versionId, snapshotIds.get(phase.courseId), phase.semester, phase.type, phase.startDate, phase.endDate);

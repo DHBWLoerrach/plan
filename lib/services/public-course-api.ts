@@ -34,20 +34,20 @@ type PublishedPhaseRow = { semester: number; type: PhaseType; startDate: string;
 
 /**
  * The public, published course plan addressed by its exact course code. This reads the immutable snapshots rather
- * than current courses, so an unpublished edit never changes the API. Snapshot codes are compared in JavaScript
- * because SQLite's NOCASE collation does not cover the German Unicode normalisation strategy.
+ * than current courses, so an unpublished edit never changes the API. The stored normalised key lets SQLite find the
+ * matching snapshot through its index without first loading every public course into application memory.
  */
 export function readPublicCourseBlockPlan(sqlite: Database.Database, courseCode: string): PublicCourseBlockPlanResult {
   const normalizedCode = normalizeCodePrefix(courseCode);
   if (!normalizedCode) return { kind: "not-found" };
 
-  const courses = sqlite
+  const matches = sqlite
     .prepare(`SELECT snapshot.id, snapshot.code, snapshot.program_name AS program, snapshot.program_abbreviation AS programAbbreviation,
         snapshot.study_start AS studyStart, snapshot.study_end AS studyEnd, snapshot.semesters
-      FROM published_course_snapshots snapshot
-      JOIN published_versions version ON version.id = snapshot.version_id`)
-    .all() as PublishedCourseRow[];
-  const matches = courses.filter((course) => normalizeCodePrefix(course.code) === normalizedCode);
+      FROM published_course_search_keys search_key
+      JOIN published_course_snapshots snapshot ON snapshot.id = search_key.course_snapshot_id
+      WHERE search_key.normalized_code = ?`)
+    .all(normalizedCode) as PublishedCourseRow[];
   if (!matches.length) return { kind: "not-found" };
   if (matches.length > 1) return { kind: "ambiguous" };
 
