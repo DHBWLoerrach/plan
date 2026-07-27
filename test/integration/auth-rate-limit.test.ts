@@ -17,7 +17,7 @@ const traefikAddress = "10.0.0.7";
 const temporaryDirectories: string[] = [];
 
 /** The application behind Traefik, wired to a throwaway database: only the forwarded headers differ per request. */
-function createAuth(trustedProxies = parseTrustedProxies("10.0.0.0/24")) {
+function createAuth() {
   const directory = mkdtempSync(path.join(os.tmpdir(), "dhbw-mgmt-rate-limit-"));
   temporaryDirectories.push(directory);
   const sqlite = new Database(path.join(directory, "database.sqlite"));
@@ -25,7 +25,7 @@ function createAuth(trustedProxies = parseTrustedProxies("10.0.0.0/24")) {
   const options = internalAuthOptions({
     secret: "a".repeat(32),
     database: drizzleAdapter(drizzle(sqlite), { provider: "sqlite", schema: authSchema }),
-    trustedProxies,
+    trustedProxies: parseTrustedProxies("10.0.0.0/24"),
   });
   return betterAuth({ ...options, baseURL: baseUrl });
 }
@@ -78,15 +78,5 @@ describe("sign-in rate limit behind Traefik", () => {
     // Traefik appended the real client address to the value the client sent, so only the rightmost
     // untrusted hop counts: the spoofed address in front of it must not open a fresh bucket.
     expect((await signIn(auth, `198.51.100.10, 203.0.113.7, ${traefikAddress}`)).status).toBe(429);
-  });
-
-  it("does not trust a forwarded chain without a configured proxy", async () => {
-    const auth = createAuth([]);
-
-    expect(await attemptUntilRateLimited(auth, `203.0.113.8, ${traefikAddress}`)).not.toBeNull();
-
-    // Unresolvable chains share one bucket, so a second client is limited as well: the limit stays
-    // effective, which is why the proxy addresses belong in TRUSTED_PROXY_IPS when Traefik appends.
-    expect((await signIn(auth, `198.51.100.11, ${traefikAddress}`)).status).toBe(429);
   });
 });

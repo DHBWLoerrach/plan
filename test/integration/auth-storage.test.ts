@@ -18,6 +18,14 @@ afterEach(() => {
   for (const directory of temporaryDirectories.splice(0)) rmSync(directory, { force: true, recursive: true });
 });
 
+/**
+ * The seam between the application's own SQL and the configured Drizzle adapter, not Better Auth on
+ * its own: `lib/services/password-link.ts` writes `user` and `account` timestamps as epoch
+ * milliseconds directly, while Better Auth writes the `session` of the same sign-in through the
+ * adapter. Both have to agree on one representation — Better Auth's raw SQLite adapter would put ISO
+ * strings in the same columns. An upgrade that changes this is a real finding, not test noise. It
+ * belongs to local accounts and goes when they do.
+ */
 describe("Better Auth storage", () => {
   it("stores shared authentication timestamps as epoch-millisecond integers", async () => {
     const directory = mkdtempSync(path.join(os.tmpdir(), "dhbw-mgmt-auth-storage-"));
