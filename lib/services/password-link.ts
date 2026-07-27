@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 
 import type Database from "better-sqlite3";
 
+import { FieldError } from "@/lib/domain/field-error";
 import { maximumPasswordLength, minimumPasswordLength, specialCharacterPattern } from "@/lib/domain/password-rules";
 import { issuePasswordLinkToken } from "@/lib/services/password-link-token.mjs";
 
@@ -60,12 +61,12 @@ export async function changeAccountPassword(sqlite: Database.Database, input: {
   validatePassword(input.newPassword);
   const account = findCredentialAccount(sqlite, input.userId);
   if (!account?.password || !await input.verifyPassword(account.password, input.currentPassword)) {
-    throw new Error("Das bisherige Passwort ist nicht korrekt.");
+    throw new FieldError("currentPassword", "Das bisherige Passwort ist nicht korrekt.");
   }
   const passwordHash = await input.hashPassword(input.newPassword);
   sqlite.transaction(() => {
     const currentAccount = findCredentialAccount(sqlite, input.userId);
-    if (!currentAccount) throw new Error("Das bisherige Passwort ist nicht korrekt.");
+    if (!currentAccount) throw new FieldError("currentPassword", "Das bisherige Passwort ist nicht korrekt.");
     sqlite.prepare("UPDATE account SET password = ?, updatedAt = ? WHERE id = ?").run(passwordHash, Date.now(), currentAccount.id);
     sqlite.prepare("DELETE FROM session WHERE userId = ? AND id <> ?").run(input.userId, input.currentSessionId);
   })();
@@ -94,13 +95,14 @@ export function lockAccount(sqlite: Database.Database, userId: string, now = new
   })();
 }
 
+/** Rejects a password at the field it belongs to, so a form can show every rule without reading its wording. */
 export function validatePassword(password: string) {
   const length = [...password].length;
-  if (length < minimumPasswordLength) throw new Error(`Das Passwort muss mindestens ${minimumPasswordLength} Zeichen lang sein.`);
-  if (length > maximumPasswordLength) throw new Error(`Das Passwort darf höchstens ${maximumPasswordLength} Zeichen lang sein.`);
-  if (!/\p{Lu}/u.test(password)) throw new Error("Das Passwort muss mindestens einen Großbuchstaben enthalten.");
-  if (!/\p{Nd}/u.test(password)) throw new Error("Das Passwort muss mindestens eine Ziffer enthalten.");
-  if (!specialCharacterPattern.test(password)) throw new Error("Das Passwort muss mindestens ein zulässiges Sonderzeichen enthalten.");
+  if (length < minimumPasswordLength) throw new FieldError("password", `Das Passwort muss mindestens ${minimumPasswordLength} Zeichen lang sein.`);
+  if (length > maximumPasswordLength) throw new FieldError("password", `Das Passwort darf höchstens ${maximumPasswordLength} Zeichen lang sein.`);
+  if (!/\p{Lu}/u.test(password)) throw new FieldError("password", "Das Passwort muss mindestens einen Großbuchstaben enthalten.");
+  if (!/\p{Nd}/u.test(password)) throw new FieldError("password", "Das Passwort muss mindestens eine Ziffer enthalten.");
+  if (!specialCharacterPattern.test(password)) throw new FieldError("password", "Das Passwort muss mindestens ein zulässiges Sonderzeichen enthalten.");
 }
 
 function findPasswordLink(sqlite: Database.Database, tokenHash: string) {

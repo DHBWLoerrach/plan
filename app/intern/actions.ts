@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 
 import { auth } from "@/lib/auth";
 import { sqlite } from "@/lib/db";
+import { FieldError } from "@/lib/domain/field-error";
 import { getActiveAccount } from "@/lib/internal-auth";
 import { changeAccountPassword, redeemPasswordLink } from "@/lib/services/password-link";
 import { StaleStateError, publishBlockPlan, withdrawBlockPlan } from "@/lib/services/publication";
@@ -91,9 +92,8 @@ export async function setPasswordWithLinkAction(_: PasswordLinkActionState, form
       hashPassword,
     });
   } catch (error) {
-    if (error instanceof Error && (error.message.startsWith("Das Passwort muss") || error.message.startsWith("Das Passwort darf"))) {
-      return { error: error.message };
-    }
+    // A rejected password names its rule; everything else about the link stays as unspecific as it has to be.
+    if (error instanceof FieldError) return { error: error.message };
     return { error: "Der Passwortlink ist ungültig oder abgelaufen." };
   }
   redirect("/intern/anmelden?passwort=gesetzt");
@@ -115,10 +115,9 @@ export async function changePasswordAction(_: ChangePasswordActionState, formDat
       verifyPassword: async (hash, password) => verifyPassword({ hash, password }),
     });
   } catch (error) {
-    if (error instanceof Error && (error.message.startsWith("Das Passwort muss") || error.message.startsWith("Das Passwort darf"))) {
-      return { newPasswordError: error.message };
+    if (error instanceof FieldError) {
+      return error.field === "currentPassword" ? { currentPasswordError: error.message } : { newPasswordError: error.message };
     }
-    if (error instanceof Error && error.message.includes("bisherige")) return { currentPasswordError: error.message };
     return { formError: "Das Passwort konnte nicht geändert werden." };
   }
   return { success: "Ihr Passwort wurde geändert. Andere Sitzungen wurden beendet." };
