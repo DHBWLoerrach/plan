@@ -13,6 +13,7 @@ import {
   updateAccountEmail,
   updateAccountPermissions,
 } from "@/lib/services/account-admin";
+import { passwordLinkUrl } from "@/lib/services/password-link-token.mjs";
 
 const notAuthorizedMessage = "Sie sind nicht zur Kontoverwaltung berechtigt.";
 
@@ -37,12 +38,6 @@ async function requestOrigin() {
   return `${proto}://${host}`;
 }
 
-async function passwordLinkUrl(token: string) {
-  const url = new URL("/intern/passwort-vergeben", await requestOrigin());
-  url.hash = token;
-  return url.toString();
-}
-
 function revalidateAccount(userId: string) {
   revalidatePath("/intern/konten");
   revalidatePath(`/intern/konten/${userId}`);
@@ -60,7 +55,7 @@ export async function createAccountAction(_: CreateAccountState, formData: FormD
     const email = String(formData.get("email") ?? "");
     const token = createInternalAccount(sqlite, { email, ...readPermissions(formData) });
     revalidatePath("/intern/konten");
-    return { passwordLink: await passwordLinkUrl(token), email: email.trim().toLowerCase() };
+    return { passwordLink: passwordLinkUrl(token, await requestOrigin()), email: email.trim().toLowerCase() };
   } catch (error) {
     return { error: errorMessage(error), email: String(formData.get("email") ?? "") };
   }
@@ -98,7 +93,7 @@ export async function issueLinkAction(_: AccountActionState, formData: FormData)
     const userId = String(formData.get("userId") ?? "");
     const token = issuePasswordLink(sqlite, userId);
     revalidateAccount(userId);
-    return { passwordLink: await passwordLinkUrl(token), success: "Ein neuer Passwortlink wurde ausgestellt." };
+    return { passwordLink: passwordLinkUrl(token, await requestOrigin()), success: "Ein neuer Passwortlink wurde ausgestellt." };
   } catch (error) {
     return { error: errorMessage(error) };
   }
@@ -122,7 +117,7 @@ export async function unlockAction(_: AccountActionState, formData: FormData): P
     const userId = String(formData.get("userId") ?? "");
     const token = unlockInternalAccount(sqlite, userId);
     revalidateAccount(userId);
-    return { passwordLink: await passwordLinkUrl(token), success: "Das Konto wurde freigegeben." };
+    return { passwordLink: passwordLinkUrl(token, await requestOrigin()), success: "Das Konto wurde freigegeben." };
   } catch (error) {
     return { error: errorMessage(error) };
   }
