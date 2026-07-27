@@ -15,8 +15,9 @@ Umgesetzt sind die öffentliche Suche mit URL-basierten Filtern und die öffentl
 Detailansicht, der semesterweise Entwurfseditor mit Vorschau, Veröffentlichung und
 Zurücknahme, die Kurs- und Blockplanverwaltung, die Kontenverwaltung mit
 Passwortlinks sowie die Kommandozeilenbefehle für das initiale
-Systemadministrationskonto und den Notfall-Passwort-Reset. `npm run lint`,
-`npm run typecheck` und `npm test` (222 Tests) laufen fehlerfrei.
+Systemadministrationskonto und den Notfall-Passwort-Reset. Nonce-basierte CSP,
+Security-Header, Origin-Prüfung und der Betriebsweg aus Sicherung, Migration und
+Wiederherstellung sind umgesetzt und getestet.
 
 Offen ist die Datenschutzerklärung: Der Footer verweist auf die allgemeinen
 DHBW-Hinweise, während [`docs/ARCHITEKTUR_UND_BETRIEB.md`](docs/ARCHITEKTUR_UND_BETRIEB.md)
@@ -36,6 +37,7 @@ Bereiche sind bewusst noch nicht spezifiziert; die kanonische Domänensprache in
 - [`docs/FACHLICHE_REGELN.md`](docs/FACHLICHE_REGELN.md) — Invarianten, Lebenszyklen und Berechtigungen
 - [`docs/MVP-SPEZIFIKATION.md`](docs/MVP-SPEZIFIKATION.md) — Zielumfang, Rollen, Ansichten
 - [`docs/ARCHITEKTUR_UND_BETRIEB.md`](docs/ARCHITEKTUR_UND_BETRIEB.md) — Anwendungsschnitt, Auth, Datenhaltung, Betrieb
+- [`docs/BETRIEBSHANDBUCH.md`](docs/BETRIEBSHANDBUCH.md) — Sicherung, Migration, Wiederherstellung und Notfallbefehle
 - [`docs/BARRIEREFREIHEIT.md`](docs/BARRIEREFREIHEIT.md) — verbindliche Gestaltungs- und Abnahmekriterien
 - [`docs/adr/`](docs/adr/) — Architekturentscheidungen mit Begründung
 
@@ -70,3 +72,12 @@ npm run bootstrap:admin -- --email <dienstliche-e-mail>
 
 Zum Zurücksetzen der lokalen Datenbank `rm -f data/dhbw-mgmt.sqlite*` ausführen
 (die WAL-Dateien müssen mit weg) und danach Seed und Bootstrap wiederholen.
+
+Die Betriebsbefehle laufen auch lokal; ihr Zusammenspiel steht im
+[Betriebshandbuch](docs/BETRIEBSHANDBUCH.md):
+
+```bash
+npm run migrate:db                         # ausstehende Migrationen anwenden
+npm run backup:db -- --to <zieldatei>      # geprüfte Sicherung erstellen
+npm run restore:db -- --from <snapshot>    # Sicherung bei gestoppter Anwendung einspielen
+```

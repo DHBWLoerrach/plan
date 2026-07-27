@@ -9,6 +9,9 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "migrate:db": "node --env-file-if-exists=.env.local scripts/migrate-db.mjs",
+    "backup:db": "node --env-file-if-exists=.env.local scripts/backup-db.mjs",
+    "restore:db": "node --env-file-if-exists=.env.local scripts/restore-db.mjs",
     "bootstrap:admin": "node --env-file-if-exists=.env.local scripts/bootstrap-admin.mjs",
     "reset:admin-password": "node --env-file-if-exists=.env.local scripts/reset-admin-password.mjs"
   },

@@ -36,6 +36,9 @@ export function internalAuthOptions(input: InternalAuthOptionsInput): BetterAuth
     // keeps no sign-in counters of its own.
     rateLimit: { enabled: true },
     advanced: {
+      // Better Auth trusts only its configured base URL and would skip that check under NODE_ENV=test.
+      // Stating the production behaviour keeps the check the integration test verifies the real one.
+      disableOriginCheck: false,
       ipAddress: {
         ipAddressHeaders: ["x-forwarded-for"],
         trustedProxies: input.trustedProxies,
