@@ -24,7 +24,7 @@ type PlanRow = {
   publishedVersionId: string | null;
 };
 type CourseRow = DraftCourse & { program: string; programAbbreviation: string };
-type PublishedCourseCodeRow = { code: string };
+type PublishedSnapshotRow = { sourceCourseId: string; code: string };
 
 /**
  * The refusal to act on a state that changed since it was shown — a draft edited after its preview was rendered, or
@@ -90,22 +90,19 @@ export function publicationIssuesForDraft(
       message: "Der Blockplan benötigt mindestens einen zugeordneten Kurs.",
     });
   }
-  const publishedElsewhere = sqlite.prepare(`SELECT snapshot.id FROM published_course_snapshots snapshot
+  // Both cross-plan rules read the same snapshots of the other block plans: neither the course nor the code it was
+  // published under may appear twice. Public snapshots preserve the code that was visible at publication time, while
+  // the current course code may later change. Compare those codes in JavaScript because SQLite's NOCASE collation
+  // does not cover the application's German Unicode normalisation strategy.
+  const publishedElsewhere = sqlite.prepare(`SELECT snapshot.source_course_id AS sourceCourseId, snapshot.code
+    FROM published_course_snapshots snapshot
     JOIN published_versions version ON version.id = snapshot.version_id
-    WHERE snapshot.source_course_id = ? AND version.block_plan_id <> ?`);
-  // Public snapshots preserve the code that was visible at publication time, while the current course code may later
-  // change. Compare those snapshots in JavaScript because SQLite's NOCASE collation does not cover the application's
-  // German Unicode normalisation strategy.
-  const publishedCodesElsewhere = new Set(
-    (sqlite.prepare(`SELECT snapshot.code FROM published_course_snapshots snapshot
-      JOIN published_versions version ON version.id = snapshot.version_id
-      WHERE version.block_plan_id <> ?`).all(blockPlanId) as PublishedCourseCodeRow[])
-      .map((snapshot) => normalizeCodePrefix(snapshot.code))
-      .filter((code): code is string => code !== null),
-  );
+    WHERE version.block_plan_id <> ?`).all(blockPlanId) as PublishedSnapshotRow[];
+  const publishedCourseIds = new Set(publishedElsewhere.map((snapshot) => snapshot.sourceCourseId));
+  const publishedCodes = new Set(publishedElsewhere.map((snapshot) => normalizeCodePrefix(snapshot.code)));
   for (const course of courses) {
-    const isPublishedElsewhere = Boolean(publishedElsewhere.get(course.id, blockPlanId));
-    if (isPublishedElsewhere) {
+    const normalizedCode = normalizeCodePrefix(course.code);
+    if (publishedCourseIds.has(course.id)) {
       issues.push({
         code: "course-published-elsewhere",
         courseId: course.id,
@@ -113,9 +110,7 @@ export function publicationIssuesForDraft(
         field: null,
         message: `Der Kurs ${course.code} ist bereits in einer anderen veröffentlichten Fassung sichtbar. Diese muss zuerst ohne den Kurs neu veröffentlicht oder zurückgenommen werden.`,
       });
-    }
-    const normalizedCode = normalizeCodePrefix(course.code);
-    if (!isPublishedElsewhere && normalizedCode && publishedCodesElsewhere.has(normalizedCode)) {
+    } else if (normalizedCode && publishedCodes.has(normalizedCode)) {
       issues.push({
         code: "course-code-published-elsewhere",
         courseId: course.id,
