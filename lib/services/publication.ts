@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import type Database from "better-sqlite3";
 
 import { blockPlanDisplayName } from "@/lib/domain/block-plan-name";
+import { normalizeCodePrefix } from "@/lib/domain/course-code";
 import { type DraftCourse, type DraftEvent, type DraftPhase, type PublicationIssue, validatePublication } from "@/lib/domain/publication";
 import { assertAreaEditPermission } from "@/lib/services/authorization";
 
@@ -23,6 +24,7 @@ type PlanRow = {
   publishedVersionId: string | null;
 };
 type CourseRow = DraftCourse & { program: string; programAbbreviation: string };
+type PublishedCourseCodeRow = { code: string };
 
 /**
  * The refusal to act on a state that changed since it was shown — a draft edited after its preview was rendered, or
@@ -91,14 +93,35 @@ export function publicationIssuesForDraft(
   const publishedElsewhere = sqlite.prepare(`SELECT snapshot.id FROM published_course_snapshots snapshot
     JOIN published_versions version ON version.id = snapshot.version_id
     WHERE snapshot.source_course_id = ? AND version.block_plan_id <> ?`);
+  // Public snapshots preserve the code that was visible at publication time, while the current course code may later
+  // change. Compare those snapshots in JavaScript because SQLite's NOCASE collation does not cover the application's
+  // German Unicode normalisation strategy.
+  const publishedCodesElsewhere = new Set(
+    (sqlite.prepare(`SELECT snapshot.code FROM published_course_snapshots snapshot
+      JOIN published_versions version ON version.id = snapshot.version_id
+      WHERE version.block_plan_id <> ?`).all(blockPlanId) as PublishedCourseCodeRow[])
+      .map((snapshot) => normalizeCodePrefix(snapshot.code))
+      .filter((code): code is string => code !== null),
+  );
   for (const course of courses) {
-    if (publishedElsewhere.get(course.id, blockPlanId)) {
+    const isPublishedElsewhere = Boolean(publishedElsewhere.get(course.id, blockPlanId));
+    if (isPublishedElsewhere) {
       issues.push({
         code: "course-published-elsewhere",
         courseId: course.id,
         semester: null,
         field: null,
         message: `Der Kurs ${course.code} ist bereits in einer anderen veröffentlichten Fassung sichtbar. Diese muss zuerst ohne den Kurs neu veröffentlicht oder zurückgenommen werden.`,
+      });
+    }
+    const normalizedCode = normalizeCodePrefix(course.code);
+    if (!isPublishedElsewhere && normalizedCode && publishedCodesElsewhere.has(normalizedCode)) {
+      issues.push({
+        code: "course-code-published-elsewhere",
+        courseId: course.id,
+        semester: null,
+        field: null,
+        message: `Die Kurskennung ${course.code} ist bereits in einer anderen veröffentlichten Fassung sichtbar. Diese muss zuerst ohne die Kurskennung neu veröffentlicht oder zurückgenommen werden.`,
       });
     }
   }

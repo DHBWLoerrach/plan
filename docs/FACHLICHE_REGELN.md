@@ -155,6 +155,7 @@ Eine Veröffentlichung ist nur möglich, wenn zusätzlich folgende Regeln erfül
 - Jedes Semester von 1 bis zur Anzahl Semester des Studiengangs kommt mindestens einmal vor; alle Kursphasen eines Semesters bilden einen zusammenhängenden Abschnitt.
 - Jeder Termin liegt vollständig innerhalb des Studienzeitraums jedes betroffenen Kurses.
 - Keine veröffentlichte Fassung eines anderen Blockplans verweist auf einen der zu veröffentlichenden Kurse.
+- Keine veröffentlichte Fassung eines anderen Blockplans zeigt eine Kurskennung, die ohne Beachtung der Groß-/Kleinschreibung einer zu veröffentlichenden Kurskennung entspricht.
 
 ## Interne Konten
 

@@ -62,6 +62,20 @@ describe("readPublicationPreview", () => {
     );
   });
 
+  it("reports a course code that another published version still shows", () => {
+    const sqlite = databaseWithPublishablePlan();
+    sqlite.exec(`
+      INSERT INTO block_plans VALUES ('plan-2', 'area-1', NULL, NULL, 1, '2026-01-01T00:00:00.000Z', 'editor-1');
+      INSERT INTO courses VALUES ('course-2', 'program-1', 'plan-2', 'TIF26B', 'tif26b', '2026-10-01', '2027-03-31');
+      INSERT INTO published_versions VALUES ('version-2', 'plan-2', '2026-01-01T00:00:00.000Z', '2026 · TIF26A', 'Informatik');
+      INSERT INTO published_course_snapshots VALUES ('snapshot-2', 'version-2', 'course-2', 'tIf26a', 'Informatik', 'TIF', '2026-10-01', '2027-03-31', 6);
+    `);
+
+    expect(readPublicationPreview(sqlite, "plan-1")?.issues).toContainEqual(
+      expect.objectContaining({ code: "course-code-published-elsewhere", courseId: "course-1" }),
+    );
+  });
+
   it("reports a block plan without any course", () => {
     const sqlite = databaseWithPublishablePlan();
     sqlite.exec("DELETE FROM draft_phases; UPDATE courses SET block_plan_id = NULL WHERE id = 'course-1'");
@@ -139,6 +153,19 @@ describe("publishBlockPlan", () => {
     `);
 
     expect(() => publish(sqlite)).toThrow("bereits in einer anderen veröffentlichten Fassung");
+    expect(sqlite.prepare("SELECT block_plan_id AS blockPlanId FROM published_versions").all()).toEqual([{ blockPlanId: "plan-2" }]);
+  });
+
+  it("refuses a course code that another published version still shows", () => {
+    const sqlite = databaseWithPublishablePlan();
+    sqlite.exec(`
+      INSERT INTO block_plans VALUES ('plan-2', 'area-1', NULL, NULL, 1, '${draftUpdatedAt}', 'editor-1');
+      INSERT INTO courses VALUES ('course-2', 'program-1', 'plan-2', 'TIF26B', 'tif26b', '2026-10-01', '2027-03-31');
+      INSERT INTO published_versions VALUES ('version-2', 'plan-2', '${draftUpdatedAt}', '2026 · TIF26A', 'Informatik');
+      INSERT INTO published_course_snapshots VALUES ('snapshot-2', 'version-2', 'course-2', 'tIf26a', 'Informatik', 'TIF', '2026-10-01', '2027-03-31', 6);
+    `);
+
+    expect(() => publish(sqlite)).toThrow("Kurskennung TIF26A ist bereits in einer anderen veröffentlichten Fassung sichtbar");
     expect(sqlite.prepare("SELECT block_plan_id AS blockPlanId FROM published_versions").all()).toEqual([{ blockPlanId: "plan-2" }]);
   });
 

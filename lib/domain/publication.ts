@@ -39,6 +39,7 @@ export interface PublicationIssue {
   code:
     | "block-plan-without-course"
     | "course-published-elsewhere"
+    | "course-code-published-elsewhere"
     | "coverage-gap"
     | "coverage-overlap"
     | "semester-missing"
