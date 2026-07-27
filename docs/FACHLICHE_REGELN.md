@@ -166,7 +166,13 @@ Ein internes Konto befindet sich genau in einem Zustand:
 - **Aktiv**: Das Konto besitzt ein gültiges lokales Passwort und kann sich anmelden.
 - **Gesperrt**: Die Anmeldung ist gesperrt. Fachliche Zuordnungen bleiben erhalten.
 
-Ein neues Konto wartet auf die Passwortvergabe. Ein Passwortlink ist zufällig, einmal verwendbar, serverseitig nur gehasht gespeichert und sieben Tage gültig. Er kann ausschließlich für ein Konto mit ausstehender Passwortvergabe erzeugt werden; eine Neuausstellung macht einen vorherigen Passwortlink dieses Kontos ungültig. Das erfolgreiche Setzen eines Passworts versetzt das Konto in den aktiven Zustand.
+Ein neues Konto wartet auf die Passwortvergabe. Ein Passwortlink ist zufällig, einmal verwendbar, serverseitig nur gehasht gespeichert und sieben Tage gültig. Er kann ausschließlich für ein Konto mit ausstehender Passwortvergabe erzeugt werden; eine Neuausstellung macht einen vorherigen Passwortlink dieses Kontos ungültig. Ein lokales Passwort muss 15 bis 128 Zeichen lang sein und mindestens einen Großbuchstaben, eine Ziffer sowie ein Sonderzeichen aus der folgenden Menge enthalten:
+
+```
+!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~
+```
+
+Das erfolgreiche Setzen eines Passworts versetzt das Konto in den aktiven Zustand.
 
 Setzt die Systemadministration das Passwort eines aktiven Kontos zurück, werden das bisherige Passwort und alle Sitzungen sofort ungültig, das Konto wartet wieder auf die Passwortvergabe und ein neuer Passwortlink wird ausgegeben. Mitarbeitende können ein vergessenes Passwort nicht selbst zurücksetzen.
 

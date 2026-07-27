@@ -35,14 +35,14 @@ describe("redeemPasswordLink", () => {
 
     await redeemPasswordLink(sqlite, {
       token,
-      password: "ein-sehr-langes-passwort",
+      password: "Ein-sehr-langes-Passwort1!",
       now: new Date("2030-01-02T00:00:00.000Z"),
       hashPassword: async (password) => `better-auth:${password}`,
     });
 
     expect(sqlite.prepare("SELECT status FROM user WHERE id = 'user-1'").get()).toEqual({ status: "ACTIVE" });
     expect(sqlite.prepare("SELECT providerId, accountId, password FROM account WHERE userId = 'user-1'").get()).toEqual({
-      providerId: "credential", accountId: "user-1", password: "better-auth:ein-sehr-langes-passwort",
+      providerId: "credential", accountId: "user-1", password: "better-auth:Ein-sehr-langes-Passwort1!",
     });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM password_links").get()).toEqual({ count: 0 });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM session").get()).toEqual({ count: 0 });
@@ -53,7 +53,7 @@ describe("redeemPasswordLink", () => {
 
     await expect(redeemPasswordLink(sqlite, {
       token,
-      password: "ein-sehr-langes-passwort",
+      password: "Ein-sehr-langes-Passwort1!",
       now: new Date("2030-01-02T00:00:00.000Z"),
       hashPassword: async (password) => `better-auth:${password}`,
     })).rejects.toThrow("ungültig oder abgelaufen");
@@ -65,7 +65,7 @@ describe("redeemPasswordLink", () => {
     const { sqlite, token } = databaseWithPasswordLink();
     const input = {
       token,
-      password: "ein-sehr-langes-passwort",
+      password: "Ein-sehr-langes-Passwort1!",
       now: new Date("2030-01-02T00:00:00.000Z"),
       hashPassword: async (password: string) => `better-auth:${password}`,
     };
@@ -80,14 +80,14 @@ describe("redeemPasswordLink", () => {
 
     await expect(redeemPasswordLink(sqlite, {
       token,
-      password: "ein-sehr-langes-passwort",
+      password: "Ein-sehr-langes-Passwort1!",
       now: new Date("2030-01-02T00:00:00.000Z"),
       hashPassword,
     })).rejects.toThrow("ungültig oder abgelaufen");
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM password_links").get()).toEqual({ count: 1 });
   });
 
-  it("enforces Better Auth's configured password length before consuming the link", async () => {
+  it("rejects a password shorter than 15 characters before consuming the link", async () => {
     const { sqlite, token } = databaseWithPasswordLink();
 
     await expect(redeemPasswordLink(sqlite, {
@@ -96,6 +96,54 @@ describe("redeemPasswordLink", () => {
       now: new Date("2030-01-02T00:00:00.000Z"),
       hashPassword: async (password) => `better-auth:${password}`,
     })).rejects.toThrow("mindestens 15");
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM password_links").get()).toEqual({ count: 1 });
+  });
+
+  it("rejects a password without an uppercase letter before consuming the link", async () => {
+    const { sqlite, token } = databaseWithPasswordLink();
+
+    await expect(redeemPasswordLink(sqlite, {
+      token,
+      password: "einsicherespasswort1!",
+      now: new Date("2030-01-02T00:00:00.000Z"),
+      hashPassword: async (password) => `better-auth:${password}`,
+    })).rejects.toThrow("Großbuchstaben");
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM password_links").get()).toEqual({ count: 1 });
+  });
+
+  it("rejects a password without a digit before consuming the link", async () => {
+    const { sqlite, token } = databaseWithPasswordLink();
+
+    await expect(redeemPasswordLink(sqlite, {
+      token,
+      password: "Ein-sicheres-Passwort!",
+      now: new Date("2030-01-02T00:00:00.000Z"),
+      hashPassword: async (password) => `better-auth:${password}`,
+    })).rejects.toThrow("Ziffer");
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM password_links").get()).toEqual({ count: 1 });
+  });
+
+  it("rejects a password without a special character before consuming the link", async () => {
+    const { sqlite, token } = databaseWithPasswordLink();
+
+    await expect(redeemPasswordLink(sqlite, {
+      token,
+      password: "EinSicheresPasswort1",
+      now: new Date("2030-01-02T00:00:00.000Z"),
+      hashPassword: async (password) => `better-auth:${password}`,
+    })).rejects.toThrow("Sonderzeichen");
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM password_links").get()).toEqual({ count: 1 });
+  });
+
+  it("rejects a password with a special character outside the allowed set before consuming the link", async () => {
+    const { sqlite, token } = databaseWithPasswordLink();
+
+    await expect(redeemPasswordLink(sqlite, {
+      token,
+      password: "EinSicheresPasswort1§",
+      now: new Date("2030-01-02T00:00:00.000Z"),
+      hashPassword: async (password) => `better-auth:${password}`,
+    })).rejects.toThrow("zulässiges Sonderzeichen");
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM password_links").get()).toEqual({ count: 1 });
   });
 
@@ -155,12 +203,12 @@ describe("redeemPasswordLink", () => {
       userId: "user-1",
       currentSessionId: "current-session",
       currentPassword: "bisheriges-passwort",
-      newPassword: "ein-sehr-langes-passwort",
+      newPassword: "Ein-sehr-langes-Passwort1!",
       hashPassword: async (password) => `better-auth:${password}`,
       verifyPassword: async (hash, password) => hash === "old-hash" && password === "bisheriges-passwort",
     });
 
-    expect(sqlite.prepare("SELECT password FROM account WHERE id = 'credential-account'").get()).toEqual({ password: "better-auth:ein-sehr-langes-passwort" });
+    expect(sqlite.prepare("SELECT password FROM account WHERE id = 'credential-account'").get()).toEqual({ password: "better-auth:Ein-sehr-langes-Passwort1!" });
     expect(sqlite.prepare("SELECT id FROM session ORDER BY id").all()).toEqual([{ id: "current-session" }]);
   });
 });

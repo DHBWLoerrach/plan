@@ -110,6 +110,9 @@ export function validatePassword(password: string) {
   const length = [...password].length;
   if (length < minimumPasswordLength) throw new Error(`Das Passwort muss mindestens ${minimumPasswordLength} Zeichen lang sein.`);
   if (length > maximumPasswordLength) throw new Error(`Das Passwort darf höchstens ${maximumPasswordLength} Zeichen lang sein.`);
+  if (!/\p{Lu}/u.test(password)) throw new Error("Das Passwort muss mindestens einen Großbuchstaben enthalten.");
+  if (!/\p{Nd}/u.test(password)) throw new Error("Das Passwort muss mindestens eine Ziffer enthalten.");
+  if (!/[\x21-\x2F\x3A-\x40\x5B-\x60\x7B-\x7E]/.test(password)) throw new Error("Das Passwort muss mindestens ein zulässiges Sonderzeichen enthalten.");
 }
 
 function findPasswordLink(sqlite: Database.Database, tokenHash: string) {
