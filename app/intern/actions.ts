@@ -18,6 +18,15 @@ async function accountId() {
   return account.id;
 }
 
+/**
+ * Signing out is a form submission rather than a link: a link would be prefetched by Next and would
+ * end the session on a mere GET. The session cookie is cleared by the `nextCookies` plugin.
+ */
+export async function signOutAction() {
+  await auth.api.signOut({ headers: await headers() });
+  redirect("/intern/anmelden");
+}
+
 export type PublicationFormState = { error?: string };
 
 /** Every view a publication or withdrawal changes: the public search and detail page, and the internal pages naming the state. */

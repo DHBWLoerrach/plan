@@ -10,7 +10,7 @@ export default async function AccountPage() {
   await connection();
   const account = await getActiveAccount();
   if (!account) redirect("/intern/anmelden");
-  return <SiteShell nav={<InternalNav account={account} current="konto" />}><section className="search-panel narrow-panel" aria-labelledby="account-heading">
+  return <SiteShell nav={<InternalNav account={account} />}><section className="search-panel narrow-panel" aria-labelledby="account-heading">
     <p className="eyebrow">Interner Bereich</p><h1 id="account-heading">Eigenes Konto</h1>
     <p>Angemeldet als {account.email}</p>
     <h2>Passwort ändern</h2>
