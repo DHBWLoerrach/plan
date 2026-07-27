@@ -2,10 +2,9 @@ import { createHash, randomUUID } from "node:crypto";
 
 import type Database from "better-sqlite3";
 
+import { maximumPasswordLength, minimumPasswordLength, specialCharacterPattern } from "@/lib/domain/password-rules";
 import { issuePasswordLinkToken } from "@/lib/services/password-link-token.mjs";
 
-const minimumPasswordLength = 15;
-const maximumPasswordLength = 128;
 const invalidPasswordLinkMessage = "Der Passwortlink ist ungültig oder abgelaufen.";
 
 type PasswordHasher = (password: string) => Promise<string>;
@@ -101,7 +100,7 @@ export function validatePassword(password: string) {
   if (length > maximumPasswordLength) throw new Error(`Das Passwort darf höchstens ${maximumPasswordLength} Zeichen lang sein.`);
   if (!/\p{Lu}/u.test(password)) throw new Error("Das Passwort muss mindestens einen Großbuchstaben enthalten.");
   if (!/\p{Nd}/u.test(password)) throw new Error("Das Passwort muss mindestens eine Ziffer enthalten.");
-  if (!/[\x21-\x2F\x3A-\x40\x5B-\x60\x7B-\x7E]/.test(password)) throw new Error("Das Passwort muss mindestens ein zulässiges Sonderzeichen enthalten.");
+  if (!specialCharacterPattern.test(password)) throw new Error("Das Passwort muss mindestens ein zulässiges Sonderzeichen enthalten.");
 }
 
 function findPasswordLink(sqlite: Database.Database, tokenHash: string) {

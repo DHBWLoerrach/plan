@@ -3,6 +3,7 @@
 import { useActionState, useLayoutEffect, useRef, useState } from "react";
 
 import { setPasswordWithLinkAction, type PasswordLinkActionState } from "@/app/intern/actions";
+import { allowedSpecialCharacters, passwordRuleDescription } from "@/lib/domain/password-rules";
 
 const initialState: PasswordLinkActionState = {};
 
@@ -32,7 +33,7 @@ export function PasswordLinkForm() {
   return <form action={formAction} className="sign-in-form">
     <input name="token" type="hidden" value={token} />
     <label htmlFor="password">Neues Passwort</label>
-    <p id="password-description">15 bis 128 Zeichen, darunter mindestens ein Großbuchstabe, eine Ziffer und ein Sonderzeichen. Zulässig sind: <code>!&quot;#$%&amp;&apos;()*+,-./:;&lt;=&gt;?@[\]^_`{"{"}|{"}"}~</code></p>
+    <p id="password-description">{passwordRuleDescription} Zulässig sind: <code>{allowedSpecialCharacters}</code></p>
     <input id="password" name="password" type="password" autoComplete="new-password" required aria-describedby={state.error ? "password-description password-error" : "password-description"} aria-invalid={Boolean(state.error)} />
     {state.error ? <div role="alert" aria-labelledby="password-error-summary"><p id="password-error-summary">Bitte korrigieren Sie die Passwortangabe.</p><ul><li id="password-error"><a href="#password">{state.error}</a></li></ul></div> : null}
     <button className="button" type="submit" disabled={isPending}>{isPending ? "Passwort wird gespeichert …" : "Passwort speichern"}</button>
