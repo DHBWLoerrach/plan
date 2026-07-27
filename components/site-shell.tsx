@@ -7,7 +7,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
     <header className="site-header">
       <div className="site-header__inner">
         <Link className="wordmark" href="/"><span>DHBW</span> Lörrach <small>Blockpläne</small></Link>
-        <nav aria-label="Hauptnavigation"><Link href="/">Öffentliche Suche</Link><Link href="/intern/anmelden">Interner Bereich</Link></nav>
+        <nav aria-label="Hauptnavigation"><Link href="/">Öffentliche Suche</Link><Link href="/intern">Interner Bereich</Link></nav>
       </div>
     </header>
     <main id="inhalt" className="site-main">{children}</main>
