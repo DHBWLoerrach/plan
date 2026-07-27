@@ -1,6 +1,6 @@
 import type Database from "better-sqlite3";
 
-import { normalizeCodePrefix } from "@/lib/domain/course-code";
+import { normalizeCourseCode } from "@/lib/domain/course-code";
 import type { PhaseType } from "@/lib/domain/phase-type";
 
 export interface PublicCourseBlockPlan {
@@ -38,7 +38,7 @@ type PublishedPhaseRow = { semester: number; type: PhaseType; startDate: string;
  * matching snapshot through its index without first loading every public course into application memory.
  */
 export function readPublicCourseBlockPlan(sqlite: Database.Database, courseCode: string): PublicCourseBlockPlanResult {
-  const normalizedCode = normalizeCodePrefix(courseCode);
+  const normalizedCode = normalizeCourseCode(courseCode);
   if (!normalizedCode) return { kind: "not-found" };
 
   const matches = sqlite

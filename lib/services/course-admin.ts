@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import type Database from "better-sqlite3";
 
 import { normalizeCalendarDay } from "@/lib/domain/calendar-day";
+import { normalizeCourseCode } from "@/lib/domain/course-code";
 import { assertAreaEditPermission } from "@/lib/services/authorization";
 import { assertCourseFitsBlockPlan } from "@/lib/services/course-assignment";
 import { assertStudyPeriodCoversDraftPhases, clearCourseFromDraft, touchDraft } from "@/lib/services/draft-changes";
@@ -93,6 +94,6 @@ function normalizeCourseInput(input: CourseInput): NormalizedCourse {
   const studyStart = normalizeCalendarDay(input.studyStart, "Der Studienbeginn");
   const studyEnd = normalizeCalendarDay(input.studyEnd, "Das Studienende");
   if (studyStart >= studyEnd) throw new Error("Der Studienbeginn muss vor dem Studienende liegen.");
-  return { code, normalizedCode: code.toLocaleLowerCase("de-DE"), programId, studyStart, studyEnd };
+  return { code, normalizedCode: normalizeCourseCode(code), programId, studyStart, studyEnd };
 }
 

@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import type Database from "better-sqlite3";
 
 import { blockPlanDisplayName } from "@/lib/domain/block-plan-name";
-import { normalizeCodePrefix } from "@/lib/domain/course-code";
+import { normalizeCourseCode } from "@/lib/domain/course-code";
 import { type DraftCourse, type DraftEvent, type DraftPhase, type PublicationIssue, validatePublication } from "@/lib/domain/publication";
 import { assertAreaEditPermission } from "@/lib/services/authorization";
 
@@ -99,9 +99,9 @@ export function publicationIssuesForDraft(
     JOIN published_versions version ON version.id = snapshot.version_id
     WHERE version.block_plan_id <> ?`).all(blockPlanId) as PublishedSnapshotRow[];
   const publishedCourseIds = new Set(publishedElsewhere.map((snapshot) => snapshot.sourceCourseId));
-  const publishedCodes = new Set(publishedElsewhere.map((snapshot) => normalizeCodePrefix(snapshot.code)));
+  const publishedCodes = new Set(publishedElsewhere.map((snapshot) => normalizeCourseCode(snapshot.code)));
   for (const course of courses) {
-    const normalizedCode = normalizeCodePrefix(course.code);
+    const normalizedCode = normalizeCourseCode(course.code);
     if (publishedCourseIds.has(course.id)) {
       issues.push({
         code: "course-published-elsewhere",
@@ -150,7 +150,7 @@ export function publishBlockPlan(sqlite: Database.Database, request: Publication
       const snapshotId = randomUUID();
       snapshotIds.set(course.id, snapshotId);
       addSnapshot.run(snapshotId, versionId, course.id, course.code, course.program, course.programAbbreviation, course.studyStart, course.studyEnd, course.semesters);
-      addSearchKey.run(snapshotId, normalizeCodePrefix(course.code));
+      addSearchKey.run(snapshotId, normalizeCourseCode(course.code));
     }
     const addPhase = sqlite.prepare("INSERT INTO published_phases (id, version_id, course_snapshot_id, semester, phase_type, start_date, end_date) VALUES (?, ?, ?, ?, ?, ?, ?)");
     for (const phase of phases) addPhase.run(randomUUID(), versionId, snapshotIds.get(phase.courseId), phase.semester, phase.type, phase.startDate, phase.endDate);
