@@ -1,6 +1,6 @@
 import type Database from "better-sqlite3";
 
-import { matchesCodePrefix, normalizeCodePrefix } from "@/lib/domain/course-code";
+import { normalizeCodePrefix } from "@/lib/domain/course-code";
 import type { DraftCourse, DraftEvent, DraftPhase } from "@/lib/domain/publication";
 
 /** Server-side pagination of the public search (MVP-SPEZIFIKATION.md). */
@@ -86,10 +86,17 @@ export function readPublicFilterOptions(sqlite: Database.Database) {
   };
 }
 
-type PlanRow = {
+type PublicPlanRow = {
+  versionId: string;
   blockPlanId: string;
   name: string;
   area: string;
+  year: number;
+  groupKey: PublicPlanGroupKey;
+};
+
+type PublicCourseRow = {
+  versionId: string;
   id: string;
   code: string;
   program: string;
@@ -98,49 +105,9 @@ type PlanRow = {
   semesters: number;
 };
 
-/**
- * Every published plan with its published courses. A published version always carries at least one course snapshot, so
- * the join loses nothing: a plan without publicly visible courses could neither be grouped nor dated.
- */
-function readPublishedPlans(sqlite: Database.Database): PublicPlan[] {
-  const rows = sqlite
-    .prepare(`SELECT version.block_plan_id AS blockPlanId, version.block_plan_name AS name, version.area_name AS area,
-        snapshot.id, snapshot.code, snapshot.program_name AS program,
-        snapshot.study_start AS studyStart, snapshot.study_end AS studyEnd, snapshot.semesters
-      FROM published_versions version
-      JOIN published_course_snapshots snapshot ON snapshot.version_id = version.id
-      ORDER BY snapshot.code COLLATE NOCASE`)
-    .all() as PlanRow[];
-  const plans = new Map<string, PublicPlan>();
-  for (const row of rows) {
-    const plan = plans.get(row.blockPlanId) ?? { id: row.blockPlanId, name: row.name, area: row.area, year: 0, courses: [] };
-    plan.courses.push({
-      id: row.id,
-      code: row.code,
-      program: row.program,
-      studyStart: row.studyStart,
-      studyEnd: row.studyEnd,
-      semesters: row.semesters,
-    });
-    plans.set(row.blockPlanId, plan);
-  }
-  for (const plan of plans.values()) plan.year = studyStartYear(plan.courses);
-  return [...plans.values()];
-}
-
 /** The year of studies: the calendar year the studies begin in; it is derived, never stored (FACHLICHE_REGELN.md). */
 function studyStartYear(courses: PublicCourse[]): number {
   return Number(courses.reduce((earliest, course) => (course.studyStart < earliest ? course.studyStart : earliest), courses[0].studyStart).slice(0, 4));
-}
-
-/**
- * Exactly one group per plan: future when all study periods of its publicly visible courses begin in the future, past
- * when all have ended, running in every other case (MVP-SPEZIFIKATION.md).
- */
-function groupOfPlan(plan: PublicPlan, today: string): PublicPlanGroupKey {
-  if (plan.courses.every((course) => course.studyStart > today)) return "future";
-  if (plan.courses.every((course) => course.studyEnd < today)) return "past";
-  return "current";
 }
 
 /** The filters as the search applies them: values holding only whitespace count as unset. */
@@ -153,17 +120,89 @@ function normalizeFilters(filters: PublicFilters): PublicFilters {
   return normalized;
 }
 
-function matchesFilters(plan: PublicPlan, filters: PublicFilters, coursePrefix: string | null): boolean {
-  if (filters.area && plan.area !== filters.area) return false;
-  if (filters.year && plan.year !== Number(filters.year)) return false;
-  if (filters.program && !plan.courses.some((course) => course.program === filters.program)) return false;
-  if (coursePrefix && !plan.courses.some((course) => matchesCodePrefix(course.code, coursePrefix))) return false;
-  return true;
+const matchingPlansSql = `
+  WITH matching_plans AS (
+    SELECT version.id AS versionId, version.block_plan_id AS blockPlanId, version.block_plan_name AS name,
+      version.area_name AS area, CAST(substr(MIN(snapshot.study_start), 1, 4) AS INTEGER) AS year,
+      CASE
+        WHEN MIN(snapshot.study_start) > ? THEN 'future'
+        WHEN MAX(snapshot.study_end) < ? THEN 'past'
+        ELSE 'current'
+      END AS groupKey
+    FROM published_versions version
+    JOIN published_course_snapshots snapshot ON snapshot.version_id = version.id
+    WHERE (? IS NULL OR version.area_name = ?)
+      AND (? IS NULL OR EXISTS (
+        SELECT 1 FROM published_course_snapshots filtered_snapshot
+        WHERE filtered_snapshot.version_id = version.id AND filtered_snapshot.program_name = ?
+      ))
+      AND (? IS NULL OR EXISTS (
+        SELECT 1 FROM published_course_search_keys search_key
+        JOIN published_course_snapshots filtered_snapshot ON filtered_snapshot.id = search_key.course_snapshot_id
+        WHERE filtered_snapshot.version_id = version.id AND search_key.normalized_code LIKE ? || '%'
+      ))
+    GROUP BY version.id
+    HAVING (? IS NULL OR CAST(substr(MIN(snapshot.study_start), 1, 4) AS INTEGER) = ?)
+  )
+`;
+
+const planOrderSql = `
+  ORDER BY CASE groupKey WHEN 'current' THEN 0 WHEN 'future' THEN 1 ELSE 2 END,
+    CASE WHEN groupKey = 'future' THEN year END ASC,
+    CASE WHEN groupKey <> 'future' THEN year END DESC,
+    name COLLATE NOCASE ASC, blockPlanId ASC
+`;
+
+function matchingPlanParameters(filters: PublicFilters, coursePrefix: string | null, today: string) {
+  const year = filters.year ? Number(filters.year) : null;
+  return [
+    today, today,
+    filters.area ?? null, filters.area ?? null,
+    filters.program ?? null, filters.program ?? null,
+    coursePrefix, coursePrefix,
+    year, year,
+  ];
 }
 
-/** Within a group: year first, then the published display name, then the stable block plan id (MVP-SPEZIFIKATION.md). */
-function comparePlans(left: PublicPlan, right: PublicPlan, yearOrder: 1 | -1): number {
-  return (left.year - right.year) * yearOrder || left.name.localeCompare(right.name, "de") || left.id.localeCompare(right.id);
+/** The page's plans are filtered, grouped and ordered by SQLite before their visible courses are read. */
+function readMatchingPlanPage(
+  sqlite: Database.Database,
+  filters: PublicFilters,
+  coursePrefix: string | null,
+  today: string,
+  limit: number,
+  offset: number,
+): PublicPlanRow[] {
+  return sqlite.prepare(`${matchingPlansSql} SELECT * FROM matching_plans ${planOrderSql} LIMIT ? OFFSET ?`)
+    .all(...matchingPlanParameters(filters, coursePrefix, today), limit, offset) as PublicPlanRow[];
+}
+
+function countMatchingPlans(sqlite: Database.Database, filters: PublicFilters, coursePrefix: string | null, today: string): number {
+  return (sqlite.prepare(`${matchingPlansSql} SELECT count(*) AS count FROM matching_plans`)
+    .get(...matchingPlanParameters(filters, coursePrefix, today)) as { count: number }).count;
+}
+
+function readCoursesForPlanPage(sqlite: Database.Database, versionIds: string[]): Map<string, PublicCourse[]> {
+  if (!versionIds.length) return new Map();
+  const rows = sqlite.prepare(`SELECT version_id AS versionId, id, code, program_name AS program,
+      study_start AS studyStart, study_end AS studyEnd, semesters
+    FROM published_course_snapshots
+    WHERE version_id IN (${versionIds.map(() => "?").join(", ")})
+    ORDER BY version_id, code COLLATE NOCASE`).all(...versionIds) as PublicCourseRow[];
+  const coursesByVersion = new Map<string, PublicCourse[]>();
+  for (const row of rows) {
+    const courses = coursesByVersion.get(row.versionId) ?? [];
+    courses.push({
+      id: row.id,
+      code: row.code,
+      program: row.program,
+      studyStart: row.studyStart,
+      studyEnd: row.studyEnd,
+      semesters: row.semesters,
+    });
+    coursesByVersion.set(row.versionId, courses);
+  }
+  return coursesByVersion;
 }
 
 /**
@@ -177,21 +216,25 @@ export function searchPublicPlans(
 ): PublicSearchResult {
   const filters = normalizeFilters(request);
   const coursePrefix = normalizeCodePrefix(filters.course);
-  const matching = readPublishedPlans(sqlite).filter((plan) => matchesFilters(plan, filters, coursePrefix));
-  const grouped: Record<PublicPlanGroupKey, PublicPlan[]> = { current: [], future: [], past: [] };
-  for (const plan of matching) grouped[groupOfPlan(plan, today)].push(plan);
-  grouped.current.sort((left, right) => comparePlans(left, right, -1));
-  grouped.future.sort((left, right) => comparePlans(left, right, 1));
-  grouped.past.sort((left, right) => comparePlans(left, right, -1));
-
-  const ordered = groupOrder.flatMap((key) => grouped[key]);
-  const pages = Math.max(Math.ceil(ordered.length / plansPerPage), 1);
+  const total = countMatchingPlans(sqlite, filters, coursePrefix, today);
+  const pages = Math.max(Math.ceil(total / plansPerPage), 1);
   const page = Math.min(Math.max(Math.trunc(Number(request.page)) || 1, 1), pages);
-  const visible = new Set(ordered.slice((page - 1) * plansPerPage, page * plansPerPage));
+  const matchingPlans = readMatchingPlanPage(sqlite, filters, coursePrefix, today, plansPerPage, (page - 1) * plansPerPage);
+  const coursesByVersion = readCoursesForPlanPage(sqlite, matchingPlans.map((plan) => plan.versionId));
+  const grouped: Record<PublicPlanGroupKey, PublicPlan[]> = { current: [], future: [], past: [] };
+  for (const plan of matchingPlans) {
+    grouped[plan.groupKey].push({
+      id: plan.blockPlanId,
+      name: plan.name,
+      area: plan.area,
+      year: plan.year,
+      courses: coursesByVersion.get(plan.versionId) ?? [],
+    });
+  }
   return {
-    groups: groupOrder.map((key) => ({ key, label: groupLabels[key], plans: grouped[key].filter((plan) => visible.has(plan)) })),
+    groups: groupOrder.map((key) => ({ key, label: groupLabels[key], plans: grouped[key] })),
     filters,
-    total: ordered.length,
+    total,
     page,
     pages,
   };

@@ -53,6 +53,9 @@ function publish(
         course.studyEnd ?? `${studyStartYear + 3}-09-30`,
         course.semesters ?? 6,
       );
+    sqlite
+      .prepare("INSERT INTO published_course_search_keys VALUES (?, ?)")
+      .run(`snapshot-${plan.id}-${course.code}`, course.code.toLocaleLowerCase("de-DE"));
   }
 }
 
@@ -259,6 +262,13 @@ describe("searchPublicPlans filters", () => {
 
     expect(allPlanIds(searchPublicPlans(sqlite, { area: "Technik", program: "BWL" }, today))).toEqual(["plan-gemischt"]);
     expect(allPlanIds(searchPublicPlans(sqlite, { area: "Technik", program: "BWL", year: "2024" }, today))).toEqual([]);
+  });
+
+  it("keeps every published course of a matching plan", () => {
+    const result = searchPublicPlans(databaseWithMixedPlans(), { program: "BWL" }, today);
+    const mixedPlan = result.groups.flatMap((group) => group.plans).find((plan) => plan.id === "plan-gemischt");
+
+    expect(mixedPlan?.courses.map((course) => course.code)).toEqual(["TIF26A", "WWI26B"]);
   });
 
   it("ignores blank filter values", () => {
