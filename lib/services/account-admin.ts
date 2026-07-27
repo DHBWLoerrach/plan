@@ -2,9 +2,10 @@ import { randomUUID } from "node:crypto";
 
 import type Database from "better-sqlite3";
 
-import { issuePasswordLinkToken, lockAccount, reissuePasswordLink, resetAccountPassword, unlockAccount } from "@/lib/services/password-link";
+import { normalizeEmail } from "@/lib/domain/account-email.mjs";
+import { lockAccount, reissuePasswordLink, resetAccountPassword, unlockAccount } from "@/lib/services/password-link";
+import { issuePasswordLinkToken } from "@/lib/services/password-link-token.mjs";
 
-const maximumEmailLength = 254;
 const lastActiveSystemAdminMessage = "Das letzte aktive Systemadministrationskonto muss erhalten bleiben.";
 const notFoundMessage = "Das interne Konto wurde nicht gefunden.";
 
@@ -127,11 +128,4 @@ function assertAreasExist(sqlite: Database.Database, areaIds: string[]): void {
 function assertEmailAvailable(sqlite: Database.Database, email: string, exceptUserId: string | null): void {
   const existing = sqlite.prepare("SELECT id FROM user WHERE email = ?").get(email) as { id: string } | undefined;
   if (existing && existing.id !== exceptUserId) throw new Error("Diese E-Mail-Adresse ist bereits vergeben.");
-}
-
-function normalizeEmail(value: string): string {
-  const email = value.trim().toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(email)) throw new Error("Eine gültige dienstliche E-Mail-Adresse ist erforderlich.");
-  if ([...email].length > maximumEmailLength) throw new Error("Die dienstliche E-Mail-Adresse ist zu lang.");
-  return email;
 }

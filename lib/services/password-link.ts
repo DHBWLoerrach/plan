@@ -1,23 +1,12 @@
-import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import type Database from "better-sqlite3";
 
+import { issuePasswordLinkToken } from "@/lib/services/password-link-token.mjs";
+
 const minimumPasswordLength = 15;
 const maximumPasswordLength = 128;
-export const passwordLinkLifetimeMs = 7 * 24 * 60 * 60 * 1000;
 const invalidPasswordLinkMessage = "Der Passwortlink ist ungültig oder abgelaufen.";
-
-/** Replaces any open password link of the account with a fresh, only-hashed one-time link and returns its plain token. */
-export function issuePasswordLinkToken(sqlite: Database.Database, userId: string, now: Date) {
-  const token = randomBytes(32).toString("base64url");
-  const tokenHash = createHash("sha256").update(token).digest("hex");
-  sqlite.prepare("DELETE FROM password_links WHERE user_id = ?").run(userId);
-  sqlite.prepare(`
-    INSERT INTO password_links (id, user_id, token_hash, expires_at, created_at)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(randomUUID(), userId, tokenHash, new Date(now.getTime() + passwordLinkLifetimeMs).toISOString(), now.toISOString());
-  return token;
-}
 
 type PasswordHasher = (password: string) => Promise<string>;
 type PasswordVerifier = (hash: string, password: string) => Promise<boolean>;
