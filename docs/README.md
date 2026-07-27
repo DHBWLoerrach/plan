@@ -7,6 +7,7 @@ Jedes Dokument ist für genau eine Art von Entscheidung maßgeblich. Andere Doku
 - [MVP-Spezifikation](MVP-SPEZIFIKATION.md): Produktumfang, sichtbares Verhalten, Oberflächen und bewusst ausgeklammerte Funktionen.
 - [Architektur und Betrieb](ARCHITEKTUR_UND_BETRIEB.md): technische und betriebliche Entscheidungen, Sicherheit, Migration und Teststrategie.
 - [Betriebshandbuch](BETRIEBSHANDBUCH.md): ausführbare Betriebswege für Sicherung, Migration, Wiederherstellung und Notfälle.
+- [Öffentliche API](OEFFENTLICHE_API.md): versionierter, schreibgeschützter Vertrag für veröffentlichte Kursphasen.
 - [Seed-Daten](SEED-DATEN.md): verbindliche Bereiche und Studiengänge für den initialen Seed.
 - [Barrierefreiheit](BARRIEREFREIHEIT.md): verbindliche Gestaltungs- und Abnahmekriterien der Barrierefreiheit.
 - [`adr/`](adr/): Begründungen schwer reversibler Entscheidungen und verworfene Alternativen.

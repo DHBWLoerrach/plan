@@ -2,7 +2,7 @@
 
 ## Anwendung und Datenhaltung
 
-Das MVP ist ein modularer Next.js-Monolith in einem Docker-Container. Öffentliche Ansichten, interner Editor, Fachlogik, lokale Anmeldung und Datenzugriff sind eine Anwendung, aber klar getrennte Module. Das MVP stellt keine öffentliche REST-API bereit.
+Das MVP ist ein modularer Next.js-Monolith in einem Docker-Container. Öffentliche Ansichten, interner Editor, Fachlogik, lokale Anmeldung und Datenzugriff sind eine Anwendung, aber klar getrennte Module. Neben den öffentlichen Ansichten stellt das MVP eine versionierte, schreibgeschützte REST-API für die veröffentlichten Kursphasen bereit; ihr Vertrag steht in [`OEFFENTLICHE_API.md`](OEFFENTLICHE_API.md).
 
 Die Anwendung greift serverseitig über `better-sqlite3` und explizite SQL-Abfragen auf SQLite zu. Versionierte SQL-Migrationen definieren das vollständige Datenbankschema. Drizzle ORM wird ausschließlich als Datenbankadapter und Tabellenmodell für Better Auth verwendet. Der Produktions-Build legt keine Datenbank an und migriert keine: Er sammelt nur die Routen, rendert keine Seite mit Fachdaten vor und darf deshalb keine Datei ins Image schreiben, die später die auf dem Volume verdecken würde. Die Anwendung läuft vorerst in genau einer Instanz. Datenbank und Bereitstellungsmodell werden erst neu bewertet, wenn mehrere Instanzen oder deutlich mehr gleichzeitige Schreibvorgänge tatsächlich erforderlich werden.
 
