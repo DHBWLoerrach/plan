@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { proxy } from "@/proxy";
 
@@ -10,6 +10,14 @@ function request(path = "/") {
 function nonceOf(policy: string) {
   return /'nonce-([^']+)'/u.exec(policy)?.[1];
 }
+
+function policyOf(path = "/") {
+  return proxy(request(path)).headers.get("content-security-policy") ?? "";
+}
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 describe("content security policy", () => {
   it("answers every request with its own nonce", () => {
@@ -38,6 +46,18 @@ describe("content security policy", () => {
     expect(scriptSource).toContain(`'nonce-${nonceOf(policy)}'`);
     expect(scriptSource).not.toContain("'unsafe-inline'");
     expect(scriptSource).not.toContain("'unsafe-eval'");
+  });
+
+  it("upgrades insecure requests where the application is served over TLS", () => {
+    expect(policyOf()).toContain("upgrade-insecure-requests");
+  });
+
+  it("leaves requests alone while developing over plain HTTP", () => {
+    vi.stubEnv("NODE_ENV", "development");
+
+    // Upgrading would send every stylesheet and script of http://localhost to an https port that
+    // nobody listens on, which leaves the page unstyled.
+    expect(policyOf()).not.toContain("upgrade-insecure-requests");
   });
 });
 

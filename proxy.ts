@@ -21,7 +21,9 @@ export function proxy(request: NextRequest) {
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
-    "upgrade-insecure-requests",
+    // Traefik terminates TLS in front of the application. Local development has no TLS, and
+    // upgrading there would point every stylesheet and script at an https port nobody listens on.
+    ...(isDevelopment ? [] : ["upgrade-insecure-requests"]),
   ].join("; ");
 
   const requestHeaders = new Headers(request.headers);
