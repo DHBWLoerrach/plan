@@ -87,63 +87,22 @@ describe("redeemPasswordLink", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM password_links").get()).toEqual({ count: 1 });
   });
 
-  it("rejects a password shorter than 15 characters before consuming the link", async () => {
+  // Every rule of the password decides alone, and none of them may consume the link on the way.
+  it.each([
+    { rejected: "shorter than 15 characters", password: "zu-kurz", message: "mindestens 15" },
+    { rejected: "without an uppercase letter", password: "einsicherespasswort1!", message: "Großbuchstaben" },
+    { rejected: "without a digit", password: "Ein-sicheres-Passwort!", message: "Ziffer" },
+    { rejected: "without a special character", password: "EinSicheresPasswort1", message: "Sonderzeichen" },
+    { rejected: "with a special character outside the allowed set", password: "EinSicheresPasswort1§", message: "zulässiges Sonderzeichen" },
+  ])("rejects a password $rejected before consuming the link", async ({ password, message }) => {
     const { sqlite, token } = databaseWithPasswordLink();
 
     await expect(redeemPasswordLink(sqlite, {
       token,
-      password: "zu-kurz",
+      password,
       now: new Date("2030-01-02T00:00:00.000Z"),
-      hashPassword: async (password) => `better-auth:${password}`,
-    })).rejects.toThrow("mindestens 15");
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM password_links").get()).toEqual({ count: 1 });
-  });
-
-  it("rejects a password without an uppercase letter before consuming the link", async () => {
-    const { sqlite, token } = databaseWithPasswordLink();
-
-    await expect(redeemPasswordLink(sqlite, {
-      token,
-      password: "einsicherespasswort1!",
-      now: new Date("2030-01-02T00:00:00.000Z"),
-      hashPassword: async (password) => `better-auth:${password}`,
-    })).rejects.toThrow("Großbuchstaben");
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM password_links").get()).toEqual({ count: 1 });
-  });
-
-  it("rejects a password without a digit before consuming the link", async () => {
-    const { sqlite, token } = databaseWithPasswordLink();
-
-    await expect(redeemPasswordLink(sqlite, {
-      token,
-      password: "Ein-sicheres-Passwort!",
-      now: new Date("2030-01-02T00:00:00.000Z"),
-      hashPassword: async (password) => `better-auth:${password}`,
-    })).rejects.toThrow("Ziffer");
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM password_links").get()).toEqual({ count: 1 });
-  });
-
-  it("rejects a password without a special character before consuming the link", async () => {
-    const { sqlite, token } = databaseWithPasswordLink();
-
-    await expect(redeemPasswordLink(sqlite, {
-      token,
-      password: "EinSicheresPasswort1",
-      now: new Date("2030-01-02T00:00:00.000Z"),
-      hashPassword: async (password) => `better-auth:${password}`,
-    })).rejects.toThrow("Sonderzeichen");
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM password_links").get()).toEqual({ count: 1 });
-  });
-
-  it("rejects a password with a special character outside the allowed set before consuming the link", async () => {
-    const { sqlite, token } = databaseWithPasswordLink();
-
-    await expect(redeemPasswordLink(sqlite, {
-      token,
-      password: "EinSicheresPasswort1§",
-      now: new Date("2030-01-02T00:00:00.000Z"),
-      hashPassword: async (password) => `better-auth:${password}`,
-    })).rejects.toThrow("zulässiges Sonderzeichen");
+      hashPassword: async (value) => `better-auth:${value}`,
+    })).rejects.toThrow(message);
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM password_links").get()).toEqual({ count: 1 });
   });
 
