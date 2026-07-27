@@ -141,7 +141,8 @@ const matchingPlansSql = `
       AND (? IS NULL OR EXISTS (
         SELECT 1 FROM published_course_search_keys search_key
         JOIN published_course_snapshots filtered_snapshot ON filtered_snapshot.id = search_key.course_snapshot_id
-        WHERE filtered_snapshot.version_id = version.id AND search_key.normalized_code LIKE ? || '%'
+        WHERE filtered_snapshot.version_id = version.id
+          AND search_key.normalized_code >= ? AND search_key.normalized_code < ?
       ))
     GROUP BY version.id
     HAVING (? IS NULL OR CAST(substr(MIN(snapshot.study_start), 1, 4) AS INTEGER) = ?)
@@ -155,13 +156,33 @@ const planOrderSql = `
     name COLLATE NOCASE ASC, blockPlanId ASC
 `;
 
+/**
+ * The exclusive upper bound of a course code prefix: every string beginning with the prefix sorts before it. The
+ * search compares the prefix as a range rather than through `LIKE`, so that `_` and `%` of a search term stay ordinary
+ * characters and SQLite can answer the comparison from the index on the normalised code.
+ */
+function afterCodePrefix(prefix: string): string {
+  return `${prefix}\u{10FFFF}`;
+}
+
+/**
+ * The year the view keeps showing must not silently drop out of the query: a value that is no calendar year matches no
+ * plan, just like an unknown area does. `Number` would answer `NaN` for it, which SQLite binds as `NULL` — and `NULL`
+ * is how this query says "filter unset".
+ */
+function yearParameter(year: string | undefined): number | null {
+  if (!year) return null;
+  const parsed = Number(year);
+  return Number.isInteger(parsed) ? parsed : -1;
+}
+
 function matchingPlanParameters(filters: PublicFilters, coursePrefix: string | null, today: string) {
-  const year = filters.year ? Number(filters.year) : null;
+  const year = yearParameter(filters.year);
   return [
     today, today,
     filters.area ?? null, filters.area ?? null,
     filters.program ?? null, filters.program ?? null,
-    coursePrefix, coursePrefix,
+    coursePrefix, coursePrefix, coursePrefix && afterCodePrefix(coursePrefix),
     year, year,
   ];
 }

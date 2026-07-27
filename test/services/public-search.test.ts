@@ -257,6 +257,13 @@ describe("searchPublicPlans filters", () => {
     expect(allPlanIds(searchPublicPlans(databaseWithMixedPlans(), { course: "IF24" }, today))).toEqual([]);
   });
 
+  it("searches for the literal course code, so a search term stands for no other character", () => {
+    const sqlite = databaseWithMixedPlans();
+
+    expect(allPlanIds(searchPublicPlans(sqlite, { course: "_IF24" }, today))).toEqual([]);
+    expect(allPlanIds(searchPublicPlans(sqlite, { course: "%" }, today))).toEqual([]);
+  });
+
   it("combines several filters with AND", () => {
     const sqlite = databaseWithMixedPlans();
 
@@ -287,6 +294,14 @@ describe("searchPublicPlans filters", () => {
 
     expect(allPlanIds(result)).toEqual([]);
     expect(result.total).toBe(0);
+  });
+
+  it("reports a year that is no calendar year as an empty result instead of dropping the filter", () => {
+    const result = searchPublicPlans(databaseWithMixedPlans(), { year: "2024x" }, today);
+
+    expect(allPlanIds(result)).toEqual([]);
+    expect(result.total).toBe(0);
+    expect(result.filters).toEqual({ year: "2024x" });
   });
 });
 
