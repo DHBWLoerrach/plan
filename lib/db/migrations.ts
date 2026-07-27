@@ -16,7 +16,8 @@ const migrationsDirectory = path.join(process.cwd(), "migrations");
 function migrationIdsOnDisk() {
   return readdirSync(migrationsDirectory)
     .filter((fileName) => /^\d+_.+\.sql$/u.test(fileName))
-    .sort()
+    // By version number, not as text: sorted as text "10_" would run before "2_".
+    .sort((left, right) => Number.parseInt(left, 10) - Number.parseInt(right, 10))
     .map((fileName) => fileName.slice(0, -".sql".length));
 }
 

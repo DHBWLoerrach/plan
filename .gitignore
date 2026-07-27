@@ -36,6 +36,7 @@ data/*.sqlite
 data/*.sqlite-shm
 data/*.sqlite-wal
 data/*.ersetzt-*
+data/*.neu-*
 
 # vercel
 .vercel

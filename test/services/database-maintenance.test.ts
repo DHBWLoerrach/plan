@@ -104,6 +104,18 @@ describe("applyPendingMigrations", () => {
     sqlite.close();
   });
 
+  it("orders migrations by their version number, not by their file name", () => {
+    const directory = createDirectory();
+    // Sorted as text, "10_" would run before "2_" and alter a table that does not exist yet.
+    const migrationsDirectory = createMigrations(directory, {
+      "2_areas": "CREATE TABLE areas (id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL);",
+      "10_area_note": "ALTER TABLE areas ADD COLUMN note TEXT;",
+    });
+    const databasePath = path.join(directory, "dhbw-mgmt.sqlite");
+
+    expect(applyPendingMigrations({ databasePath, migrationsDirectory })).toEqual(["2_areas", "10_area_note"]);
+  });
+
   it("applies nothing when the database is already on the current version", () => {
     const directory = createDirectory();
     const migrationsDirectory = createMigrations(directory, {
@@ -164,6 +176,23 @@ describe("restoreDatabase", () => {
     restoreDatabase({ snapshotPath, databasePath, migrationsDirectory: path.join(process.cwd(), "migrations") });
 
     expect(existsSync(`${databasePath}-wal`)).toBe(false);
+  });
+
+  it("keeps the replaced database complete, with the journal it was still writing to", async () => {
+    const directory = createDirectory();
+    const { databasePath, sqlite } = createRunningDatabase(directory, "vorher@dhbw-loerrach.de");
+    const snapshotPath = path.join(directory, "snapshot.sqlite");
+    await backupDatabase({ databasePath, targetPath: snapshotPath });
+    // The connection stays open, so this write lives in the write-ahead log and not yet in the
+    // database file itself — exactly the state a running application is replaced in.
+    sqlite.prepare("UPDATE user SET email = ? WHERE id = ?").run("nachher@dhbw-loerrach.de", "account-1");
+
+    const report = restoreDatabase({ snapshotPath, databasePath, migrationsDirectory: path.join(process.cwd(), "migrations") });
+
+    const replaced = new Database(report.replacedPath, { readonly: true });
+    expect(replaced.prepare("SELECT email FROM user").pluck().all()).toEqual(["nachher@dhbw-loerrach.de"]);
+    replaced.close();
+    sqlite.close();
   });
 
   it("refuses a snapshot of a newer application version", async () => {

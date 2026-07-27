@@ -80,9 +80,11 @@ sie mit deren Namen ab. Schritt 3 lässt sich also nicht versehentlich überspri
 Schlägt die Migration oder eine Prüfung fehl, wird nicht mit der neuen Version weitergearbeitet.
 
 1. **Anwendung stoppen** — die Wiederherstellung erfolgt ausschließlich bei gestoppter Anwendung.
-2. **Snapshot einspielen.** Der Befehl prüft den Snapshot vor dem Einspielen, lehnt Snapshots einer
-   neueren Anwendungsversion ab, entfernt das nicht mehr passende Write-Ahead-Log und benennt die
-   ersetzte Datenbank in `<datei>.ersetzt-<zeitpunkt>` um, statt sie zu löschen.
+2. **Snapshot einspielen.** Der Befehl prüft den Snapshot vor dem Einspielen und lehnt ihn ab, wenn
+   er Migrationen enthält, die diese Anwendungsversion nicht kennt — sein Schema wäre dann neuer als
+   der Code. Zwei Anwendungsversionen mit gleichem Migrationsstand unterscheidet er nicht; die
+   Datenbank vermerkt Migrationen, keine Anwendungsversion. Die ersetzte Datenbank wird samt ihrem
+   Write-Ahead-Log nach `<datei>.ersetzt-<zeitpunkt>` verschoben, statt gelöscht zu werden.
    ```bash
    docker compose run --rm app npm run restore:db -- --from /backup/vor-migration-2026-07-27.sqlite
    ```
