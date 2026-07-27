@@ -105,6 +105,8 @@ type PublicCourseRow = {
   semesters: number;
 };
 
+type EventCourseRow = { eventId: string; courseId: string };
+
 /** The year of studies: the calendar year the studies begin in; it is derived, never stored (FACHLICHE_REGELN.md). */
 function studyStartYear(courses: PublicCourse[]): number {
   return Number(courses.reduce((earliest, course) => (course.studyStart < earliest ? course.studyStart : earliest), courses[0].studyStart).slice(0, 4));
@@ -263,9 +265,18 @@ export function readPublicPlan(sqlite: Database.Database, blockPlanId: string): 
     .prepare(`SELECT id, title, description, category, start_date AS startDate, end_date AS endDate, provisional
       FROM published_events WHERE version_id = ? ORDER BY start_date, title COLLATE NOCASE`)
     .all(version.id) as (Omit<DraftEvent, "courseIds" | "provisional"> & { provisional: number })[];
-  const affectedCourses = sqlite.prepare(`SELECT link.course_snapshot_id AS courseId FROM published_event_courses link
+  const eventCourses = sqlite.prepare(`SELECT link.event_id AS eventId, link.course_snapshot_id AS courseId
+    FROM published_event_courses link
+    JOIN published_events event ON event.id = link.event_id
     JOIN published_course_snapshots snapshot ON snapshot.id = link.course_snapshot_id
-    WHERE link.event_id = ? ORDER BY snapshot.code COLLATE NOCASE`);
+    WHERE event.version_id = ? ORDER BY link.event_id, snapshot.code COLLATE NOCASE`)
+    .all(version.id) as EventCourseRow[];
+  const courseIdsByEvent = new Map<string, string[]>();
+  for (const { eventId, courseId } of eventCourses) {
+    const courseIds = courseIdsByEvent.get(eventId) ?? [];
+    courseIds.push(courseId);
+    courseIdsByEvent.set(eventId, courseIds);
+  }
   return {
     id: blockPlanId,
     name: version.name,
@@ -276,7 +287,7 @@ export function readPublicPlan(sqlite: Database.Database, blockPlanId: string): 
     events: events.map((event) => ({
       ...event,
       provisional: Boolean(event.provisional),
-      courseIds: (affectedCourses.all(event.id) as { courseId: string }[]).map((row) => row.courseId),
+      courseIds: courseIdsByEvent.get(event.id) ?? [],
     })),
   };
 }

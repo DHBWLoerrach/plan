@@ -294,6 +294,20 @@ function allPlanIds(result: ReturnType<typeof searchPublicPlans>) {
   return result.groups.flatMap((group) => group.plans.map((plan) => plan.id));
 }
 
+function observeEventCourseQueries(sqlite: Database.Database) {
+  const eventCourseQueries: string[] = [];
+  const observed = new Proxy(sqlite, {
+    get(target, property) {
+      if (property !== "prepare") return Reflect.get(target, property);
+      return (sql: string) => {
+        if (sql.includes("WHERE link.event_id = ?")) eventCourseQueries.push(sql);
+        return target.prepare(sql);
+      };
+    },
+  }) as Database.Database;
+  return { observed, eventCourseQueries };
+}
+
 describe("searchPublicPlans pagination", () => {
   function databaseWithManyPlans(count: number) {
     const sqlite = emptyDatabase();
@@ -373,16 +387,19 @@ describe("readPublicPlan", () => {
     expect(plan?.courses.map((course) => course.code)).toEqual(["TIF24A", "TIF24B"]);
   });
 
-  it("reads course phases and events of the published version", () => {
+  it("reads course phases and events of the published version without querying courses for each event", () => {
     const sqlite = emptyDatabase();
     publish(sqlite, { id: "plan-1", name: "2024 · TIF24A", courses: [{ code: "TIF24A", studyStart: "2024-10-01", studyEnd: "2027-09-30" }] });
     sqlite.exec(`
       INSERT INTO published_phases VALUES ('phase-1', 'version-plan-1', 'snapshot-plan-1-TIF24A', 1, 'THEORY', '2024-10-01', '2024-12-31');
       INSERT INTO published_events VALUES ('event-1', 'version-plan-1', 'Klausur', 'Am Campus', 'EXAM', '2024-11-04', NULL, 1);
+      INSERT INTO published_events VALUES ('event-2', 'version-plan-1', 'Abgabe', NULL, 'SUBMISSION', '2024-12-12', NULL, 0);
       INSERT INTO published_event_courses VALUES ('event-1', 'snapshot-plan-1-TIF24A');
+      INSERT INTO published_event_courses VALUES ('event-2', 'snapshot-plan-1-TIF24A');
     `);
 
-    const plan = readPublicPlan(sqlite, "plan-1");
+    const { observed, eventCourseQueries } = observeEventCourseQueries(sqlite);
+    const plan = readPublicPlan(observed, "plan-1");
 
     expect(plan?.phases).toEqual([
       { courseId: "snapshot-plan-1-TIF24A", semester: 1, type: "THEORY", startDate: "2024-10-01", endDate: "2024-12-31" },
@@ -398,7 +415,18 @@ describe("readPublicPlan", () => {
         provisional: true,
         courseIds: ["snapshot-plan-1-TIF24A"],
       },
+      {
+        id: "event-2",
+        title: "Abgabe",
+        description: null,
+        category: "SUBMISSION",
+        startDate: "2024-12-12",
+        endDate: null,
+        provisional: false,
+        courseIds: ["snapshot-plan-1-TIF24A"],
+      },
     ]);
+    expect(eventCourseQueries).toEqual([]);
   });
 
   it("reads nothing for an unknown block plan id", () => {
