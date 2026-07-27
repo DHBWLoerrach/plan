@@ -17,6 +17,5 @@ export async function GET(_: Request, { params }: RouteContext): Promise<Respons
   const { courseCode } = await params;
   const result = readPublicCourseBlockPlan(sqlite, courseCode);
   if (result.kind === "not-found") return Response.json({ error: "not_found" }, { status: 404, headers: publicApiHeaders });
-  if (result.kind === "ambiguous") return Response.json({ error: "ambiguous_course_code" }, { status: 409, headers: publicApiHeaders });
   return Response.json(result.data, { headers: publicApiHeaders });
 }

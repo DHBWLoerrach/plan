@@ -17,8 +17,7 @@ export interface PublicCourseBlockPlan {
 
 export type PublicCourseBlockPlanResult =
   | { kind: "found"; data: PublicCourseBlockPlan }
-  | { kind: "not-found" }
-  | { kind: "ambiguous" };
+  | { kind: "not-found" };
 
 type PublishedCourseRow = {
   id: string;
@@ -34,24 +33,22 @@ type PublishedPhaseRow = { semester: number; type: PhaseType; startDate: string;
 
 /**
  * The public, published course plan addressed by its exact course code. This reads the immutable snapshots rather
- * than current courses, so an unpublished edit never changes the API. The stored normalised key lets SQLite find the
- * matching snapshot through its index without first loading every public course into application memory.
+ * than current courses, so an unpublished edit never changes the API. The stored normalised key is unique
+ * (`migrations/0003_unique_published_course_code.sql`), so one code names at most one published course.
  */
 export function readPublicCourseBlockPlan(sqlite: Database.Database, courseCode: string): PublicCourseBlockPlanResult {
   const normalizedCode = normalizeCourseCode(courseCode);
   if (!normalizedCode) return { kind: "not-found" };
 
-  const matches = sqlite
+  const course = sqlite
     .prepare(`SELECT snapshot.id, snapshot.code, snapshot.program_name AS program, snapshot.program_abbreviation AS programAbbreviation,
         snapshot.study_start AS studyStart, snapshot.study_end AS studyEnd, snapshot.semesters
       FROM published_course_search_keys search_key
       JOIN published_course_snapshots snapshot ON snapshot.id = search_key.course_snapshot_id
       WHERE search_key.normalized_code = ?`)
-    .all(normalizedCode) as PublishedCourseRow[];
-  if (!matches.length) return { kind: "not-found" };
-  if (matches.length > 1) return { kind: "ambiguous" };
+    .get(normalizedCode) as PublishedCourseRow | undefined;
+  if (!course) return { kind: "not-found" };
 
-  const course = matches[0];
   const phases = sqlite
     .prepare(`SELECT semester, phase_type AS type, start_date AS startDate, end_date AS endDate
       FROM published_phases WHERE course_snapshot_id = ? ORDER BY semester, start_date, end_date`)

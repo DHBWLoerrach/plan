@@ -68,15 +68,16 @@ describe("readPublicCourseBlockPlan", () => {
     expect(readPublicCourseBlockPlan(sqlite, "TIF99A")).toEqual({ kind: "not-found" });
   });
 
-  it("refuses to pick a course from legacy data with ambiguous published codes", () => {
+  // What lets the API answer with one course instead of a choice: no second published version can hold the code.
+  it("cannot be asked for a code that two published versions share", () => {
     const sqlite = databaseWithPublishedCourse();
     sqlite.exec(`
       INSERT INTO block_plans VALUES ('plan-2', 'area-1', NULL, NULL, 1, '2026-01-01T00:00:00.000Z', NULL);
       INSERT INTO published_versions VALUES ('version-2', 'plan-2', '2026-01-01T00:00:00.000Z', 'Zweiter Plan', 'Technik');
       INSERT INTO published_course_snapshots VALUES ('snapshot-2', 'version-2', 'course-2', 'tIf25a', 'Informatik', 'TIF', '2025-10-01', '2028-09-30', 3);
-      INSERT INTO published_course_search_keys VALUES ('snapshot-2', 'tif25a');
     `);
 
-    expect(readPublicCourseBlockPlan(sqlite, "TIF25A")).toEqual({ kind: "ambiguous" });
+    expect(() => sqlite.exec("INSERT INTO published_course_search_keys VALUES ('snapshot-2', 'tif25a')"))
+      .toThrow("UNIQUE constraint failed");
   });
 });

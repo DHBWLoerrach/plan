@@ -45,13 +45,4 @@ describe("public course API", () => {
     expect(response.status).toBe(404);
     await expect(response.json()).resolves.toEqual({ error: "not_found" });
   });
-
-  it("does not pick one result from ambiguous legacy data", async () => {
-    mocks.readPublicCourseBlockPlan.mockReturnValue({ kind: "ambiguous" });
-
-    const response = await GET(new Request("https://example.test/api/v1/courses/TIF25A/block-plan"), context("TIF25A"));
-
-    expect(response.status).toBe(409);
-    await expect(response.json()).resolves.toEqual({ error: "ambiguous_course_code" });
-  });
 });

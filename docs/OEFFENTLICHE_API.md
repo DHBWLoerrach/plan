@@ -42,6 +42,5 @@ Eine erfolgreiche Antwort (`200 OK`) enthält genau den angefragten Kurs und des
 
 | Status | Antwort | Bedeutung |
 | --- | --- | --- |
-| `200` | Kursdaten | Genau ein veröffentlichter Kurs-Snapshot passt zur Kennung. |
+| `200` | Kursdaten | Der veröffentlichte Kurs-Snapshot zur Kennung. Eine Kennung ist über alle veröffentlichten Fassungen hinweg eindeutig. |
 | `404` | `{"error":"not_found"}` | Die Kennung ist unbekannt, nur im Entwurf vorhanden oder ihre Veröffentlichung wurde zurückgenommen. Diese Fälle sind absichtlich nicht unterscheidbar. |
-| `409` | `{"error":"ambiguous_course_code"}` | Historische Daten enthalten mehrere veröffentlichte Snapshots mit derselben Kennung. Neue Veröffentlichungen verhindern diesen Zustand. |
