@@ -39,7 +39,7 @@ export default async function BlockPlansPage({ searchParams }: PageProps<"/inter
   // courses of the manageable areas as a starting point (FACHLICHE_REGELN.md).
   const availableCourses = courseListData(sqlite, account, { area: null, program: null, year: null, assignment: "unassigned" }, "code").courses;
 
-  return <SiteShell><InternalNav account={account} current="blockplaene" /><section className="search-panel" aria-labelledby="block-plans-heading">
+  return <SiteShell nav={<InternalNav account={account} current="blockplaene" />}><section className="search-panel" aria-labelledby="block-plans-heading">
     <p className="eyebrow">Interner Bereich</p>
     <h1 id="block-plans-heading">Blockpläne</h1>
     {deleted ? <p role="status">Der Blockplan wurde gelöscht. Seine Kurse bestehen blockplanlos weiter.</p> : null}

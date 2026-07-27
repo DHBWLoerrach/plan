@@ -41,7 +41,7 @@ export default async function InternalHome() {
   // administration manages all areas, so listing them all would say nothing — only those holding plans do.
   const listedAreas = account.systemAdmin ? areas.filter((area) => plans.some((plan) => plan.areaId === area.id)) : areas;
 
-  return <SiteShell><InternalNav account={account} current="home" /><section className="search-panel" aria-labelledby="internal-heading">
+  return <SiteShell nav={<InternalNav account={account} current="home" />}><section className="search-panel" aria-labelledby="internal-heading">
     <p className="eyebrow">Interner Bereich</p>
     <h1 id="internal-heading">Übersicht</h1>
     <p>Angemeldet als {account.email} — {permissionSummary(account)}. Änderungen bleiben Entwurf, bis Sie sie bewusst veröffentlichen.</p>

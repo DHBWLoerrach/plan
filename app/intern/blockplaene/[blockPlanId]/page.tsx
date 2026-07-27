@@ -98,7 +98,7 @@ export default async function InternalBlockPlanPage({ params, searchParams }: Pa
       : "Veröffentlicht · keine neueren Änderungen"
     : publicationState;
 
-  return <SiteShell><InternalNav account={account} current="blockplaene" /><article className="plan-detail">
+  return <SiteShell nav={<InternalNav account={account} current="blockplaene" />}><article className="plan-detail">
     <header className="plan-workspace-header">
       <div>
         <p className="eyebrow">Interner Entwurf</p>

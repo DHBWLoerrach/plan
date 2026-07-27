@@ -17,6 +17,7 @@ Vor Go-live wird mit der zuständigen DHBW-Stelle geklärt, ob Erklärung zur Ba
 
 ## Interner Editor
 
+- Der Sprunglink „Zum Inhalt springen“ führt hinter sämtliche wiederkehrenden Navigationsblöcke. Die Bereichsnavigation des internen Bereichs steht deshalb vor dem Inhaltsbereich und nicht als dessen erstes Element (WCAG 2.4.1 „Blöcke umgehen“).
 - Anmeldung, Passwortvergabe und Passwortänderung erlauben Passwortmanager, Autofill und Einfügen und verlangen keine kognitive Aufgabe wie das Abschreiben oder Erinnern zusätzlicher Inhalte.
 - Jede Eingabe besitzt ein sichtbares und programmatisch verknüpftes Label. Pflichtangaben und zulässige Formate sind vor der Eingabe erklärt.
 - Validierungsfehler erscheinen am Feld und zusätzlich in einer Fehlerübersicht; bekannte Korrekturmöglichkeiten werden genannt.

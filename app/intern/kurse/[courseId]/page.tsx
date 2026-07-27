@@ -23,7 +23,7 @@ export default async function CourseDetailPage({ params, searchParams }: PagePro
   const created = searchParam(await searchParams, "angelegt") === "1";
   const programs = programOptions(sqlite, account);
 
-  return <SiteShell><InternalNav account={account} current="kurse" /><section className="search-panel" aria-labelledby="course-detail-heading">
+  return <SiteShell nav={<InternalNav account={account} current="kurse" />}><section className="search-panel" aria-labelledby="course-detail-heading">
     <p className="eyebrow">Interner Bereich</p>
     <h1 id="course-detail-heading">Kurs {course.code}</h1>
     {created ? <p role="status">Der Kurs wurde angelegt.</p> : null}

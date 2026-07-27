@@ -23,7 +23,7 @@ export default async function AccountDetailPage({ params }: PageProps<"/intern/k
   const { account: managed, areas, areaIds } = details;
   const initial = { role: managed.role, systemAdmin: Boolean(managed.systemAdmin), areaIds };
 
-  return <SiteShell><InternalNav account={account} current="konten" /><section className="search-panel" aria-labelledby="account-detail-heading">
+  return <SiteShell nav={<InternalNav account={account} current="konten" />}><section className="search-panel" aria-labelledby="account-detail-heading">
     <p className="eyebrow">Interner Bereich · Systemadministration</p>
     <h1 id="account-detail-heading">{managed.email}</h1>
     <p>Zustand: {statusLabels[managed.status]}</p>

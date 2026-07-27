@@ -17,7 +17,7 @@ export default async function NewAccountPage() {
   if (!account.systemAdmin) redirect("/intern");
   const areas = accountAreaOptions(sqlite, account);
 
-  return <SiteShell><InternalNav account={account} current="konten" /><section className="search-panel narrow-panel" aria-labelledby="new-account-heading">
+  return <SiteShell nav={<InternalNav account={account} current="konten" />}><section className="search-panel narrow-panel" aria-labelledby="new-account-heading">
     <p className="eyebrow">Interner Bereich · Systemadministration</p>
     <h1 id="new-account-heading">Neues Konto anlegen</h1>
     <p>Das Konto wartet zunächst auf die Passwortvergabe. Der erzeugte Passwortlink wird genau einmal angezeigt.</p>

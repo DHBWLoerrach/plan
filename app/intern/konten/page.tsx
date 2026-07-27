@@ -28,7 +28,7 @@ export default async function AccountsPage({ searchParams }: PageProps<"/intern/
   const status = statusFilters.includes(requested as AccountStatus) ? (requested as AccountStatus) : undefined;
   const accounts = listAccounts(sqlite, account, status);
 
-  return <SiteShell><InternalNav account={account} current="konten" /><section className="search-panel" aria-labelledby="accounts-heading">
+  return <SiteShell nav={<InternalNav account={account} current="konten" />}><section className="search-panel" aria-labelledby="accounts-heading">
     <p className="eyebrow">Interner Bereich · Systemadministration</p>
     <h1 id="accounts-heading">Interne Konten</h1>
     <p><Link className="button" href="/intern/konten/neu">Neues Konto anlegen</Link></p>

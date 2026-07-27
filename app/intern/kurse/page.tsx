@@ -25,7 +25,7 @@ export default async function CoursesPage({ searchParams }: PageProps<"/intern/k
   const sort = isCourseSort(requestedSort) ? requestedSort : "code";
   const { areas, programs, years, courses } = courseListData(sqlite, account, { area, program, year, assignment }, sort);
 
-  return <SiteShell><InternalNav account={account} current="kurse" /><section className="search-panel" aria-labelledby="courses-heading">
+  return <SiteShell nav={<InternalNav account={account} current="kurse" />}><section className="search-panel" aria-labelledby="courses-heading">
     <p className="eyebrow">Interner Bereich</p>
     <h1 id="courses-heading">Kurse</h1>
     <p><Link className="button" href="/intern/kurse/neu">Kurs anlegen</Link></p>

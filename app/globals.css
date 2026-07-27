@@ -33,7 +33,7 @@ p[role="status"] { margin: 0; color: var(--success); }
 .skip-link:focus { top: 1rem; }
 
 .site-header { background: #fff; border-top: 4px solid var(--red); border-bottom: 1px solid var(--line); }
-.site-header__inner, .site-main, .site-footer { width: min(1120px, calc(100% - 2rem)); margin: 0 auto; }
+.site-header__inner, .site-main, .site-footer, .internal-nav { width: min(1120px, calc(100% - 2rem)); margin: 0 auto; }
 .site-header__inner { min-height: 5rem; display: flex; align-items: center; justify-content: space-between; gap: 2rem; }
 .wordmark { display: flex; align-items: center; gap: .65rem; font-weight: 700; text-decoration: none; }
 .wordmark span { display: inline-flex; align-items: center; padding: .38rem .55rem; background: var(--red); color: #fff; font-size: 1.2rem; font-weight: 800; line-height: 1; letter-spacing: .01em; }
@@ -178,7 +178,9 @@ p[role="status"] { margin: 0; color: var(--success); }
 .sign-in-form p[id$="-error"] { color: var(--error); }
 .sign-in-form .button { justify-self: start; margin-top: .5rem; }
 
-.internal-nav { display: flex; flex-wrap: wrap; gap: 1.3rem; margin-top: 1.5rem; padding-bottom: .9rem; border-bottom: 1px solid var(--line); }
+/* Sits between header and main, so it carries the page width itself and keeps its distance to both. */
+.internal-nav { display: flex; flex-wrap: wrap; gap: 1.3rem; margin-top: 2rem; padding-bottom: .9rem; border-bottom: 1px solid var(--line); }
+.internal-nav + .site-main { padding-top: 1.5rem; }
 .internal-nav a { font-weight: 700; font-size: .95rem; text-decoration: none; }
 .internal-nav a:hover { color: var(--red); text-decoration: underline; text-underline-offset: .3rem; }
 .internal-nav a[aria-current="page"] { padding-bottom: .2rem; border-bottom: .2rem solid var(--red); color: var(--red); }

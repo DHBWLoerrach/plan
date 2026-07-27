@@ -17,7 +17,7 @@ export default async function NewCoursePage() {
   if (!managesAnyArea(account)) redirect("/intern");
   const programs = programOptions(sqlite, account);
 
-  return <SiteShell><InternalNav account={account} current="kurse" /><section className="search-panel narrow-panel" aria-labelledby="new-course-heading">
+  return <SiteShell nav={<InternalNav account={account} current="kurse" />}><section className="search-panel narrow-panel" aria-labelledby="new-course-heading">
     <p className="eyebrow">Interner Bereich</p>
     <h1 id="new-course-heading">Kurs anlegen</h1>
     {programs.length ? <CreateCourseForm programs={programs} /> : <p className="empty-note">Ihnen ist kein Bereich mit Studiengängen zugeordnet.</p>}

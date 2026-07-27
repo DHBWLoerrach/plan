@@ -32,7 +32,7 @@ export default async function PublicationPreviewPage({ params, searchParams }: P
   // Every assigned course carries the same number of semesters (FACHLICHE_REGELN.md), so the first one answers for the plan.
   const semesters = courses[0]?.semesters ?? 0;
 
-  return <SiteShell><InternalNav account={account} current="blockplaene" /><article className="plan-detail">
+  return <SiteShell nav={<InternalNav account={account} current="blockplaene" />}><article className="plan-detail">
     <p className="eyebrow">Vorschau der Veröffentlichung</p>
     <h1>{displayName}</h1>
     {changed ? <p role="alert" className="notice">
