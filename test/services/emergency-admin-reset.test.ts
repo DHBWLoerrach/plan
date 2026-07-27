@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -8,6 +8,7 @@ import Database from "better-sqlite3";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { resetSystemAdminPassword } from "@/lib/services/emergency-admin-reset.mjs";
+import { applySchema } from "@/test/schema";
 
 const temporaryDirectories: string[] = [];
 
@@ -18,7 +19,7 @@ function createDatabase({ email = "admin@dhbw-loerrach.de", systemAdmin = 1, sta
   temporaryDirectories.push(directory);
   const databasePath = path.join(directory, "database.sqlite");
   const sqlite = new Database(databasePath);
-  sqlite.exec(readFileSync(path.join(process.cwd(), "migrations/0000_initial.sql"), "utf8"));
+  applySchema(sqlite);
   sqlite.prepare("INSERT INTO user (id, name, email, emailVerified, role, system_admin, status, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
     "admin-1", email, email, 0, "NONE", systemAdmin, status, 1000, 1000,
   );

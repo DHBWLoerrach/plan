@@ -16,7 +16,9 @@ try {
     migrationsDirectory: path.join(process.cwd(), "migrations"),
   });
   process.stdout.write(`Wiederhergestellter Migrationsstand: ${report.migrations.join(", ")}\n`);
-  process.stdout.write(`Ersetzte Datenbank liegt unter: ${path.resolve(report.replacedPath)}\n`);
+  process.stdout.write(report.replacedPath === null
+    ? "Es war keine Datenbank vorhanden; es wurde keine ersetzt.\n"
+    : `Ersetzte Datenbank liegt unter: ${path.resolve(report.replacedPath)}\n`);
 } catch (error) {
   const message = error instanceof Error ? error.message : "Unbekannter Fehler";
   process.stderr.write(`Die Wiederherstellung wurde abgebrochen: ${message}\n`);

@@ -10,9 +10,16 @@ import { applyMigrations, pendingMigrations } from "@/lib/db/migrations";
 import { seedMasterData } from "@/lib/db/seed";
 
 const databasePath = process.env.DATABASE_URL ?? path.join(process.cwd(), "data", "dhbw-mgmt.sqlite");
-const isProductionRuntime = process.env.NODE_ENV === "production" && process.env.NEXT_PHASE !== "phase-production-build";
+const isBuildPhase = process.env.NEXT_PHASE === "phase-production-build";
 
 function createDatabase() {
+  // `next build` imports this module to collect the routes, but renders no page that reads data —
+  // every page is dynamic. Opening the configured file here would create, migrate and seed a
+  // database inside the image, which would then shadow the one on the volume. The build gets an
+  // empty database with no schema instead: anything that did query during the build fails on the
+  // missing table rather than silently baking data in.
+  if (isBuildPhase) return new Database(":memory:");
+
   mkdirSync(path.dirname(databasePath), { recursive: true });
   const sqlite = new Database(databasePath);
   sqlite.pragma("foreign_keys = ON");
@@ -29,7 +36,7 @@ function createDatabase() {
   // production the start migrates, so a fresh checkout runs without a separate command.
   const pending = pendingMigrations(sqlite);
   if (pending.length > 0) {
-    if (isProductionRuntime) throw new Error(`Ausstehende Migrationen: ${pending.join(", ")}. Führen Sie zuerst npm run migrate:db aus.`);
+    if (process.env.NODE_ENV === "production") throw new Error(`Ausstehende Migrationen: ${pending.join(", ")}. Führen Sie zuerst npm run migrate:db aus.`);
     applyMigrations(sqlite, pending);
   }
 

@@ -5,20 +5,22 @@ import path from "node:path";
 
 import type Database from "better-sqlite3";
 
+import { compareMigrationIds, isMigrationFileName } from "@/lib/db/migration-order.mjs";
+
 /**
- * The migration handling of the running application. It repeats the little the operational command
- * in `lib/services/database-maintenance.mjs` also does, because the bundler can only trace file
- * access whose directory it resolves statically — an injectable directory would pull the whole
- * project into the build output. Both read the same files and the same bookkeeping table.
+ * The migration handling of the running application. It reads the same files and the same
+ * bookkeeping table as the operational command in `lib/services/database-maintenance.mjs`, and
+ * shares its naming and ordering rules with it; only the directory access is its own, because the
+ * bundler can trace file access only where it resolves the directory statically — an injectable
+ * directory would pull the whole project into the build output.
  */
 const migrationsDirectory = path.join(process.cwd(), "migrations");
 
 function migrationIdsOnDisk() {
   return readdirSync(migrationsDirectory)
-    .filter((fileName) => /^\d+_.+\.sql$/u.test(fileName))
-    // By version number, not as text: sorted as text "10_" would run before "2_".
-    .sort((left, right) => Number.parseInt(left, 10) - Number.parseInt(right, 10))
-    .map((fileName) => fileName.slice(0, -".sql".length));
+    .filter(isMigrationFileName)
+    .map((fileName) => fileName.slice(0, -".sql".length))
+    .sort(compareMigrationIds);
 }
 
 /** @returns the migrations the database has not seen yet, without changing anything. */

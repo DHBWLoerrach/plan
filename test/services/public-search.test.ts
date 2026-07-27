@@ -1,5 +1,4 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
+import { applySchema } from "@/test/schema";
 
 import Database from "better-sqlite3";
 import { describe, expect, it } from "vitest";
@@ -16,7 +15,7 @@ const today = "2026-07-26";
 
 function emptyDatabase() {
   const sqlite = new Database(":memory:");
-  sqlite.exec(readFileSync(path.join(process.cwd(), "migrations/0000_initial.sql"), "utf8"));
+  applySchema(sqlite);
   sqlite.exec(`
     INSERT INTO areas VALUES ('area-1', 'Technik', 'technik');
     INSERT INTO areas VALUES ('area-2', 'Wirtschaft', 'wirtschaft');

@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { internalAuthOptions, parseTrustedProxies } from "@/lib/auth-options";
 import { authSchema } from "@/lib/db/auth-schema";
+import { applySchema } from "@/test/schema";
 
 const baseUrl = "https://blockplan.dhbw-loerrach.de";
 const traefikAddress = "10.0.0.7";
@@ -20,7 +21,7 @@ function createAuth(trustedProxies = parseTrustedProxies("10.0.0.0/24")) {
   const directory = mkdtempSync(path.join(os.tmpdir(), "dhbw-mgmt-rate-limit-"));
   temporaryDirectories.push(directory);
   const sqlite = new Database(path.join(directory, "database.sqlite"));
-  sqlite.exec(readFileSync(path.join(process.cwd(), "migrations/0000_initial.sql"), "utf8"));
+  applySchema(sqlite);
   const options = internalAuthOptions({
     secret: "a".repeat(32),
     database: drizzleAdapter(drizzle(sqlite), { provider: "sqlite", schema: authSchema }),

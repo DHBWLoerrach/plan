@@ -1,18 +1,17 @@
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
-import path from "node:path";
 
 import Database from "better-sqlite3";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createInternalAccount, issuePasswordLink, lockInternalAccount, unlockInternalAccount, updateAccountEmail, updateAccountPermissions } from "@/lib/services/account-admin";
+import { applySchema } from "@/test/schema";
 
 const databases: Database.Database[] = [];
 
 function createDatabase() {
   const sqlite = new Database(":memory:");
   databases.push(sqlite);
-  sqlite.exec(readFileSync(path.join(process.cwd(), "migrations/0000_initial.sql"), "utf8"));
+  applySchema(sqlite);
   sqlite.prepare("INSERT INTO areas (id, name, normalized_name) VALUES (?, ?, ?)").run("area-01", "Technik", "technik");
   sqlite.prepare("INSERT INTO areas (id, name, normalized_name) VALUES (?, ?, ?)").run("area-02", "Wirtschaft", "wirtschaft");
   return sqlite;

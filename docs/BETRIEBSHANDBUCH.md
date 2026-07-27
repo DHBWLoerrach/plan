@@ -61,19 +61,27 @@ Migrationen laufen nicht nebenbei: Die Anwendung wird dafür gestoppt.
    ```bash
    docker compose run --rm app npm run backup:db -- --to /backup/vor-migration-$(date +%F).sqlite
    ```
-3. **Migrationen ausführen.** Der Befehl wendet jede noch nicht eingespielte Migration in ihrer
-   Versionsreihenfolge an, jede in einer eigenen Transaktion.
+3. **Neues Image bereitstellen**, aber noch nicht starten. Die Migrationen liegen im Image; nur das
+   neue Image kennt die neuen. Aus dem alten Image aufgerufen, meldet `migrate:db` „nichts zu tun"
+   und der anschließende Start des neuen Images bricht mit den ausstehenden Migrationen ab.
+   ```bash
+   docker compose pull app   # oder: docker compose build app
+   ```
+4. **Migrationen ausführen — aus dem neuen Image.** `docker compose run` verwendet das Image, das in
+   der Compose-Datei steht: Diese muss also bereits auf die neue Version zeigen. Der Befehl wendet
+   jede noch nicht eingespielte Migration in ihrer Versionsreihenfolge an, jede in einer eigenen
+   Transaktion, und nennt am Ende den erreichten Migrationsstand.
    ```bash
    docker compose run --rm app npm run migrate:db
    ```
-4. **Neues Image starten und verifizieren:** Container-Healthcheck, HTTP-Erreichbarkeit, eine
+5. **Neues Image starten und verifizieren:** Container-Healthcheck, HTTP-Erreichbarkeit, eine
    erneute Sicherung als Datenbankprüfung sowie ein fachlicher Smoke-Test (öffentliche Suche öffnen,
    einen veröffentlichten Blockplan aufrufen, intern anmelden).
-5. **Dokumentieren:** Sicherungsdatei, Migrationsversion, Prüfergebnis und ein gegebenenfalls
-   ausgeführter Rückweg.
+6. **Dokumentieren:** Sicherungsdatei, Migrationsstand vor und nach dem Schritt, Prüfergebnis und ein
+   gegebenenfalls ausgeführter Rückweg.
 
 Die produktive Anwendung migriert nicht selbst: Findet sie beim Start ausstehende Migrationen, bricht
-sie mit deren Namen ab. Schritt 3 lässt sich also nicht versehentlich überspringen.
+sie mit deren Namen ab. Schritt 4 lässt sich also nicht versehentlich überspringen.
 
 ## Rückweg
 
@@ -84,11 +92,14 @@ Schlägt die Migration oder eine Prüfung fehl, wird nicht mit der neuen Version
    er Migrationen enthält, die diese Anwendungsversion nicht kennt — sein Schema wäre dann neuer als
    der Code. Zwei Anwendungsversionen mit gleichem Migrationsstand unterscheidet er nicht; die
    Datenbank vermerkt Migrationen, keine Anwendungsversion. Die ersetzte Datenbank wird samt ihrem
-   Write-Ahead-Log nach `<datei>.ersetzt-<zeitpunkt>` verschoben, statt gelöscht zu werden.
+   Write-Ahead-Log nach `<datei>.ersetzt-<zeitpunkt>` verschoben, statt gelöscht zu werden; der
+   Befehl nennt den Pfad. Scheitert eine der Verschiebungen, macht er die bereits erfolgten
+   rückgängig und lässt die vorhandene Datenbank an ihrem Platz.
    ```bash
    docker compose run --rm app npm run restore:db -- --from /backup/vor-migration-2026-07-27.sqlite
    ```
-3. **Passende Konfiguration wiederherstellen und das vorherige Container-Image starten.**
+3. **Passende Konfiguration wiederherstellen und das vorherige Container-Image starten.** Die
+   Compose-Datei zeigt danach wieder auf die vorherige Version.
 4. **Verifizieren** wie nach einer Migration.
 5. **Dokumentieren**, dass und warum der Rückweg gegangen wurde.
 

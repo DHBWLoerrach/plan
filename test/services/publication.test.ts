@@ -1,16 +1,15 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 
 import Database from "better-sqlite3";
 import { describe, expect, it } from "vitest";
 
 import { StaleStateError, publishBlockPlan, readPublicationPreview, withdrawBlockPlan } from "@/lib/services/publication";
+import { applySchema } from "@/test/schema";
 
 const draftUpdatedAt = "2026-01-01T00:00:00.000Z";
 
 function databaseWithPublishablePlan() {
   const sqlite = new Database(":memory:");
-  sqlite.exec(readFileSync(path.join(process.cwd(), "migrations/0000_initial.sql"), "utf8"));
+  applySchema(sqlite);
   sqlite.exec(`
     INSERT INTO areas VALUES ('area-1', 'Informatik', 'informatik');
     INSERT INTO programs VALUES ('program-1', 'area-1', 'Informatik', 'TIF', 6);

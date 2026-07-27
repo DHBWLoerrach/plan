@@ -4,10 +4,11 @@ import os from "node:os";
 import path from "node:path";
 
 import Database from "better-sqlite3";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { applyMigrations, pendingMigrations } from "@/lib/db/migrations";
 import { applyPendingMigrations, backupDatabase, restoreDatabase } from "@/lib/services/database-maintenance.mjs";
+import { applySchema, migrationIds } from "@/test/schema";
 
 const temporaryDirectories: string[] = [];
 
@@ -23,8 +24,9 @@ function createRunningDatabase(directory: string, email = "admin@dhbw-loerrach.d
   const sqlite = new Database(databasePath);
   sqlite.pragma("journal_mode = WAL");
   sqlite.exec("CREATE TABLE _migrations (id TEXT PRIMARY KEY NOT NULL, applied_at TEXT NOT NULL)");
-  sqlite.exec(readFileSync(path.join(process.cwd(), "migrations/0000_initial.sql"), "utf8"));
-  sqlite.prepare("INSERT INTO _migrations (id, applied_at) VALUES (?, ?)").run("0000_initial", new Date().toISOString());
+  applySchema(sqlite);
+  const record = sqlite.prepare("INSERT INTO _migrations (id, applied_at) VALUES (?, ?)");
+  for (const migrationId of migrationIds()) record.run(migrationId, new Date().toISOString());
   sqlite.prepare("INSERT INTO user (id, name, email, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?)").run("account-1", email, email, 1, 1);
   return { databasePath, sqlite };
 }
@@ -39,7 +41,14 @@ function createMigrations(directory: string, steps: Record<string, string>) {
   return migrationsDirectory;
 }
 
+/** The database a restore set aside, failing the test when it reports none. */
+function openReplacedDatabase(replacedPath: string | null) {
+  if (replacedPath === null) throw new Error("Die Wiederherstellung hat keine ersetzte Datenbank gemeldet.");
+  return new Database(replacedPath, { readonly: true });
+}
+
 afterEach(() => {
+  vi.useRealTimers();
   for (const directory of temporaryDirectories.splice(0)) rmSync(directory, { force: true, recursive: true });
 });
 
@@ -62,7 +71,23 @@ describe("backupDatabase", () => {
 
     const report = await backupDatabase({ databasePath, targetPath: path.join(directory, "snapshot.sqlite") });
 
-    expect(report.migrations).toEqual(["0000_initial"]);
+    expect(report.migrations).toEqual(["0000_initial", "0001_foreign_key_indexes"]);
+  });
+
+  it("names the migration state in the order the migrations were applied", async () => {
+    const directory = createDirectory();
+    // Read back as text, "10_" would come before "2_" and the operator would log an order that
+    // never happened. The state named here is the one the runbook has them write down.
+    const migrationsDirectory = createMigrations(directory, {
+      "2_areas": "CREATE TABLE areas (id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL);",
+      "10_area_note": "ALTER TABLE areas ADD COLUMN note TEXT;",
+    });
+    const databasePath = path.join(directory, "dhbw-mgmt.sqlite");
+    applyPendingMigrations({ databasePath, migrationsDirectory });
+
+    const report = await backupDatabase({ databasePath, targetPath: path.join(directory, "snapshot.sqlite") });
+
+    expect(report.migrations).toEqual(["2_areas", "10_area_note"]);
   });
 
   it("refuses a snapshot whose foreign keys are broken", async () => {
@@ -159,9 +184,47 @@ describe("restoreDatabase", () => {
     const restored = new Database(databasePath, { readonly: true });
     expect(restored.prepare("SELECT email FROM user").pluck().all()).toEqual(["vorher@dhbw-loerrach.de"]);
     restored.close();
-    const replaced = new Database(report.replacedPath, { readonly: true });
+    const replaced = openReplacedDatabase(report.replacedPath);
     expect(replaced.prepare("SELECT email FROM user").pluck().all()).toEqual(["nachher@dhbw-loerrach.de"]);
     replaced.close();
+  });
+
+  it("reports no replaced database when there was none to replace", async () => {
+    const directory = createDirectory();
+    const { databasePath, sqlite } = createRunningDatabase(directory);
+    const snapshotPath = path.join(directory, "snapshot.sqlite");
+    await backupDatabase({ databasePath, targetPath: snapshotPath });
+    sqlite.close();
+    // The first restore on a fresh volume: the snapshot arrives where no database is yet.
+    const emptyDatabasePath = path.join(directory, "leeres-volume.sqlite");
+
+    const report = restoreDatabase({ snapshotPath, databasePath: emptyDatabasePath, migrationsDirectory: path.join(process.cwd(), "migrations") });
+
+    expect(report.replacedPath).toBeNull();
+    expect(existsSync(emptyDatabasePath)).toBe(true);
+  });
+
+  it("puts the database back when a move fails halfway through", async () => {
+    const directory = createDirectory();
+    const { databasePath, sqlite } = createRunningDatabase(directory, "vorher@dhbw-loerrach.de");
+    const snapshotPath = path.join(directory, "snapshot.sqlite");
+    await backupDatabase({ databasePath, targetPath: snapshotPath });
+    sqlite.close();
+    writeFileSync(`${databasePath}-wal`, "Journalinhalt");
+    // The names carry the restore's own timestamp, so the clock stands still while the destination
+    // of the journal move is blocked by a directory: moving a file onto one fails with EISDIR.
+    const now = new Date("2026-07-27T08:00:00.000Z");
+    vi.useFakeTimers({ now });
+    const replacedPath = `${databasePath}.ersetzt-${now.toISOString().replace(/[:.]/gu, "-")}`;
+    mkdirSync(`${replacedPath}-wal`);
+
+    expect(() => restoreDatabase({ snapshotPath, databasePath, migrationsDirectory: path.join(process.cwd(), "migrations") })).toThrow();
+
+    const untouched = new Database(databasePath, { readonly: true });
+    expect(untouched.prepare("SELECT email FROM user").pluck().all()).toEqual(["vorher@dhbw-loerrach.de"]);
+    untouched.close();
+    expect(readFileSync(`${databasePath}-wal`, "utf8")).toBe("Journalinhalt");
+    expect(existsSync(replacedPath)).toBe(false);
   });
 
   it("drops the write-ahead log of the replaced database", async () => {
@@ -189,7 +252,7 @@ describe("restoreDatabase", () => {
 
     const report = restoreDatabase({ snapshotPath, databasePath, migrationsDirectory: path.join(process.cwd(), "migrations") });
 
-    const replaced = new Database(report.replacedPath, { readonly: true });
+    const replaced = openReplacedDatabase(report.replacedPath);
     expect(replaced.prepare("SELECT email FROM user").pluck().all()).toEqual(["nachher@dhbw-loerrach.de"]);
     replaced.close();
     sqlite.close();
@@ -257,7 +320,7 @@ describe("operational commands", () => {
 
     expect(output).toContain("0000_initial");
     const sqlite = new Database(databasePath, { readonly: true });
-    expect(sqlite.prepare("SELECT id FROM _migrations").pluck().all()).toEqual(["0000_initial"]);
+    expect(sqlite.prepare("SELECT id FROM _migrations").pluck().all()).toEqual(["0000_initial", "0001_foreign_key_indexes"]);
     sqlite.close();
   });
 

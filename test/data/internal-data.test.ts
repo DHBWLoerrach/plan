@@ -1,5 +1,4 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
+import { applySchema } from "@/test/schema";
 
 import Database from "better-sqlite3";
 import { afterEach, describe, expect, it } from "vitest";
@@ -45,7 +44,7 @@ const completeDraft = [
 function createDatabase() {
   const sqlite = new Database(":memory:");
   databases.push(sqlite);
-  sqlite.exec(readFileSync(path.join(process.cwd(), "migrations/0000_initial.sql"), "utf8"));
+  applySchema(sqlite);
 
   sqlite.prepare("INSERT INTO areas (id, name, normalized_name) VALUES (?, ?, ?)").run("area-tech", "Technik", "technik");
   sqlite.prepare("INSERT INTO areas (id, name, normalized_name) VALUES (?, ?, ?)").run("area-business", "Wirtschaft", "wirtschaft");
@@ -132,6 +131,13 @@ function createDatabase() {
   );
 
   return sqlite;
+}
+
+/** The first column of each index on a table — the only ones a lookup on that column can use. */
+function indexedColumns(sqlite: Database.Database, table: string): (string | undefined)[] {
+  const indexes = sqlite.prepare(`PRAGMA index_list(${table})`).all() as { name: string }[];
+  return indexes.map((index) => (sqlite.prepare(`PRAGMA index_info(${index.name})`).all() as { seqno: number; name: string }[])
+    .find((column) => column.seqno === 0)?.name);
 }
 
 function insertAccount(sqlite: Database.Database, input: {
@@ -385,6 +391,21 @@ describe("internal block plan data", () => {
     for (const draft of incomplete) expect(draft.issueCount).toBeGreaterThan(0);
     expect(incompleteDrafts(sqlite, blockPlanListData(sqlite, technicalEditor, noPlanFilters, "draft").plans)
       .map((draft) => draft.id)).toEqual(["plan-tech-2025", "plan-tech"]);
+  });
+
+  it("reaches the draft rows of a single block plan by index", () => {
+    const sqlite = createDatabase();
+
+    // The start page checks every plan of the account this way. Without an index on the foreign key
+    // each of those checks scans the phase and event tables of all plans, so the page costs the
+    // square of the number of block plans instead of growing with it.
+    for (const table of ["courses", "draft_phases", "draft_events"]) {
+      expect(indexedColumns(sqlite, table)).toContain("block_plan_id");
+    }
+    // Detaching a course deletes its phases and event links by course, and deleting the course has
+    // SQLite look for rows still referencing it.
+    expect(indexedColumns(sqlite, "draft_phases")).toContain("course_id");
+    expect(indexedColumns(sqlite, "draft_event_courses")).toContain("course_id");
   });
 
   it("returns the minimal draft data and summaries used by the workspace", () => {

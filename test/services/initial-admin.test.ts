@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -8,6 +8,7 @@ import Database from "better-sqlite3";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { bootstrapInitialSystemAdmin } from "@/lib/services/initial-admin.mjs";
+import { applySchema, migrationIds } from "@/test/schema";
 
 const temporaryDirectories: string[] = [];
 
@@ -17,8 +18,11 @@ function createDatabase({ migrated = true }: { migrated?: boolean } = {}) {
   const databasePath = path.join(directory, "database.sqlite");
   const sqlite = new Database(databasePath);
   sqlite.exec("CREATE TABLE _migrations (id TEXT PRIMARY KEY NOT NULL, applied_at TEXT NOT NULL)");
-  sqlite.exec(readFileSync(path.join(process.cwd(), "migrations/0000_initial.sql"), "utf8"));
-  if (migrated) sqlite.prepare("INSERT INTO _migrations (id, applied_at) VALUES (?, ?)").run("0000_initial", new Date().toISOString());
+  applySchema(sqlite);
+  if (migrated) {
+    const record = sqlite.prepare("INSERT INTO _migrations (id, applied_at) VALUES (?, ?)");
+    for (const migrationId of migrationIds()) record.run(migrationId, new Date().toISOString());
+  }
   sqlite.close();
   return databasePath;
 }

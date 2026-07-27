@@ -1,18 +1,17 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 
 import Database from "better-sqlite3";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { attachCourse, createBlockPlanFromCourse, deleteBlockPlan, detachCourse, listAttachableCourses, renameBlockPlan } from "@/lib/services/block-plan-admin";
 import { createCourse } from "@/lib/services/course-admin";
+import { applySchema } from "@/test/schema";
 
 const databases: Database.Database[] = [];
 
 function createDatabase() {
   const sqlite = new Database(":memory:");
   databases.push(sqlite);
-  sqlite.exec(readFileSync(path.join(process.cwd(), "migrations/0000_initial.sql"), "utf8"));
+  applySchema(sqlite);
   sqlite.prepare("INSERT INTO areas (id, name, normalized_name) VALUES (?, ?, ?)").run("area-01", "Technik", "technik");
   sqlite.prepare("INSERT INTO areas (id, name, normalized_name) VALUES (?, ?, ?)").run("area-02", "Wirtschaft", "wirtschaft");
   sqlite.prepare("INSERT INTO programs (id, area_id, name, abbreviation, semesters) VALUES (?, ?, ?, ?, ?)").run("prog-tif", "area-01", "Informatik", "TIF", 6);
