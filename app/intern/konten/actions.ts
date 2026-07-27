@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 
 import { sqlite } from "@/lib/db";
+import { normalizeEmail } from "@/lib/domain/account-email.mjs";
 import { getActiveAccount } from "@/lib/internal-auth";
 import {
   createInternalAccount,
@@ -55,7 +56,8 @@ export async function createAccountAction(_: CreateAccountState, formData: FormD
     const email = String(formData.get("email") ?? "");
     const token = createInternalAccount(sqlite, { email, ...readPermissions(formData) });
     revalidatePath("/intern/konten");
-    return { passwordLink: passwordLinkUrl(token, await requestOrigin()), email: email.trim().toLowerCase() };
+    // The address shown next to the link is the one that was stored, normalised by the same rule.
+    return { passwordLink: passwordLinkUrl(token, await requestOrigin()), email: normalizeEmail(email) };
   } catch (error) {
     return { error: errorMessage(error), email: String(formData.get("email") ?? "") };
   }
