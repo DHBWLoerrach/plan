@@ -7,7 +7,7 @@ Vor Go-live wird mit der zuständigen DHBW-Stelle geklärt, ob Erklärung zur Ba
 ## Öffentliche Planmatrix
 
 - Die Matrix ist eine echte Datentabelle mit `caption`, Kopfzellen und programmatisch bestimmbaren Zeilen- und Spaltenbezügen.
-- Jedes Semester besitzt eine eigene Tabelle. Die Zeitraumspalte und die Kurskennungen bilden eindeutige Zeilen- und Spaltenüberschriften; geteilte visuelle Zellen dürfen die programmatische Zuordnung nicht verschleiern.
+- Jedes Semester besitzt eine eigene Zeilengruppe innerhalb der Tabelle; ihre Semesterzelle ist die Überschrift der Gruppe. Die Zeitraumspalte und die Kurskennungen bilden eindeutige Zeilen- und Spaltenüberschriften; geteilte visuelle Zellen dürfen die programmatische Zuordnung nicht verschleiern.
 - Theorie, Praxis, „Nicht in diesem Semester“ und vorläufige Zeitangaben prüfungsrelevanter Termine sind immer auch textlich benannt; Farbe, Symbol, leere Fläche oder Position sind nur Ergänzungen. Veröffentlichungszustände treten hier nicht auf, da die öffentliche Ansicht ausschließlich veröffentlichte Fassungen zeigt.
 - Die Inhalte bleiben bei 320 CSS-Pixeln Breite, 200 % Textvergrößerung und 400 % Browser-Zoom vollständig verfügbar. Notwendiges horizontales Scrollen ist erkennbar, per Tastatur erreichbar und frei von Fokusfallen. Eine beschriftete Kursauswahl kann sichtbare Kursspalten reduzieren; alle Kurse bleiben auswählbar und die Auswahländerung wird angekündigt.
 - Alle Funktionen sind per Tastatur erreichbar; Fokus ist sichtbar, sinnvoll angeordnet und alle Bedienelemente sind eindeutig benannt.

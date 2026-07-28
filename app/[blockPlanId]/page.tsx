@@ -30,7 +30,6 @@ export default async function BlockPlanPage({ params }: DynamicProps) {
   if (!plan) notFound();
 
   return <SiteShell><article className="plan-detail">
-    <p className="eyebrow">Veröffentlichter Blockplan</p>
     <h1>{plan.name}</h1>
     <dl className="course-list">
       <div><dt>Bereich</dt><dd>{plan.area}</dd></div>

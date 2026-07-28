@@ -19,7 +19,7 @@ function phaseAttribute(cell: string) {
 export function PlanMatrix({ courses, phases, events }: { courses: DraftCourse[]; phases: DraftPhase[]; events: DraftEvent[] }) {
   const [visibleCourseIds, setVisibleCourseIds] = useState(() => new Set(courses.map((course) => course.id)));
   const [status, setStatus] = useState("");
-  const captionIdBase = useId();
+  const captionId = useId();
   const visibleCourses = courses.filter((course) => visibleCourseIds.has(course.id));
   const courseCodes = new Map(courses.map((course) => [course.id, course.code]));
   // Every course of a block plan carries the same number of semesters (FACHLICHE_REGELN.md); hiding columns therefore
@@ -46,42 +46,48 @@ export function PlanMatrix({ courses, phases, events }: { courses: DraftCourse[]
       <div className="section-heading">
         <p className="eyebrow">Studienverlauf</p>
         <h2 id="matrix-heading">Planmatrix</h2>
-        <p>Je Semester eine Tabelle: Die erste Spalte nennt den Zeitraum, jede weitere genau einen Kurs. Auf schmalen Anzeigen lassen sich die Tabellen waagerecht scrollen.</p>
+        <p>Je Zeilengruppe ein Semester, je Spalte ein Kurs; auf schmalen Anzeigen ist die Tabelle waagerecht scrollbar.</p>
       </div>
       <fieldset className="course-selector">
         <legend>Sichtbare Kurse in der Planmatrix</legend>
-        <p>Sie können Kursspalten ausblenden. Die Auswahl verändert keine Planinhalte; mindestens ein Kurs bleibt sichtbar.</p>
+        {/* Which courses are shown is readable from the checkboxes themselves; only the change is announced. */}
+        <p>Mindestens ein Kurs bleibt sichtbar; Planinhalte verändert die Auswahl nicht.</p>
         {courses.map((course) => <label key={course.id}>
           <input type="checkbox" checked={visibleCourseIds.has(course.id)} onChange={() => toggleCourse(course)} /> {course.code}
         </label>)}
       </fieldset>
       <p className="sr-only" role="status">{status}</p>
-      <p className="matrix-visibility">{visibleCourses.length} von {courses.length} {courses.length === 1 ? "Kurs ist" : "Kursen sind"} in der Planmatrix sichtbar.</p>
-      {Array.from({ length: semesters }, (_, index) => index + 1).map((semester) => {
-        const rows = buildSemesterMatrix(visibleCourses, phases, semester);
-        const captionId = `${captionIdBase}-semester-${semester}`;
-        return <div className="matrix-wrap" key={semester} role="region" aria-labelledby={captionId} tabIndex={0}>
-          <table className="matrix">
-            <caption id={captionId}>Semester {semester}</caption>
-            <thead><tr><th scope="col">Zeitraum</th>{visibleCourses.map((course) => <th key={course.id} scope="col">{course.code}</th>)}</tr></thead>
-            <tbody>{rows.length
-              ? rows.map((row) => <tr key={row.startDate}>
+      <div className="matrix-wrap" role="region" aria-labelledby={captionId} tabIndex={0}>
+        <table className="matrix">
+          <caption id={captionId}>Studienverlauf je Semester</caption>
+          <thead><tr>
+            <th scope="col">Semester</th><th scope="col">Zeitraum</th>
+            {visibleCourses.map((course) => <th key={course.id} scope="col">{course.code}</th>)}
+          </tr></thead>
+          {Array.from({ length: semesters }, (_, index) => index + 1).map((semester) => {
+            const rows = buildSemesterMatrix(visibleCourses, phases, semester);
+            // One row group per semester: the semester cell spans the group's rows and stays its programmatic heading.
+            const semesterHeading = (rowSpan: number) => <th className="matrix-semester" scope="rowgroup" rowSpan={rowSpan}>Semester {semester}</th>;
+            return <tbody key={semester}>{rows.length
+              ? rows.map((row, index) => <tr key={row.startDate}>
+                {index === 0 ? semesterHeading(rows.length) : null}
                 <th scope="row">{formatCalendarPeriod(row.startDate, row.endDate)}</th>
-                {row.cells.map((cell, index) => <td key={visibleCourses[index].id} data-phase={phaseAttribute(cell)}>{cell}</td>)}
+                {row.cells.map((cell, cellIndex) => <td key={visibleCourses[cellIndex].id} data-phase={phaseAttribute(cell)}>{cell}</td>)}
               </tr>)
               : <tr>
+                {semesterHeading(1)}
                 <th scope="row">Kein Zeitraum</th>
                 {visibleCourses.map((course) => <td key={course.id} data-phase="none">Nicht in diesem Semester</td>)}
-              </tr>}</tbody>
-          </table>
-        </div>;
-      })}
+              </tr>}</tbody>;
+          })}
+        </table>
+      </div>
     </section>
     <section aria-labelledby="events-heading">
       <div className="section-heading">
         <p className="eyebrow">Prüfungsrelevante Termine</p>
         <h2 id="events-heading">Termine</h2>
-        <p>Chronologisch über alle Semester hinweg. Das Semester ist je betroffenem Kurs angegeben.</p>
+        <p>Chronologisch über alle Semester, mit dem je betroffenem Kurs abgeleiteten Semester.</p>
       </div>
       {events.length ? <div className="matrix-wrap" role="region" aria-labelledby="events-table-caption" tabIndex={0}>
         <table className="event-table">

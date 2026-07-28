@@ -51,7 +51,7 @@ export default async function PublicationPreviewPage({ params, searchParams }: P
     {issues.length
       ? <PublicationIssueOverview blockPlanId={plan.id} issues={issues} courses={courses} events={events} semesters={semesters} />
       : <>
-        <p>So sehen externe Nutzende den Blockplan, sobald Sie diesen Stand freigeben. Die Vorschau liest ausschließlich den gespeicherten Entwurf.</p>
+        <p>So sehen externe Nutzende den gespeicherten Entwurf, sobald Sie diesen Stand freigeben.</p>
         <PlanMatrix courses={courses} phases={phases} events={events} />
         <section aria-labelledby="release-heading">
           <h2 id="release-heading">Freigabe</h2>
