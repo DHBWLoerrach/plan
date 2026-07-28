@@ -178,7 +178,9 @@ p[role="status"] { margin: 0; color: var(--success); }
 .matrix caption, .event-table caption { padding: 1rem; text-align: left; font-size: 1.15rem; font-weight: 800; }
 .matrix th, .matrix td, .event-table th, .event-table td { padding: .8rem; border: 1px solid var(--line); vertical-align: top; }
 .matrix thead th, .event-table thead th { background: var(--surface); border-bottom: 2px solid var(--gray); font-size: .85rem; }
-.matrix tbody th { width: 10rem; font-weight: 400; }
+/* The period column keeps start and end on one line; the wrapper scrolls when the table outgrows the viewport. */
+.matrix tbody th, .event-table tbody td:first-child { width: 1%; white-space: nowrap; }
+.matrix tbody th { font-weight: 400; }
 .matrix td[data-phase="theory"] { background: var(--theory); }
 .matrix td[data-phase="practice"] { background: var(--practice); }
 .matrix td[data-phase="none"] { color: var(--gray); background: #f9f9f9; }
