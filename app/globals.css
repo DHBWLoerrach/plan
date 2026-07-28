@@ -7,7 +7,12 @@
   --line: #e5e5e5; --surface: #f5f5f5; --field-border: #6f7c85;
   --error: #a94442; --success: #3c763d;
   --warning: #8a6d3b; --warning-bg: #fcf8e3; --warning-border: #c29227;
-  --theory: #d9edf7; --practice: #dff0d8;
+  /* Phasenflächen aus der DHBW-Palette: Theorie (Hochschule) rot, Praxis (Betrieb) grau, beide stark aufgehellt und
+     mit einer Kante in der Vollfarbe. Ein Zeitraum ohne Phase ist schraffiert statt gefärbt. */
+  --theory: #fdeaec; --theory-edge: var(--red); --practice: #eaeeef; --practice-edge: var(--gray);
+  --theory-fill: linear-gradient(to right, var(--theory-edge) 0 4px, var(--theory) 4px);
+  --practice-fill: linear-gradient(to right, var(--practice-edge) 0 4px, var(--practice) 4px);
+  --no-phase-fill: repeating-linear-gradient(45deg, #fff 0 6px, #e8e8e8 6px 12px);
   color-scheme: light;
 }
 * { box-sizing: border-box; }
@@ -182,11 +187,35 @@ p[role="status"] { margin: 0; color: var(--success); }
 .matrix tbody th, .matrix-duration, .event-table tbody td:first-child { width: 1%; white-space: nowrap; }
 .matrix-duration { color: var(--gray); }
 .matrix tbody th { font-weight: 400; }
-.matrix-semester { background: var(--surface); font-weight: 700; }
-.matrix tbody + tbody th, .matrix tbody + tbody td { border-top: 2px solid var(--gray); }
+/* The semester heading names its whole row group, so it sits centred over the rows it spans and keeps the weight of a
+   heading. The selector names the element as well, or the rules above for every cell would outweigh the class. */
+.matrix tbody th.matrix-semester { vertical-align: middle; background: var(--surface); font-weight: 700; }
+/* Only the first row of a semester carries the group line; the rows inside a semester stay on the light table line. */
+.matrix tbody + tbody tr:first-child th, .matrix tbody + tbody tr:first-child td { border-top: 2px solid var(--gray); }
+/* The abbreviation carries the phase for readers of the legend, the cell text below it for assistive technology;
+   fill and hatching only support both (BARRIEREFREIHEIT.md). Backgrounds must survive printing, or a cell whose
+   phase is only shown as an abbreviation would lose the fill that groups it with its column. */
+.matrix td[data-phase], .matrix-legend span, .phase-badge { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+.matrix td[data-phase] { position: relative; text-align: center; }
 .matrix td[data-phase="theory"] { background: var(--theory); }
 .matrix td[data-phase="practice"] { background: var(--practice); }
-.matrix td[data-phase="none"] { color: var(--gray); background: #f9f9f9; }
+.matrix td[data-phase="none"], .matrix-legend [data-phase="none"] { background: var(--no-phase-fill); }
+.matrix-legend [data-phase="theory"], .phase-badge--theory { background: var(--theory-fill); }
+.matrix-legend [data-phase="practice"], .phase-badge--practice { background: var(--practice-fill); }
+/* The edge of a matrix cell is drawn over the row line instead of ending at it, so a phase that spans several rows
+   reads as one block; `data-run` names where in that block the cell sits, and the edge closes only towards a
+   neighbour of the same phase. */
+.matrix td[data-phase="theory"]::before, .matrix td[data-phase="practice"]::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+}
+.matrix td[data-phase="theory"]::before { background: var(--theory-edge); }
+.matrix td[data-phase="practice"]::before { background: var(--practice-edge); }
+.matrix-block-duration { display: block; margin-top: .1rem; color: var(--gray); font-size: .78rem; white-space: nowrap; }
+.matrix td[data-run="start"]::before, .matrix td[data-run="middle"]::before { bottom: -1px; }
+.matrix td[data-run="middle"]::before, .matrix td[data-run="end"]::before { top: -1px; }
+.matrix-legend { display: flex; flex-wrap: wrap; gap: .4rem 1.2rem; margin: 1rem 0 0; padding: 0; list-style: none; color: var(--gray); font-size: .85rem; }
+.matrix-legend li { display: flex; align-items: center; gap: .45rem; }
+.matrix-legend span { display: inline-flex; align-items: center; justify-content: center; width: 1.8rem; height: 1.4rem; flex: none; border: 1px solid var(--line); color: var(--ink); font-size: .8rem; font-weight: 700; }
 .event-description { display: block; margin-top: .35rem; color: var(--gray); font-size: .9rem; font-weight: 400; }
 .event-courses { margin: 0; padding: 0; list-style: none; }
 .event-courses li + li { margin-top: .3rem; }
@@ -318,9 +347,8 @@ p[role="status"] { margin: 0; color: var(--success); }
 .phase-gap span { color: var(--ink); font-size: .84rem; }
 .phase-empty-row { padding: 1rem; color: var(--gray); }
 .phase-duration { color: var(--gray); font-size: .85rem; font-weight: 400; }
-.phase-badge { padding: .16rem .48rem; border: 1px solid var(--line); font-size: .76rem; letter-spacing: .04em; text-transform: uppercase; }
-.phase-badge--theory { background: var(--theory); }
-.phase-badge--practice { background: var(--practice); }
+/* The badge keeps the fill of its phase; its left padding clears the coloured edge the fill draws. */
+.phase-badge { padding: .16rem .48rem .16rem .7rem; border: 1px solid var(--line); font-size: .76rem; letter-spacing: .04em; text-transform: uppercase; }
 
 .create-panel { position: sticky; top: 1rem; align-self: start; margin-top: 1rem; padding: 1.1rem; border: 1px solid var(--line); border-top: 4px solid var(--red); background: var(--surface); }
 .create-panel__heading { display: flex; justify-content: space-between; gap: 1rem; align-items: start; }
