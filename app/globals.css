@@ -14,6 +14,9 @@
   /* The practice edge steps back: in full grey it weighs as much as the red theory edge, yet occurs more often and
      would take over the table. The value still holds 3:1 against white. */
   --theory: #f9eeef; --theory-edge: var(--red); --practice: #eceff1; --practice-edge: #8b979d;
+  /* The outline the timeline draws around a theory bar. In full red it reads as a selected or clickable element next
+     to the red controls of the page, so it keeps the hue and gives up the saturation; it holds 3.98:1 against white. */
+  --theory-outline: #cf5965;
   --theory-fill: linear-gradient(to right, var(--theory-edge) 0 4px, var(--theory) 4px);
   --practice-fill: linear-gradient(to right, var(--practice-edge) 0 4px, var(--practice) 4px);
   --no-phase-fill: repeating-linear-gradient(45deg, #fff 0 6px, #e8e8e8 6px 12px);
@@ -181,6 +184,47 @@ p[role="status"] { margin: 0; color: var(--success); }
 .status-badge--ready { color: var(--success); border-color: #93bc95; background: #f1f8f1; }
 .status-badge--warning, .status-badge--issues { color: var(--warning); border-color: var(--warning-border); background: var(--warning-bg); }
 .status-badge--not-started { color: var(--gray); }
+
+/* The overview of the whole course of study: one shared time axis, one lane per set of courses running identically.
+   The diagram adds to the matrix and never replaces it — it stays hidden from assistive technology and drops out
+   where its bars would grow too narrow to be labelled. */
+.timeline { margin-top: 1rem; padding: .8rem 1rem 1rem; border: 1px solid var(--line); background: #fff; }
+.timeline-title { margin: 0 0 .6rem; font-size: 1.05rem; font-weight: 800; }
+/* The axis is the full width of the box; every child inside it is placed by its share of that axis. */
+.timeline-years, .timeline-track { position: relative; width: 100%; }
+/* The years are a band above the semester band: each number stands in its own section, and the year boundaries are
+   the edges of those sections instead of lines running down through the diagram. The band stays open — dividers and
+   number, no fill — so it reads as the coarser grouping above the filled semester band rather than as a second one.
+   Its dividers may be firmer than a line inside the diagram, because they compete with nothing down there. It stays
+   flatter than the semester band below and keeps a hairline of distance from it, so the two read as two levels. */
+.timeline-years { height: 1.3rem; margin-bottom: 2px; }
+.timeline-years span { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; border-left: 1px solid #d9dde0; color: var(--gray-strong); font-size: .85rem; }
+.timeline-years span:last-child { border-right: 1px solid #d9dde0; }
+.timeline-codes { margin: .9rem 0 .3rem; font-size: .95rem; font-weight: 700; }
+.timeline-track { height: 1.4rem; }
+/* The bar of a phase sits in the track of its lane; the fill of the track stays visible wherever a draft has not
+   placed a course phase yet. */
+.timeline-bars { height: 2.6rem; margin-top: .25rem; background: var(--surface); }
+.timeline-track span { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid var(--line); color: var(--gray-strong); font-size: .75rem; white-space: nowrap; }
+.timeline-semester { background: var(--surface); }
+/* The length of a phase too short to hold it stands below the bars, on a line leading up to its own bar. Where two
+   such phases lie close together the second drops one row further down, and the track grows by exactly those rows. */
+.timeline-flags { position: relative; height: calc(var(--flag-rows) * 1.15rem + .5rem); }
+.timeline-flags span { position: absolute; top: calc(var(--flag-row) * 1.15rem + .5rem); transform: translateX(-50%); color: var(--gray-strong); font-size: .75rem; white-space: nowrap; }
+.timeline-flags span::before { content: ""; position: absolute; left: 50%; bottom: 100%; height: calc(var(--flag-row) * 1.15rem + .5rem); border-left: 1px solid var(--practice-edge); }
+.timeline-legend { display: flex; flex-wrap: wrap; gap: .4rem 1.2rem; margin: 1rem 0 0; padding: 0; list-style: none; color: var(--gray-strong); font-size: .85rem; }
+.timeline-legend li { display: flex; align-items: center; gap: .45rem; }
+.timeline-legend span { width: 1.8rem; height: 1rem; flex: none; }
+/* The same fills as in the matrix, but with an outline all around instead of the left edge: a short bar would
+   otherwise consist almost entirely of that edge, and adjoining phases would form a striped pattern read as a
+   divider rather than as a phase type. The outlines hold 3:1 against white (WCAG 1.4.11). */
+.timeline [data-phase] { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+.timeline [data-phase="theory"] { background: var(--theory); border: 1px solid var(--theory-outline); }
+.timeline [data-phase="practice"] { background: var(--practice); border: 1px solid var(--practice-edge); }
+/* Below this width a bar carries neither a label nor a recognizable length. The threshold is set in rem, so it also
+   catches a page whose text has been enlarged. The matrix below shows the same plan in full, which is why the
+   overview may drop out here without replacement. */
+@media (max-width: 40rem) { .timeline { display: none; } }
 
 .matrix-wrap { width: 100%; overflow-x: auto; margin-top: 1rem; background: #fff; border: 1px solid var(--line); }
 .matrix, .event-table { width: 100%; min-width: 620px; border-collapse: collapse; background: #fff; text-align: left; }

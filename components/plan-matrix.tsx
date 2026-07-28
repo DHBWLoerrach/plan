@@ -2,6 +2,7 @@
 
 import { useId, useState } from "react";
 
+import { PlanTimeline } from "@/components/plan-timeline";
 import { formatCalendarPeriod, formatPeriodDuration } from "@/lib/domain/calendar-format";
 import { eventCategoryLabel } from "@/lib/domain/event-category";
 import { phaseTypeLabel } from "@/lib/domain/phase-type";
@@ -103,6 +104,8 @@ export function PlanMatrix({ courses, phases, events }: { courses: DraftCourse[]
         </label>)}
       </fieldset>
       <p className="sr-only" role="status">{status}</p>
+      {/* The overview reads the same course selection as the matrix, so both always show the same set of courses. */}
+      <PlanTimeline courses={visibleCourses} phases={phases} />
       <div className="matrix-wrap" role="region" aria-labelledby={captionId} tabIndex={0}>
         <table className="matrix">
           {/* The legend sits under the table title, where the abbreviations it resolves are about to be read. It is

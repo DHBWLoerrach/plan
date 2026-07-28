@@ -1,6 +1,20 @@
 import { describe, expect, it } from "vitest";
 
-import { daysBetween, plusDays } from "@/lib/domain/calendar-day";
+import { daysBetween, inclusiveDays, plusDays } from "@/lib/domain/calendar-day";
+
+describe("inclusiveDays", () => {
+  it("counts both days of the period", () => {
+    expect(inclusiveDays("2027-03-31", "2027-04-01")).toBe(2);
+  });
+
+  it("counts a single day as one", () => {
+    expect(inclusiveDays("2027-03-31", "2027-03-31")).toBe(1);
+  });
+
+  it("counts the leap day of a period spanning it", () => {
+    expect(inclusiveDays("2028-02-28", "2028-03-01")).toBe(3);
+  });
+});
 
 describe("plusDays", () => {
   it("advances a calendar day across a month boundary", () => {

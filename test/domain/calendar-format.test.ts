@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatCalendarDay, formatCalendarPeriod, formatPeriodDuration, weekdayName } from "@/lib/domain/calendar-format";
+import { formatCalendarDay, formatCalendarPeriod, formatCompactDuration, formatPeriodDuration, weekdayName } from "@/lib/domain/calendar-format";
 
 describe("formatCalendarDay", () => {
   it("formats a calendar day in German notation", () => {
@@ -46,6 +46,18 @@ describe("formatPeriodDuration", () => {
 
   it("counts the leap day of a period spanning it", () => {
     expect(formatPeriodDuration("2028-02-21", "2028-03-05")).toBe("2 Wochen");
+  });
+});
+
+describe("formatCompactDuration", () => {
+  it.each([
+    ["2027-04-19", "2027-07-11", "12 Wo."],
+    ["2026-10-05", "2026-10-11", "1 Wo."],
+    ["2026-10-05", "2026-10-15", "1 Wo. + 4 T."],
+    ["2026-10-05", "2026-10-09", "5 T."],
+    ["2026-10-05", "2026-10-05", "1 T."],
+  ])("abbreviates the length of %s to %s as %s", (startDate, endDate, expected) => {
+    expect(formatCompactDuration(startDate, endDate)).toBe(expected);
   });
 });
 

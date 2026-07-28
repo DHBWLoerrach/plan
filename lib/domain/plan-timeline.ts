@@ -1,0 +1,183 @@
+import { inclusiveDays } from "@/lib/domain/calendar-day";
+import type { PhaseType } from "@/lib/domain/phase-type";
+import type { DraftCourse, DraftPhase } from "@/lib/domain/publication";
+
+/** A period placed on the shared axis of the diagram, as a percentage of the axis length. */
+export interface TimelineSpan {
+  startDate: string;
+  endDate: string;
+  offset: number;
+  width: number;
+}
+
+export interface TimelineBar extends TimelineSpan {
+  type: PhaseType;
+}
+
+export interface TimelineSemester extends TimelineSpan {
+  semester: number;
+}
+
+export interface TimelineYear extends TimelineSpan {
+  year: number;
+}
+
+/** One row of the diagram: every course whose phases are identical shares it, so the run is drawn exactly once. */
+export interface TimelineLane {
+  codes: string[];
+  bars: TimelineBar[];
+  semesters: TimelineSemester[];
+}
+
+export interface PlanTimeline {
+  startDate: string;
+  endDate: string;
+  years: TimelineYear[];
+  lanes: TimelineLane[];
+  /**
+   * The semester bounds of every lane where they agree, so the diagram draws one band instead of repeating it. The
+   * bounds of the same semester may differ between the courses of a block plan (FACHLICHE_REGELN.md), and where they
+   * do this stays `null` and every lane keeps its own band.
+   */
+  sharedSemesters: TimelineSemester[] | null;
+}
+
+/** A phase too short to hold its length, with the label placed below the bars instead. */
+export interface TimelineFlag {
+  bar: TimelineBar;
+  /** The middle of the bar, where the label is anchored and the line leading up to it starts. */
+  center: number;
+  /** Which row below the bars the label sits in; a further row keeps two close labels apart. */
+  row: number;
+}
+
+/**
+ * How narrow a bar may get and still hold its own length, as a share of the axis. Below this the label would be
+ * clipped to a fragment, so it moves out of the bar and under it.
+ */
+const narrowWidth = 4;
+
+/**
+ * How far apart two labels have to be to share a row. The value is an estimate — the width of a label is decided by
+ * the rendered font, not by the data — but it stays on the safe side, and an unnecessary second row costs a line of
+ * height where an overlap would cost the reading.
+ */
+const flagDistance = 12;
+
+/**
+ * The labels of every bar too narrow to carry its own, from left to right. A label goes into the topmost row that no
+ * nearby label occupies yet, so labels of phases following closely on one another stay apart.
+ */
+export function flagNarrowBars(bars: TimelineBar[]): TimelineFlag[] {
+  const rowEnds: number[] = [];
+  const flags: TimelineFlag[] = [];
+  for (const bar of bars) {
+    if (bar.width >= narrowWidth) continue;
+    const center = round(bar.offset + bar.width / 2);
+    const row = rowEnds.findIndex((end) => center - end >= flagDistance);
+    if (row === -1) {
+      flags.push({ bar, center, row: rowEnds.length });
+      rowEnds.push(center);
+      continue;
+    }
+    flags.push({ bar, center, row });
+    rowEnds[row] = center;
+  }
+  return flags;
+}
+
+/** Percentages carry more decimals than a screen can place; three keep the rounding well below one pixel. */
+function round(value: number): number {
+  return Math.round(value * 1000) / 1000;
+}
+
+/**
+ * The block plan as one diagram over a single time axis, as the overview above the matrix. Courses running identically
+ * become one lane, which is the statement the matrix cannot make: it repeats such courses as separate columns.
+ *
+ * The diagram is an addition, never the record. Its bars carry the phase type through fill alone and a short one has
+ * no room for a label at all, so the matrix below remains the full and the accessible reading (BARRIEREFREIHEIT.md).
+ */
+export function buildPlanTimeline(courses: DraftCourse[], phases: DraftPhase[]): PlanTimeline | null {
+  if (!courses.length) return null;
+  const courseIds = new Set(courses.map((course) => course.id));
+  const shownPhases = phases.filter((phase) => courseIds.has(phase.courseId));
+  // A draft under review may hold a phase reaching past the study period of its course, and the axis has to contain
+  // whatever it draws, or that bar would land outside the diagram.
+  const days = [
+    ...courses.flatMap((course) => [course.studyStart, course.studyEnd]),
+    ...shownPhases.flatMap((phase) => [phase.startDate, phase.endDate]),
+  ].toSorted();
+  const startDate = days[0];
+  const endDate = days[days.length - 1];
+  const axisDays = inclusiveDays(startDate, endDate);
+
+  function span(from: string, to: string): TimelineSpan {
+    return {
+      startDate: from,
+      endDate: to,
+      offset: round(((inclusiveDays(startDate, from) - 1) / axisDays) * 100),
+      width: round((inclusiveDays(from, to) / axisDays) * 100),
+    };
+  }
+
+  const firstYear = Number(startDate.slice(0, 4));
+  const lastYear = Number(endDate.slice(0, 4));
+  const years: TimelineYear[] = [];
+  for (let year = firstYear; year <= lastYear; year += 1) {
+    years.push({
+      year,
+      ...span(year === firstYear ? startDate : `${year}-01-01`, year === lastYear ? endDate : `${year}-12-31`),
+    });
+  }
+
+  const lanes = new Map<string, TimelineLane>();
+  for (const course of courses) {
+    const ownPhases = shownPhases
+      .filter((phase) => phase.courseId === course.id)
+      .toSorted((left, right) => left.startDate.localeCompare(right.startDate));
+    // Courses share a lane only where every phase matches in semester, type and period. Anything less would draw the
+    // run of one course and label it with the code of another.
+    const key = ownPhases.map((phase) => `${phase.semester} ${phase.type} ${phase.startDate} ${phase.endDate}`).join("|");
+    const known = lanes.get(key);
+    if (known) {
+      known.codes.push(course.code);
+      continue;
+    }
+    lanes.set(key, {
+      codes: [course.code],
+      bars: ownPhases.map((phase) => ({ type: phase.type, ...span(phase.startDate, phase.endDate) })),
+      semesters: laneSemesters(ownPhases, span),
+    });
+  }
+
+  const drawn = [...lanes.values()];
+  return { startDate, endDate, years, lanes: drawn, sharedSemesters: sharedSemesters(drawn) };
+}
+
+function sharedSemesters(lanes: TimelineLane[]): TimelineSemester[] | null {
+  const key = (lane: TimelineLane) => lane.semesters.map((entry) => `${entry.semester} ${entry.startDate} ${entry.endDate}`).join("|");
+  const first = key(lanes[0]);
+  return lanes.every((lane) => key(lane) === first) ? lanes[0].semesters : null;
+}
+
+/**
+ * Where each semester of one lane begins and ends. The bounds belong to the lane rather than to the diagram, because
+ * the same semester may cover different periods in different courses (FACHLICHE_REGELN.md); one band across all lanes
+ * would claim a shared schedule that the block plan does not guarantee.
+ */
+function laneSemesters(phases: DraftPhase[], span: (from: string, to: string) => TimelineSpan): TimelineSemester[] {
+  const bounds = new Map<number, { startDate: string; endDate: string }>();
+  for (const phase of phases) {
+    const known = bounds.get(phase.semester);
+    if (!known) {
+      bounds.set(phase.semester, { startDate: phase.startDate, endDate: phase.endDate });
+      continue;
+    }
+    if (phase.startDate < known.startDate) known.startDate = phase.startDate;
+    if (phase.endDate > known.endDate) known.endDate = phase.endDate;
+  }
+  return [...bounds.entries()]
+    .toSorted(([left], [right]) => left - right)
+    .map(([semester, bound]) => ({ semester, ...span(bound.startDate, bound.endDate) }));
+}
