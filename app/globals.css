@@ -9,7 +9,7 @@
   --warning: #8a6d3b; --warning-bg: #fcf8e3; --warning-border: #c29227;
   /* Phasenflächen aus der DHBW-Palette: Theorie (Hochschule) rot, Praxis (Betrieb) grau, beide stark aufgehellt und
      mit einer Kante in der Vollfarbe. Ein Zeitraum ohne Phase ist schraffiert statt gefärbt. */
-  --theory: #fdeaec; --theory-edge: var(--red); --practice: #eaeeef; --practice-edge: var(--gray);
+  --theory: #f9eeef; --theory-edge: var(--red); --practice: #eceff1; --practice-edge: var(--gray);
   --theory-fill: linear-gradient(to right, var(--theory-edge) 0 4px, var(--theory) 4px);
   --practice-fill: linear-gradient(to right, var(--practice-edge) 0 4px, var(--practice) 4px);
   --no-phase-fill: repeating-linear-gradient(45deg, #fff 0 6px, #e8e8e8 6px 12px);
