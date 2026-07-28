@@ -188,6 +188,11 @@ p[role="status"] { margin: 0; color: var(--success); }
 
 /* Overview and matrix are the two blocks of one section and carry the same weight: the eyebrow above them names the
    subject, and each block opens with its own heading and a note on what it shows. */
+/* The legend belongs to the section rather than to one of its blocks: both draw a phase type in the same language, and
+   the overview comes first, so the head of the section is the only place where it stands before everything it names.
+   It also survives the narrow display that drops the overview, where the matrix still abbreviates its phases. */
+.plan-section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .3rem 1.5rem; margin-bottom: .9rem; }
+.plan-section-head .eyebrow { margin: 0; }
 .plan-block { margin-top: 1.9rem; }
 .plan-block:first-of-type { margin-top: 0; }
 .plan-block h3 { margin: 0; font-size: clamp(1.2rem, 2.2vw, 1.45rem); font-weight: 800; letter-spacing: -.015em; }
@@ -196,7 +201,12 @@ p[role="status"] { margin: 0; color: var(--success); }
 /* The overview of the whole course of study: one shared time axis, one lane per set of courses running identically.
    The diagram adds to the matrix and never replaces it — it stays hidden from assistive technology and drops out
    where its bars would grow too narrow to be labelled. */
-.timeline { margin-top: .7rem; padding: .8rem 1rem 1rem; border: 1px solid var(--line); background: #fff; }
+/* The label size is one value: the bars and the labels below them are set in it, and the probe that measures them
+   has to be set in exactly the same one. */
+.timeline { --timeline-label: .75rem; position: relative; margin-top: .7rem; padding: .8rem 1rem 1rem; border: 1px solid var(--line); background: #fff; }
+/* Out of flow and out of sight, but laid out and therefore measurable. `visibility` rather than `display`, which would
+   leave nothing to measure. */
+.timeline-probe { position: absolute; visibility: hidden; height: 0; white-space: nowrap; font-size: var(--timeline-label); }
 /* The axis is the full width of the box; every child inside it is placed by its share of that axis. */
 .timeline-years, .timeline-track { position: relative; width: 100%; }
 /* The years are a band above the semester band: each number stands in its own section, and the year boundaries are
@@ -212,7 +222,7 @@ p[role="status"] { margin: 0; color: var(--success); }
 /* The bar of a phase sits in the track of its lane; the fill of the track stays visible wherever a draft has not
    placed a course phase yet. */
 .timeline-bars { height: 2.6rem; margin-top: .25rem; background: var(--surface); }
-.timeline-track span { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid var(--line); color: var(--gray-strong); font-size: .75rem; white-space: nowrap; }
+.timeline-track span { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid var(--line); color: var(--gray-strong); font-size: var(--timeline-label); white-space: nowrap; }
 /* The semester band groups the axis just as the year band above it does, so both are set in the same size. It has the
    room for it — a semester spans months — while the bars below stay one step smaller, because a bar is only as wide as
    its phase is long. */
@@ -220,14 +230,11 @@ p[role="status"] { margin: 0; color: var(--success); }
 /* The length of a phase too short to hold it stands below the bars, on a line leading up to its own bar. Where two
    such phases lie close together the second drops one row further down, and the track grows by exactly those rows. */
 .timeline-flags { position: relative; height: calc(var(--flag-rows) * 1.15rem + .5rem); }
-.timeline-flags span { position: absolute; top: calc(var(--flag-row) * 1.15rem + .5rem); transform: translateX(-50%); color: var(--gray-strong); font-size: .75rem; white-space: nowrap; }
+.timeline-flags span { position: absolute; top: calc(var(--flag-row) * 1.15rem + .5rem); transform: translateX(-50%); color: var(--gray-strong); font-size: var(--timeline-label); white-space: nowrap; }
 .timeline-flags span::before { content: ""; position: absolute; left: 50%; bottom: 100%; height: calc(var(--flag-row) * 1.15rem + .5rem); border-left: 1px solid var(--practice-edge); }
-.timeline-legend { display: flex; flex-wrap: wrap; gap: .4rem 1.2rem; margin: 1rem 0 0; padding: 0; list-style: none; color: var(--gray-strong); font-size: .85rem; }
-.timeline-legend li { display: flex; align-items: center; gap: .45rem; }
-.timeline-legend span { width: 1.8rem; height: 1rem; flex: none; }
-/* The same fills as in the matrix, but with an outline all around instead of the left edge: a short bar would
-   otherwise consist almost entirely of that edge, and adjoining phases would form a striped pattern read as a
-   divider rather than as a phase type. The outlines hold 3:1 against white (WCAG 1.4.11). */
+.timeline-legend { margin: 1rem 0 0; color: var(--gray-strong); font-size: .85rem; }
+/* The same fills as in the matrix, and the same outline all around: a phase type is drawn once for the page, not once
+   per view, and the legend above the section names both. The outlines hold 3:1 against white (WCAG 1.4.11). */
 .timeline [data-phase] { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 .timeline [data-phase="theory"] { background: var(--theory); border: 1px solid var(--theory-outline); }
 .timeline [data-phase="practice"] { background: var(--practice); border: 1px solid var(--practice-edge); }
@@ -241,12 +248,9 @@ p[role="status"] { margin: 0; color: var(--success); }
    two would sit as two boxes in one. */
 .matrix-card { margin-top: .8rem; border: 1px solid var(--line); background: #fff; }
 .matrix-card .matrix-wrap { margin-top: 0; border: 0; }
-/* Legend and selection share the head of the card: the legend to the left, the selection to the right, and on a
-   display too narrow for both the selection wraps below the legend. */
-.matrix-header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: .5rem 1.5rem; padding: .55rem .7rem; border-bottom: 1px solid var(--line); }
-/* Its entries are lower than the options opposite them, so the legend takes the distance that puts the two rows on one
-   middle. */
-.matrix-header .matrix-legend { padding-top: .45rem; }
+/* The head of the card carries the selection alone and starts at the left edge of the card, so label, options and hint
+   share one edge instead of floating somewhere in the middle of the row. */
+.matrix-header { padding: .55rem .7rem; border-bottom: 1px solid var(--line); }
 .matrix, .event-table { width: 100%; min-width: 620px; border-collapse: collapse; background: #fff; text-align: left; }
 .event-table caption { padding: .35rem .7rem; text-align: left; font-size: 1.05rem; font-weight: 800; }
 .matrix th, .matrix td, .event-table th, .event-table td { padding: .45rem .7rem; border: 1px solid var(--line); vertical-align: top; }
@@ -267,15 +271,15 @@ p[role="status"] { margin: 0; color: var(--success); }
 /* The abbreviation carries the phase for readers of the legend, the cell text below it for assistive technology;
    fill and hatching only support both (BARRIEREFREIHEIT.md). Backgrounds must survive printing, or a cell whose
    phase is only shown as an abbreviation would lose the fill that groups it with its column. */
-.matrix td[data-phase], .matrix-legend span, .phase-badge { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+.matrix td[data-phase], .phase-legend span, .phase-badge { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 /* A phase covering several rows is one merged cell, so its content sits centred over the rows it spans. Abbreviation
    and duration are one unit and are set tightly, or the two would drift apart within the centred block. */
 .matrix td[data-phase] { position: relative; text-align: center; vertical-align: middle; line-height: 1.25; }
 .matrix td[data-phase="theory"] { background: var(--theory); }
 .matrix td[data-phase="practice"] { background: var(--practice); }
-.matrix td[data-phase="none"], .matrix-legend [data-phase="none"] { background: var(--no-phase-fill); }
-.matrix-legend [data-phase="theory"] { background: var(--theory); border-color: var(--theory-outline); }
-.matrix-legend [data-phase="practice"] { background: var(--practice); border-color: var(--practice-edge); }
+.matrix td[data-phase="none"], .phase-legend [data-phase="none"] { background: var(--no-phase-fill); }
+.phase-legend [data-phase="theory"] { background: var(--theory); }
+.phase-legend [data-phase="practice"] { background: var(--practice); }
 .phase-badge--theory { background: var(--theory-fill); }
 .phase-badge--practice { background: var(--practice-fill); }
 /* A phase is a filled area with a thin contour all around, the same language the overview above draws its bars in, so
@@ -292,9 +296,11 @@ p[role="status"] { margin: 0; color: var(--success); }
    the others, and the merged cell it sits in has the height to spare. */
 .matrix-block-duration { display: block; color: var(--gray-strong); font-size: .78rem; }
 .matrix-block-duration span { white-space: nowrap; }
-.matrix-legend { display: flex; flex-wrap: wrap; gap: .4rem 1.2rem; margin: 0; padding: 0; list-style: none; color: var(--gray-strong); font-size: .85rem; font-weight: 400; }
-.matrix-legend li { display: flex; align-items: center; gap: .45rem; }
-.matrix-legend span { display: inline-flex; align-items: center; justify-content: center; width: 1.8rem; height: 1.4rem; flex: none; border: 1px solid var(--line); color: var(--ink); font-size: .8rem; font-weight: 700; }
+.phase-legend { display: flex; flex-wrap: wrap; gap: .4rem 1.2rem; margin: 0; padding: 0; list-style: none; color: var(--gray-strong); font-size: .85rem; font-weight: 400; }
+.phase-legend li { display: flex; align-items: center; gap: .45rem; }
+/* The patch of a legend entry carries the fill and the abbreviation and nothing else — no frame, because a frame
+   beside the framed options of the filter would read as one more thing to click. */
+.phase-legend span { display: inline-flex; align-items: center; justify-content: center; width: 1.8rem; height: 1.4rem; flex: none; color: var(--ink); font-size: .8rem; font-weight: 700; }
 .event-description { display: block; margin-top: .35rem; color: var(--gray); font-size: .9rem; font-weight: 400; }
 .event-courses { margin: 0; padding: 0; list-style: none; }
 .event-courses li + li { margin-top: .3rem; }
@@ -327,33 +333,45 @@ p[role="status"] { margin: 0; color: var(--success); }
 .internal-list li a { color: var(--red); font-weight: 700; }
 .internal-list li span { color: var(--gray); font-size: .9rem; }
 
-/* The selection sits in the head of the matrix card, opposite the legend. Explaining and acting stand close together
-   there, so they must not look alike: the legend is text with a colour patch, every option of the filter is a control
-   with a frame, a hover and a focus of its own. */
-.course-filter { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .6rem; }
-.course-filter__label { margin: 0; font-weight: 700; font-size: .9rem; }
-.course-filter__options { display: flex; flex-wrap: wrap; gap: .35rem; }
-/* The course code is a technical identifier and is set as one, here and in the column headings of the matrix. */
+/* The selection sits in the head of the matrix card and is the only thing acting there, so it may take the left edge
+   of the card: label and options on one line, the hint on the next, all three starting at that edge. Every option is a
+   framed control with a hover and a focus of its own, which is what tells it apart from the legend of the section, and
+   the columns stay at their content width so the options follow the label instead of drifting to the right. */
+.course-filter { display: grid; grid-template-columns: auto auto; justify-content: start; align-items: center; gap: .3rem .6rem; }
+.course-filter__label { grid-column: 1; margin: 0; font-weight: 700; font-size: .9rem; }
+.course-filter__options { grid-column: 2; display: flex; flex-wrap: wrap; gap: .35rem; }
+/* The whole option is the target, so its frame is the frame of the control and the box inside it may stay quiet. The
+   course code is a technical identifier and is set as one, here and in the column headings of the matrix. */
 .course-filter label { display: flex; align-items: center; gap: .45rem; min-height: 2.25rem; padding: .2rem .55rem; border: 1px solid var(--field-border); background: #fff; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9rem; cursor: pointer; }
 .course-filter label:hover { background: var(--surface); }
 /* The keyboard focus rings the whole option instead of the small box inside it: the ring is then as large as the
    target it names, and it stays black, so no focus is ever read as the red of a theory phase. */
 .course-filter label:has(:focus-visible) { outline: 3px solid #1a1a1a; outline-offset: 2px; }
 .course-filter label:has(:focus-visible) input { outline: none; }
-/* The tick stays neutral and light: red marks the theory phase on this page and must not mark a selection as well, and
-   a box filled in a dark accent would weigh more than the matrix it steers. So the box keeps a white face with a
-   neutral outline and only draws the tick, in medium grey. */
-.course-filter input { appearance: none; width: 1.1rem; height: 1.1rem; border: 1px solid var(--field-border); background: #fff; }
-.course-filter input:checked { background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%235c6971' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' d='M3.5 8.4l3.1 3.1 5.9-6'/%3E%3C/svg%3E") center / .95rem no-repeat; }
+/* The box inside the option steps back behind the frame around it and lets the tick carry the state: two frames of
+   the same weight would read as two controls. It stays at 3:1 against its face all the same (WCAG 1.4.11), while the
+   frame of the option holds 4.29:1. The tick is dark and neutral — red marks the theory phase on this page and must
+   not mark a selection as well. */
+.course-filter input { appearance: none; width: 1.1rem; height: 1.1rem; border: 1px solid #8b979d; background: #fff; }
+.course-filter input:checked { background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23333333' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round' d='M3.5 8.4l3.1 3.1 5.9-6'/%3E%3C/svg%3E") center / 1rem no-repeat; }
 /* A forced-colours mode replaces colours but not images, so there the native control is the one that stays legible. */
 @media (forced-colors: active) { .course-filter input { appearance: auto; } }
-/* The last visible course cannot be switched off. Its option gives up the white face of a switchable one, answers no
-   hover and takes the cursor of a refusal, so it reads as fixed rather than as merely ticked. */
-.course-filter label[data-locked], .course-filter label[data-locked]:hover { background: #ebeded; color: var(--gray-strong); cursor: not-allowed; }
-.course-filter label[data-locked] input { cursor: not-allowed; }
-/* The hint stands on a line of its own below the options and stays there whether or not it currently bites, so
-   switching a course never moves the table underneath it. */
-.course-filter__hint { flex-basis: 100%; margin: 0; color: var(--gray-strong); font-size: .85rem; }
+/* The last visible course cannot be switched off. Its course stays shown, so the option keeps its face and its
+   readable label; only the box gives up its white ground and its dark tick, and the cursor states the refusal. */
+.course-filter label[data-locked], .course-filter label[data-locked]:hover { background: #fff; cursor: not-allowed; }
+.course-filter label[data-locked] input { border-color: #d4d8da; background-color: var(--surface); cursor: not-allowed; }
+.course-filter label[data-locked] input:checked { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%235c6971' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round' d='M3.5 8.4l3.1 3.1 5.9-6'/%3E%3C/svg%3E"); }
+/* The hint stands below the options, in their column, and stays there whether or not it currently bites, so switching
+   a course never moves the table underneath it. */
+/* The hint runs across both columns and therefore starts at the edge the label starts at. Set under the options alone
+   it would begin at neither edge of the head and read as a line pinned to nothing. */
+.course-filter__hint { grid-column: 1 / -1; margin: 0; color: var(--gray-strong); font-size: .85rem; }
+/* Where the label beside the options leaves them too little room, they would drop to one course per line. The label
+   then moves above them and the options get the whole width of the card. */
+@media (max-width: 40rem) {
+  .course-filter { grid-template-columns: minmax(0, 1fr); }
+  .course-filter__label, .course-filter__options { grid-column: 1; }
+}
 
 .account-form { display: grid; gap: .6rem; max-width: 38rem; margin: 1rem 0 0; }
 .account-form > label { font-weight: 700; font-size: .9rem; }

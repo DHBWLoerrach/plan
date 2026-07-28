@@ -52,29 +52,25 @@ export interface TimelineFlag {
 }
 
 /**
- * How narrow a bar may get and still hold its own length, as a share of the axis. Below this the label would be
- * clipped to a fragment, so it moves out of the bar and under it.
+ * The share of the axis a label is assumed to need until the browser has measured one. It only holds for the first
+ * paint: how wide a label is depends on the font and on how wide the diagram currently is, and neither is known here.
  */
-const narrowWidth = 4;
+export const assumedLabelWidth = 4;
 
 /**
- * How far apart two labels have to be to share a row. The value is an estimate — the width of a label is decided by
- * the rendered font, not by the data — but it stays on the safe side, and an unnecessary second row costs a line of
- * height where an overlap would cost the reading.
+ * The labels of every bar too narrow to carry its own, from left to right. `labelWidth` states the share of the axis
+ * the label of a bar needs; a bar narrower than that would show a fragment of it, so the label moves under the bar. A
+ * label goes into the topmost row where it keeps its own width to the label before it, so labels of phases following
+ * closely on one another never touch.
  */
-const flagDistance = 12;
-
-/**
- * The labels of every bar too narrow to carry its own, from left to right. A label goes into the topmost row that no
- * nearby label occupies yet, so labels of phases following closely on one another stay apart.
- */
-export function flagNarrowBars(bars: TimelineBar[]): TimelineFlag[] {
+export function flagNarrowBars(bars: TimelineBar[], labelWidth: (bar: TimelineBar) => number): TimelineFlag[] {
   const rowEnds: number[] = [];
   const flags: TimelineFlag[] = [];
   for (const bar of bars) {
-    if (bar.width >= narrowWidth) continue;
+    const needed = labelWidth(bar);
+    if (bar.width >= needed) continue;
     const center = round(bar.offset + bar.width / 2);
-    const row = rowEnds.findIndex((end) => center - end >= flagDistance);
+    const row = rowEnds.findIndex((end) => center - end >= needed);
     if (row === -1) {
       flags.push({ bar, center, row: rowEnds.length });
       rowEnds.push(center);

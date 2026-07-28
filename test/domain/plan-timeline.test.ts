@@ -165,26 +165,41 @@ function bar(offset: number, width: number): TimelineBar {
   return { type: "PRACTICE", startDate: "2026-01-01", endDate: "2026-01-02", offset, width };
 }
 
+/** A label of a tenth of the axis, the width every bar of these cases is measured against. */
+const tenth = () => 10;
+
 describe("flagNarrowBars", () => {
   it("leaves a bar wide enough for its own label alone", () => {
-    expect(flagNarrowBars([bar(0, 40), bar(40, 20)])).toEqual([]);
+    expect(flagNarrowBars([bar(0, 40), bar(40, 20)], tenth)).toEqual([]);
   });
 
   it("anchors the label of a narrow bar at its middle", () => {
-    expect(flagNarrowBars([bar(0, 40), bar(40, 2), bar(42, 58)])).toEqual([
+    expect(flagNarrowBars([bar(0, 40), bar(40, 2), bar(42, 58)], tenth)).toEqual([
       { bar: bar(40, 2), center: 41, row: 0 },
     ]);
   });
 
   it("keeps distant labels in one row", () => {
-    expect(flagNarrowBars([bar(0, 2), bar(50, 2)]).map((flag) => flag.row)).toEqual([0, 0]);
+    expect(flagNarrowBars([bar(0, 2), bar(50, 2)], tenth).map((flag) => flag.row)).toEqual([0, 0]);
   });
 
   it("moves a label down where the one before it is too close", () => {
-    expect(flagNarrowBars([bar(0, 2), bar(3, 2), bar(6, 2)]).map((flag) => flag.row)).toEqual([0, 1, 2]);
+    expect(flagNarrowBars([bar(0, 2), bar(3, 2), bar(6, 2)], tenth).map((flag) => flag.row)).toEqual([0, 1, 2]);
   });
 
   it("returns to the first row as soon as it is free again", () => {
-    expect(flagNarrowBars([bar(0, 2), bar(3, 2), bar(40, 2)]).map((flag) => flag.row)).toEqual([0, 1, 0]);
+    expect(flagNarrowBars([bar(0, 2), bar(3, 2), bar(40, 2)], tenth).map((flag) => flag.row)).toEqual([0, 1, 0]);
+  });
+
+  it("measures every bar against the width of its own label", () => {
+    // The first bar holds a label of its own width, the second one does not.
+    const width = (candidate: TimelineBar) => (candidate.offset === 0 ? 8 : 30);
+    expect(flagNarrowBars([bar(0, 10), bar(20, 10)], width).map((flag) => flag.bar.offset)).toEqual([20]);
+  });
+
+  it("flags a bar the axis has grown too narrow for", () => {
+    // The same bar, once on an axis where its label fits and once where it no longer does.
+    expect(flagNarrowBars([bar(0, 12)], () => 10)).toEqual([]);
+    expect(flagNarrowBars([bar(0, 12)], () => 14).map((flag) => flag.row)).toEqual([0]);
   });
 });

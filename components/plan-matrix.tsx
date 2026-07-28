@@ -70,9 +70,11 @@ export function PlanMatrix({ courses, phases, events }: { courses: DraftCourse[]
   // never removes a semester table.
   const semesters = Math.max(...courses.map((course) => course.semesters), 0);
   const semesterRows = Array.from({ length: semesters }, (_, index) => buildSemesterMatrix(visibleCourses, phases, index + 1));
-  // The legend explains what the matrix actually shows: a complete plan never says that a course misses a semester,
-  // and a draft under review may.
-  const shownCells = new Set(semesterRows.flatMap((rows) => (rows.length ? rows.flatMap((row) => row.cells) : [noPhaseLabel])));
+  // The legend explains what the section actually shows: a complete plan never says that a course misses a semester,
+  // and a draft under review may. It is drawn from the whole year group rather than from the visible columns, because
+  // it names overview and matrix alike and the overview keeps the lane of a course the matrix hides.
+  const legendRows = Array.from({ length: semesters }, (_, index) => buildSemesterMatrix(courses, phases, index + 1));
+  const shownCells = new Set(legendRows.flatMap((rows) => (rows.length ? rows.flatMap((row) => row.cells) : [noPhaseLabel])));
   const legend = [phaseTypeLabel("THEORY"), phaseTypeLabel("PRACTICE"), noPhaseLabel].filter((cell) => shownCells.has(cell));
 
   function toggleCourse(course: DraftCourse) {
@@ -98,7 +100,18 @@ export function PlanMatrix({ courses, phases, events }: { courses: DraftCourse[]
     <section aria-labelledby="plan-heading">
       {/* Overview and matrix show the same course of study in two ways and rank equally; the section names the subject
           both of them are about. */}
-      <h2 id="plan-heading" className="eyebrow">Studienverlauf</h2>
+      <div className="plan-section-head">
+        <h2 id="plan-heading" className="eyebrow">Studienverlauf</h2>
+        {/* Both views draw a phase type in the same language, so it is named once for the section and above the first
+            of them — the overview would otherwise be read before anything has said what its fills mean. The legend
+            explains, it does not act, so it carries no frame, no surface and no state of its own. It is hidden from
+            assistive technology, which is given the full label in every cell of the matrix and would only hear the
+            abbreviations explained that it never encounters. */}
+        <ul className="phase-legend" aria-hidden="true">{legend.map((cell) => {
+          const { phase, abbreviation } = phaseCell(cell);
+          return <li key={cell}><span data-phase={phase}>{abbreviation}</span> {cell}</li>;
+        })}</ul>
+      </div>
       {/* The diagram carries its statement through area, length and position, so it stays hidden from assistive
           technology together with its heading and its note. The matrix below carries the same plan completely, named in
           words and with the dates the diagram only shows as lengths (BARRIEREFREIHEIT.md). */}
@@ -115,17 +128,10 @@ export function PlanMatrix({ courses, phases, events }: { courses: DraftCourse[]
           Tabelle horizontal gescrollt werden.
         </p>
         <div className="matrix-card">
-          {/* The head of the card carries what the table needs but must not scroll away with it: the legend that
-              resolves the abbreviations, and the selection of the columns. Both stay outside the scrolling region —
-              a course hidden there could otherwise no longer be brought back once its column has scrolled off. */}
+          {/* The head of the card carries what the table needs but must not scroll away with it: the selection of the
+              columns. It stays outside the scrolling region — a course hidden there could otherwise no longer be
+              brought back once its column has scrolled off. */}
           <div className="matrix-header">
-            {/* The legend explains, it does not act, so it carries no frame, no surface and no state of its own. It is
-                hidden from assistive technology, which is given the full label in every cell and would only hear the
-                abbreviations explained that it never encounters. */}
-            <ul className="matrix-legend" aria-hidden="true">{legend.map((cell) => {
-              const { phase, abbreviation } = phaseCell(cell);
-              return <li key={cell}><span data-phase={phase}>{abbreviation}</span> {cell}</li>;
-            })}</ul>
             <div className="course-filter" role="group" aria-labelledby={filterLabelId} aria-describedby={filterHintId}>
               <p id={filterLabelId} className="course-filter__label">Sichtbare Kurse:</p>
               <div className="course-filter__options">{courses.map((course) => {
@@ -155,7 +161,9 @@ export function PlanMatrix({ courses, phases, events }: { courses: DraftCourse[]
           <div className="matrix-wrap" role="region" aria-labelledby={matrixHeadingId} tabIndex={0}>
             <table className="matrix" aria-labelledby={matrixHeadingId}>
               <thead><tr>
-                <th scope="col">Semester</th><th scope="col">Zeitraum</th><th scope="col">Dauer</th>
+                {/* The column measures the row, a merged phase cell states its own length: the heading says which of
+                    the two a duration belongs to. */}
+                <th scope="col">Semester</th><th scope="col">Zeitraum</th><th scope="col">Dauer des Abschnitts</th>
                 {visibleCourses.map((course) => <th key={course.id} className="matrix-course" scope="col">{course.code}</th>)}
               </tr></thead>
               {semesterRows.map((rows, semesterIndex) => {
