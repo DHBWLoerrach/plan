@@ -60,8 +60,12 @@ export const assumedLabelWidth = 4;
 /**
  * The labels of every bar too narrow to carry its own, from left to right. `labelWidth` states the share of the axis
  * the label of a bar needs; a bar narrower than that would show a fragment of it, so the label moves under the bar. A
- * label goes into the topmost row where it keeps its own width to the label before it, so labels of phases following
- * closely on one another never touch.
+ * label goes into the topmost row that has ended before it begins, so labels of phases following closely on one
+ * another never touch.
+ *
+ * A row therefore keeps where its last label ends, not where it is anchored: the labels are centred on their bars and
+ * two of them meet with half of each. Measuring the gap between the anchors against the width of the later label alone
+ * would let a wide label reach into a narrow one that follows.
  */
 export function flagNarrowBars(bars: TimelineBar[], labelWidth: (bar: TimelineBar) => number): TimelineFlag[] {
   const rowEnds: number[] = [];
@@ -70,14 +74,14 @@ export function flagNarrowBars(bars: TimelineBar[], labelWidth: (bar: TimelineBa
     const needed = labelWidth(bar);
     if (bar.width >= needed) continue;
     const center = round(bar.offset + bar.width / 2);
-    const row = rowEnds.findIndex((end) => center - end >= needed);
+    const row = rowEnds.findIndex((end) => center - needed / 2 >= end);
     if (row === -1) {
       flags.push({ bar, center, row: rowEnds.length });
-      rowEnds.push(center);
+      rowEnds.push(center + needed / 2);
       continue;
     }
     flags.push({ bar, center, row });
-    rowEnds[row] = center;
+    rowEnds[row] = center + needed / 2;
   }
   return flags;
 }

@@ -60,7 +60,7 @@ function PhaseCell({ cell, rowSpan = 1, duration }: { cell: string; rowSpan?: nu
 
 export function PlanMatrix({ courses, phases, events }: { courses: DraftCourse[]; phases: DraftPhase[]; events: DraftEvent[] }) {
   const [visibleCourseIds, setVisibleCourseIds] = useState(() => new Set(courses.map((course) => course.id)));
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState({ message: "", announcement: 0 });
   const matrixHeadingId = useId();
   const filterLabelId = useId();
   const filterHintId = useId();
@@ -77,11 +77,20 @@ export function PlanMatrix({ courses, phases, events }: { courses: DraftCourse[]
   const shownCells = new Set(legendRows.flatMap((rows) => (rows.length ? rows.flatMap((row) => row.cells) : [noPhaseLabel])));
   const legend = [phaseTypeLabel("THEORY"), phaseTypeLabel("PRACTICE"), noPhaseLabel].filter((cell) => shownCells.has(cell));
 
+  /**
+   * Every announcement is counted, because the same sentence twice in a row would leave the text of the live region
+   * unchanged and would therefore be read out only the first time. Refusing to hide the last course is exactly that
+   * case: it says the same thing however often it happens, and has to be heard every time.
+   */
+  function announce(message: string) {
+    setStatus((previous) => ({ message, announcement: previous.announcement + 1 }));
+  }
+
   function toggleCourse(course: DraftCourse) {
     const next = new Set(visibleCourseIds);
     if (next.has(course.id)) next.delete(course.id); else next.add(course.id);
     setVisibleCourseIds(next);
-    setStatus(`${course.code} ${next.has(course.id) ? "eingeblendet" : "ausgeblendet"}. ${next.size} von ${courses.length} Kursen sichtbar.`);
+    announce(`${course.code} ${next.has(course.id) ? "eingeblendet" : "ausgeblendet"}. ${next.size} von ${courses.length} Kursen sichtbar.`);
   }
 
   /**
@@ -93,7 +102,7 @@ export function PlanMatrix({ courses, phases, events }: { courses: DraftCourse[]
    */
   function refuseHiding(event: MouseEvent<HTMLInputElement>, course: DraftCourse) {
     event.preventDefault();
-    setStatus(`${course.code} bleibt sichtbar: Mindestens ein Kurs muss in der Planmatrix angezeigt werden.`);
+    announce(`${course.code} bleibt sichtbar: Mindestens ein Kurs muss in der Planmatrix angezeigt werden.`);
   }
 
   return <>
@@ -155,7 +164,10 @@ export function PlanMatrix({ courses, phases, events }: { courses: DraftCourse[]
               <p id={filterHintId} className="course-filter__hint">Mindestens ein Kurs muss sichtbar bleiben.</p>
             </div>
           </div>
-          <p className="sr-only" role="status">{status}</p>
+          {/* A zero width space alternates with every announcement, so a repeated message still changes the text of
+              the region. It is the smallest change that carries no meaning of its own: screen readers pass over it,
+              while a counter or a suffix would be read out along with the sentence. */}
+          <p className="sr-only" role="status">{status.message}{status.announcement % 2 ? "\u200b" : ""}</p>
           {/* Table and scrollable region are named by the heading of the block; a title of their own would say
               „Studienverlauf“ a third time, under a section and a heading that both say it already. */}
           <div className="matrix-wrap" role="region" aria-labelledby={matrixHeadingId} tabIndex={0}>

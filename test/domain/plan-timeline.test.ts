@@ -197,6 +197,13 @@ describe("flagNarrowBars", () => {
     expect(flagNarrowBars([bar(0, 10), bar(20, 10)], width).map((flag) => flag.bar.offset)).toEqual([20]);
   });
 
+  it("keeps a narrow label clear of the wide one before it", () => {
+    // Twelve apart, which holds the second label on its own — but the two meet with half of each, and the first one
+    // is three times as wide.
+    const width = (candidate: TimelineBar) => (candidate.offset === 0 ? 30 : 10);
+    expect(flagNarrowBars([bar(0, 2), bar(12, 2)], width).map((flag) => flag.row)).toEqual([0, 1]);
+  });
+
   it("flags a bar the axis has grown too narrow for", () => {
     // The same bar, once on an axis where its label fits and once where it no longer does.
     expect(flagNarrowBars([bar(0, 12)], () => 10)).toEqual([]);
