@@ -2,7 +2,7 @@
 
 import { useId, useState } from "react";
 
-import { formatCalendarPeriod } from "@/lib/domain/calendar-format";
+import { formatCalendarPeriod, formatPeriodDuration } from "@/lib/domain/calendar-format";
 import { eventCategoryLabel } from "@/lib/domain/event-category";
 import { phaseTypeLabel } from "@/lib/domain/phase-type";
 import { buildSemesterMatrix, deriveEventSemester, type DraftCourse, type DraftEvent, type DraftPhase } from "@/lib/domain/publication";
@@ -61,7 +61,7 @@ export function PlanMatrix({ courses, phases, events }: { courses: DraftCourse[]
         <table className="matrix">
           <caption id={captionId}>Studienverlauf je Semester</caption>
           <thead><tr>
-            <th scope="col">Semester</th><th scope="col">Zeitraum</th>
+            <th scope="col">Semester</th><th scope="col">Zeitraum</th><th scope="col">Dauer</th>
             {visibleCourses.map((course) => <th key={course.id} scope="col">{course.code}</th>)}
           </tr></thead>
           {Array.from({ length: semesters }, (_, index) => index + 1).map((semester) => {
@@ -72,11 +72,13 @@ export function PlanMatrix({ courses, phases, events }: { courses: DraftCourse[]
               ? rows.map((row, index) => <tr key={row.startDate}>
                 {index === 0 ? semesterHeading(rows.length) : null}
                 <th scope="row">{formatCalendarPeriod(row.startDate, row.endDate)}</th>
+                <td className="matrix-duration">{formatPeriodDuration(row.startDate, row.endDate)}</td>
                 {row.cells.map((cell, cellIndex) => <td key={visibleCourses[cellIndex].id} data-phase={phaseAttribute(cell)}>{cell}</td>)}
               </tr>)
               : <tr>
                 {semesterHeading(1)}
                 <th scope="row">Kein Zeitraum</th>
+                <td className="matrix-duration">Keine</td>
                 {visibleCourses.map((course) => <td key={course.id} data-phase="none">Nicht in diesem Semester</td>)}
               </tr>}</tbody>;
           })}

@@ -7,7 +7,7 @@ import { type PhaseFormState, createPhasesAction } from "@/app/intern/blockplaen
 import { DateField } from "@/components/date-field";
 import { CollapsibleEditor } from "@/components/editor-controls";
 import { type EditablePhase, PhaseEditorForms } from "@/components/phase-forms";
-import { formatCalendarDay, formatCalendarPeriod } from "@/lib/domain/calendar-format";
+import { formatCalendarDay, formatCalendarPeriod, formatPeriodDuration } from "@/lib/domain/calendar-format";
 import {
   type NextPhaseDefaults,
   type PhaseGap,
@@ -263,6 +263,7 @@ export function PhaseSection({ blockPlanId, courses, semesters, semester, overvi
                 heading={<>
                   <span className={`phase-badge phase-badge--${phase.type.toLowerCase()}`}>{phaseTypeLabel(phase.type)}</span>
                   <span>{formatCalendarPeriod(phase.startDate, phase.endDate, { weekday: true })}</span>
+                  <span className="phase-duration">{formatPeriodDuration(phase.startDate, phase.endDate)}</span>
                 </>}
                 openLabel={`Kursphase bearbeiten (${course.code}, ${formatCalendarPeriod(phase.startDate, phase.endDate)})`}
                 closeLabel={`Bearbeitung schließen (${course.code}, ${formatCalendarPeriod(phase.startDate, phase.endDate)})`}>

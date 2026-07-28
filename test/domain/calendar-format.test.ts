@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatCalendarDay, formatCalendarPeriod, weekdayName } from "@/lib/domain/calendar-format";
+import { formatCalendarDay, formatCalendarPeriod, formatPeriodDuration, weekdayName } from "@/lib/domain/calendar-format";
 
 describe("formatCalendarDay", () => {
   it("formats a calendar day in German notation", () => {
@@ -27,6 +27,25 @@ describe("formatCalendarPeriod", () => {
 
   it("prefixes both weekdays when asked", () => {
     expect(formatCalendarPeriod("2026-10-01", "2026-12-31", { weekday: true })).toBe("Do 01.10.2026 – Do 31.12.2026");
+  });
+});
+
+describe("formatPeriodDuration", () => {
+  it.each([
+    ["2027-04-19", "2027-07-11", "12 Wochen"],
+    ["2027-07-12", "2027-09-26", "11 Wochen"],
+    ["2026-10-05", "2026-10-11", "1 Woche"],
+    ["2026-10-05", "2026-10-15", "1 Woche, 4 Tage"],
+    ["2026-10-05", "2026-10-13", "1 Woche, 2 Tage"],
+    ["2026-10-05", "2026-10-12", "1 Woche, 1 Tag"],
+    ["2026-10-05", "2026-10-09", "5 Tage"],
+    ["2026-10-05", "2026-10-05", "1 Tag"],
+  ])("names the inclusive length of %s to %s as %s", (startDate, endDate, expected) => {
+    expect(formatPeriodDuration(startDate, endDate)).toBe(expected);
+  });
+
+  it("counts the leap day of a period spanning it", () => {
+    expect(formatPeriodDuration("2028-02-21", "2028-03-05")).toBe("2 Wochen");
   });
 });
 

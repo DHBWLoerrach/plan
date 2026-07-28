@@ -179,7 +179,8 @@ p[role="status"] { margin: 0; color: var(--success); }
 .matrix th, .matrix td, .event-table th, .event-table td { padding: .45rem .7rem; border: 1px solid var(--line); vertical-align: top; }
 .matrix thead th, .event-table thead th { background: var(--surface); border-bottom: 2px solid var(--gray); font-size: .85rem; }
 /* The period column keeps start and end on one line; the wrapper scrolls when the table outgrows the viewport. */
-.matrix tbody th, .event-table tbody td:first-child { width: 1%; white-space: nowrap; }
+.matrix tbody th, .matrix-duration, .event-table tbody td:first-child { width: 1%; white-space: nowrap; }
+.matrix-duration { color: var(--gray); }
 .matrix tbody th { font-weight: 400; }
 .matrix-semester { background: var(--surface); font-weight: 700; }
 .matrix tbody + tbody th, .matrix tbody + tbody td { border-top: 2px solid var(--gray); }
@@ -316,6 +317,7 @@ p[role="status"] { margin: 0; color: var(--success); }
 .phase-gap strong { color: var(--warning); font-size: .88rem; }
 .phase-gap span { color: var(--ink); font-size: .84rem; }
 .phase-empty-row { padding: 1rem; color: var(--gray); }
+.phase-duration { color: var(--gray); font-size: .85rem; font-weight: 400; }
 .phase-badge { padding: .16rem .48rem; border: 1px solid var(--line); font-size: .76rem; letter-spacing: .04em; text-transform: uppercase; }
 .phase-badge--theory { background: var(--theory); }
 .phase-badge--practice { background: var(--practice); }
