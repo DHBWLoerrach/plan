@@ -5,7 +5,7 @@ import { useId, useState } from "react";
 import { formatCalendarPeriod, formatPeriodDuration } from "@/lib/domain/calendar-format";
 import { eventCategoryLabel } from "@/lib/domain/event-category";
 import { phaseTypeLabel } from "@/lib/domain/phase-type";
-import { buildSemesterMatrix, deriveEventSemester, type DraftCourse, type DraftEvent, type DraftPhase, type MatrixRow } from "@/lib/domain/publication";
+import { buildSemesterMatrix, deriveEventSemester, noPhaseLabel, type DraftCourse, type DraftEvent, type DraftPhase, type MatrixRow } from "@/lib/domain/publication";
 
 /**
  * How a matrix cell shows the phase label the domain produced: the full label stays in the cell for assistive
@@ -18,30 +18,42 @@ function phaseCell(cell: string): { phase: string; abbreviation: string } {
   return { phase: "none", abbreviation: "" };
 }
 
-/**
- * How a cell relates to the equal phases above and below it in its column. The rows of a semester are cut at the phase
- * boundaries of every course, so one phase of one course can span several rows: the run lets the coloured edge close
- * over those cuts, and the block duration names the length the duration column cannot name, because that column
- * measures the row. It is stated once at the top of a block and only where the block outlasts its row, so that the
- * plan never leaves the reader to add the rows up.
- */
-function phaseBlock(rows: MatrixRow[], index: number, column: number): { run?: string; blockDuration?: string } {
-  const cell = rows[index].cells[column];
-  const above = rows[index - 1]?.cells[column] === cell;
-  const below = rows[index + 1]?.cells[column] === cell;
-  if (!above && !below) return {};
-  if (above) return { run: below ? "middle" : "end" };
-  let last = index;
-  while (rows[last + 1]?.cells[column] === cell) last += 1;
-  return { run: "start", blockDuration: formatPeriodDuration(rows[index].startDate, rows[last].endDate) };
+interface PhaseBlock {
+  column: number;
+  cell: string;
+  rowSpan: number;
+  duration: string;
 }
 
-function PhaseCell({ cell, run, blockDuration }: { cell: string; run?: string; blockDuration?: string }) {
+/**
+ * The phase blocks each row of a semester starts. The rows are cut at the phase boundaries of every course, so one
+ * phase of one course can cover several rows; those rows become one cell that carries the phase and its length
+ * exactly once, instead of repeating the phase and leaving the reader to add the rows up.
+ */
+function buildPhaseBlocks(rows: MatrixRow[]): PhaseBlock[][] {
+  const blocks: PhaseBlock[][] = rows.map(() => []);
+  for (let column = 0; column < (rows[0]?.cells.length ?? 0); column += 1) {
+    for (let index = 0; index < rows.length;) {
+      const cell = rows[index].cells[column];
+      let last = index;
+      while (rows[last + 1]?.cells[column] === cell) last += 1;
+      // Pushed column by column, so the cells of a row stay in the order of their columns.
+      blocks[index].push({ column, cell, rowSpan: last - index + 1, duration: formatPeriodDuration(rows[index].startDate, rows[last].endDate) });
+      index = last + 1;
+    }
+  }
+  return blocks;
+}
+
+function PhaseCell({ cell, rowSpan = 1, duration }: { cell: string; rowSpan?: number; duration?: string }) {
   const { phase, abbreviation } = phaseCell(cell);
-  return <td data-phase={phase} data-run={run}>
+  return <td data-phase={phase} rowSpan={rowSpan > 1 ? rowSpan : undefined}>
     <span className="sr-only">{cell}</span>
     {abbreviation ? <span aria-hidden="true">{abbreviation}</span> : null}
-    {abbreviation && blockDuration ? <span className="matrix-block-duration">{blockDuration}</span> : null}
+    {/* The merged cell states its own length, because the duration column beside it measures the row, not the phase. */}
+    {/* The duration stays on one line, so a cell too narrow for the whole label breaks after the word before it
+        instead of somewhere inside the duration. */}
+    {abbreviation && rowSpan > 1 ? <span className="matrix-block-duration">Gesamt: <span>{duration}</span></span> : null}
   </td>;
 }
 
@@ -54,6 +66,11 @@ export function PlanMatrix({ courses, phases, events }: { courses: DraftCourse[]
   // Every course of a block plan carries the same number of semesters (FACHLICHE_REGELN.md); hiding columns therefore
   // never removes a semester table.
   const semesters = Math.max(...courses.map((course) => course.semesters), 0);
+  const semesterRows = Array.from({ length: semesters }, (_, index) => buildSemesterMatrix(visibleCourses, phases, index + 1));
+  // The legend explains what the matrix actually shows: a complete plan never says that a course misses a semester,
+  // and a draft under review may.
+  const shownCells = new Set(semesterRows.flatMap((rows) => (rows.length ? rows.flatMap((row) => row.cells) : [noPhaseLabel])));
+  const legend = [phaseTypeLabel("THEORY"), phaseTypeLabel("PRACTICE"), noPhaseLabel].filter((cell) => shownCells.has(cell));
 
   function toggleCourse(course: DraftCourse) {
     const next = new Set(visibleCourseIds);
@@ -86,20 +103,25 @@ export function PlanMatrix({ courses, phases, events }: { courses: DraftCourse[]
         </label>)}
       </fieldset>
       <p className="sr-only" role="status">{status}</p>
-      <ul className="matrix-legend">
-        <li><span data-phase="theory" aria-hidden="true">T</span> {phaseTypeLabel("THEORY")}</li>
-        <li><span data-phase="practice" aria-hidden="true">P</span> {phaseTypeLabel("PRACTICE")}</li>
-        <li><span data-phase="none" aria-hidden="true" /> Nicht in diesem Semester</li>
-      </ul>
       <div className="matrix-wrap" role="region" aria-labelledby={captionId} tabIndex={0}>
         <table className="matrix">
-          <caption id={captionId}>Studienverlauf je Semester</caption>
+          {/* The legend sits under the table title, where the abbreviations it resolves are about to be read. It is
+              hidden from assistive technology, which is given the full label in every cell and would only hear the
+              abbreviations explained that it never encounters. The region is named by the title alone. */}
+          <caption>
+            <span id={captionId}>Studienverlauf je Semester</span>
+            <ul className="matrix-legend" aria-hidden="true">{legend.map((cell) => {
+              const { phase, abbreviation } = phaseCell(cell);
+              return <li key={cell}><span data-phase={phase}>{abbreviation}</span> {cell}</li>;
+            })}</ul>
+          </caption>
           <thead><tr>
             <th scope="col">Semester</th><th scope="col">Zeitraum</th><th scope="col">Dauer</th>
-            {visibleCourses.map((course) => <th key={course.id} scope="col">{course.code}</th>)}
+            {visibleCourses.map((course) => <th key={course.id} className="matrix-course" scope="col">{course.code}</th>)}
           </tr></thead>
-          {Array.from({ length: semesters }, (_, index) => index + 1).map((semester) => {
-            const rows = buildSemesterMatrix(visibleCourses, phases, semester);
+          {semesterRows.map((rows, semesterIndex) => {
+            const semester = semesterIndex + 1;
+            const blocks = buildPhaseBlocks(rows);
             // One row group per semester: the semester cell spans the group's rows and stays its programmatic heading.
             const semesterHeading = (rowSpan: number) => <th className="matrix-semester" scope="rowgroup" rowSpan={rowSpan}>Semester {semester}</th>;
             return <tbody key={semester}>{rows.length
@@ -107,13 +129,13 @@ export function PlanMatrix({ courses, phases, events }: { courses: DraftCourse[]
                 {index === 0 ? semesterHeading(rows.length) : null}
                 <th scope="row">{formatCalendarPeriod(row.startDate, row.endDate)}</th>
                 <td className="matrix-duration">{formatPeriodDuration(row.startDate, row.endDate)}</td>
-                {row.cells.map((cell, cellIndex) => <PhaseCell key={visibleCourses[cellIndex].id} cell={cell} {...phaseBlock(rows, index, cellIndex)} />)}
+                {blocks[index].map((block) => <PhaseCell key={visibleCourses[block.column].id} {...block} />)}
               </tr>)
               : <tr>
                 {semesterHeading(1)}
                 <th scope="row">Kein Zeitraum</th>
                 <td className="matrix-duration">Keine</td>
-                {visibleCourses.map((course) => <PhaseCell key={course.id} cell="Nicht in diesem Semester" />)}
+                {visibleCourses.map((course) => <PhaseCell key={course.id} cell={noPhaseLabel} />)}
               </tr>}</tbody>;
           })}
         </table>

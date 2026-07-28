@@ -241,6 +241,9 @@ export function validatePublication({
   return issues;
 }
 
+/** What a matrix cell says where a course has no phase covering the period of its row. */
+export const noPhaseLabel = "Nicht in diesem Semester";
+
 export function buildSemesterMatrix(courses: DraftCourse[], phases: DraftPhase[], semester: number): MatrixRow[] {
   const semesterPhases = phases.filter((phase) => phase.semester === semester);
   const boundaries = new Set<string>();
@@ -258,7 +261,7 @@ export function buildSemesterMatrix(courses: DraftCourse[], phases: DraftPhase[]
       const phase = semesterPhases.find(
         (candidate) => candidate.courseId === course.id && candidate.startDate <= startDate && candidate.endDate >= endDate,
       );
-      return phase ? phaseTypeLabel(phase.type) : "Nicht in diesem Semester";
+      return phase ? phaseTypeLabel(phase.type) : noPhaseLabel;
     });
     const previous = rows.at(-1);
     if (previous && previous.cells.every((cell, cellIndex) => cell === cells[cellIndex])) {
