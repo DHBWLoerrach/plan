@@ -31,10 +31,11 @@ export default async function BlockPlanPage({ params }: DynamicProps) {
 
   return <SiteShell><article className="plan-detail">
     <h1>{plan.name}</h1>
+    {/* Only what holds for the whole plan; the courses stand in the filter of the matrix, which is where they can be
+        switched, and are named nowhere else on the page. */}
     <dl className="course-list">
       <div><dt>Bereich</dt><dd>{plan.area}</dd></div>
       <div><dt>Jahrgang</dt><dd>{plan.year}</dd></div>
-      <div><dt>Sichtbare Kurse</dt><dd>{plan.courses.map((course) => <span key={course.id}>{course.code}</span>)}</dd></div>
     </dl>
     <PlanMatrix courses={plan.courses} phases={plan.phases} events={plan.events} />
     <p className="plan-detail__back"><Link href="/">Zurück zur öffentlichen Suche</Link></p>

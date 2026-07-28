@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useState, type MouseEvent } from "react";
 
 import { PlanTimeline } from "@/components/plan-timeline";
 import { formatCalendarPeriod, formatPeriodDuration } from "@/lib/domain/calendar-format";
@@ -61,7 +61,9 @@ function PhaseCell({ cell, rowSpan = 1, duration }: { cell: string; rowSpan?: nu
 export function PlanMatrix({ courses, phases, events }: { courses: DraftCourse[]; phases: DraftPhase[]; events: DraftEvent[] }) {
   const [visibleCourseIds, setVisibleCourseIds] = useState(() => new Set(courses.map((course) => course.id)));
   const [status, setStatus] = useState("");
-  const captionId = useId();
+  const matrixHeadingId = useId();
+  const filterLabelId = useId();
+  const filterHintId = useId();
   const visibleCourses = courses.filter((course) => visibleCourseIds.has(course.id));
   const courseCodes = new Map(courses.map((course) => [course.id, course.code]));
   // Every course of a block plan carries the same number of semesters (FACHLICHE_REGELN.md); hiding columns therefore
@@ -75,73 +77,109 @@ export function PlanMatrix({ courses, phases, events }: { courses: DraftCourse[]
 
   function toggleCourse(course: DraftCourse) {
     const next = new Set(visibleCourseIds);
-    if (!next.has(course.id)) {
-      next.add(course.id);
-    } else if (next.size === 1) {
-      // Reducing the columns must not empty the matrix; the course stays selectable and the refusal is announced.
-      setStatus(`${course.code} bleibt sichtbar: Mindestens ein Kurs muss in der Planmatrix angezeigt werden.`);
-      return;
-    } else {
-      next.delete(course.id);
-    }
+    if (next.has(course.id)) next.delete(course.id); else next.add(course.id);
     setVisibleCourseIds(next);
     setStatus(`${course.code} ${next.has(course.id) ? "eingeblendet" : "ausgeblendet"}. ${next.size} von ${courses.length} Kursen sichtbar.`);
   }
 
+  /**
+   * Reducing the columns must not empty the matrix, so the last visible course carries the refusal itself instead of
+   * accepting the click and undoing it: the checkbox is marked as disabled, keeps its focus and names the rule through
+   * the hint of the filter. Preventing the default of the click covers the pointer and the space key alike, because a
+   * checkbox is activated by a click event either way. React derives its change event from that same click and fires
+   * it regardless, so the change handler has to stand down on its own as well.
+   */
+  function refuseHiding(event: MouseEvent<HTMLInputElement>, course: DraftCourse) {
+    event.preventDefault();
+    setStatus(`${course.code} bleibt sichtbar: Mindestens ein Kurs muss in der Planmatrix angezeigt werden.`);
+  }
+
   return <>
-    <section aria-labelledby="matrix-heading">
-      <div className="section-heading">
-        <p className="eyebrow">Studienverlauf</p>
-        <h2 id="matrix-heading">Planmatrix</h2>
-        <p>Je Zeilengruppe ein Semester, je Spalte ein Kurs; auf schmalen Anzeigen ist die Tabelle waagerecht scrollbar.</p>
+    <section aria-labelledby="plan-heading">
+      {/* Overview and matrix show the same course of study in two ways and rank equally; the section names the subject
+          both of them are about. */}
+      <h2 id="plan-heading" className="eyebrow">Studienverlauf</h2>
+      {/* The diagram carries its statement through area, length and position, so it stays hidden from assistive
+          technology together with its heading and its note. The matrix below carries the same plan completely, named in
+          words and with the dates the diagram only shows as lengths (BARRIEREFREIHEIT.md). */}
+      <div className="plan-block plan-overview" aria-hidden="true">
+        <h3>Überblick</h3>
+        {/* The overview always draws the whole year group, so a course hidden in the matrix keeps its lane here. */}
+        <p className="plan-block__note">Die Übersicht zeigt unabhängig von der Auswahl alle Kurse des Jahrgangs.</p>
+        <PlanTimeline courses={courses} phases={phases} />
       </div>
-      <fieldset className="course-selector">
-        <legend>Sichtbare Kurse in der Planmatrix</legend>
-        {/* Which courses are shown is readable from the checkboxes themselves; only the change is announced. */}
-        <p>Mindestens ein Kurs bleibt sichtbar; Planinhalte verändert die Auswahl nicht.</p>
-        {courses.map((course) => <label key={course.id}>
-          <input type="checkbox" checked={visibleCourseIds.has(course.id)} onChange={() => toggleCourse(course)} /> {course.code}
-        </label>)}
-      </fieldset>
-      <p className="sr-only" role="status">{status}</p>
-      {/* The overview reads the same course selection as the matrix, so both always show the same set of courses. */}
-      <PlanTimeline courses={visibleCourses} phases={phases} />
-      <div className="matrix-wrap" role="region" aria-labelledby={captionId} tabIndex={0}>
-        <table className="matrix">
-          {/* The legend sits under the table title, where the abbreviations it resolves are about to be read. It is
-              hidden from assistive technology, which is given the full label in every cell and would only hear the
-              abbreviations explained that it never encounters. The region is named by the title alone. */}
-          <caption>
-            <span id={captionId}>Studienverlauf je Semester</span>
+      <div className="plan-block">
+        <h3 id={matrixHeadingId}>Planmatrix</h3>
+        <p className="plan-block__note">
+          Je Zeilengruppe wird ein Semester und je Spalte ein Kurs dargestellt. Auf schmalen Bildschirmen kann die
+          Tabelle horizontal gescrollt werden.
+        </p>
+        <div className="matrix-card">
+          {/* The head of the card carries what the table needs but must not scroll away with it: the legend that
+              resolves the abbreviations, and the selection of the columns. Both stay outside the scrolling region —
+              a course hidden there could otherwise no longer be brought back once its column has scrolled off. */}
+          <div className="matrix-header">
+            {/* The legend explains, it does not act, so it carries no frame, no surface and no state of its own. It is
+                hidden from assistive technology, which is given the full label in every cell and would only hear the
+                abbreviations explained that it never encounters. */}
             <ul className="matrix-legend" aria-hidden="true">{legend.map((cell) => {
               const { phase, abbreviation } = phaseCell(cell);
               return <li key={cell}><span data-phase={phase}>{abbreviation}</span> {cell}</li>;
             })}</ul>
-          </caption>
-          <thead><tr>
-            <th scope="col">Semester</th><th scope="col">Zeitraum</th><th scope="col">Dauer</th>
-            {visibleCourses.map((course) => <th key={course.id} className="matrix-course" scope="col">{course.code}</th>)}
-          </tr></thead>
-          {semesterRows.map((rows, semesterIndex) => {
-            const semester = semesterIndex + 1;
-            const blocks = buildPhaseBlocks(rows);
-            // One row group per semester: the semester cell spans the group's rows and stays its programmatic heading.
-            const semesterHeading = (rowSpan: number) => <th className="matrix-semester" scope="rowgroup" rowSpan={rowSpan}>Semester {semester}</th>;
-            return <tbody key={semester}>{rows.length
-              ? rows.map((row, index) => <tr key={row.startDate}>
-                {index === 0 ? semesterHeading(rows.length) : null}
-                <th scope="row">{formatCalendarPeriod(row.startDate, row.endDate)}</th>
-                <td className="matrix-duration">{formatPeriodDuration(row.startDate, row.endDate)}</td>
-                {blocks[index].map((block) => <PhaseCell key={visibleCourses[block.column].id} {...block} />)}
-              </tr>)
-              : <tr>
-                {semesterHeading(1)}
-                <th scope="row">Kein Zeitraum</th>
-                <td className="matrix-duration">Keine</td>
-                {visibleCourses.map((course) => <PhaseCell key={course.id} cell={noPhaseLabel} />)}
-              </tr>}</tbody>;
-          })}
-        </table>
+            <div className="course-filter" role="group" aria-labelledby={filterLabelId} aria-describedby={filterHintId}>
+              <p id={filterLabelId} className="course-filter__label">Sichtbare Kurse:</p>
+              <div className="course-filter__options">{courses.map((course) => {
+                const checked = visibleCourseIds.has(course.id);
+                const locked = checked && visibleCourseIds.size === 1;
+                return <label key={course.id} data-locked={locked ? "" : undefined}>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    aria-disabled={locked || undefined}
+                    aria-describedby={locked ? filterHintId : undefined}
+                    onClick={locked ? (event) => refuseHiding(event, course) : undefined}
+                    onChange={() => { if (!locked) toggleCourse(course); }}
+                  /> {course.code}
+                  {/* The code alone names the column; what ticking it does is said for assistive technology only. */}
+                  <span className="sr-only"> in der Planmatrix anzeigen</span>
+                </label>;
+              })}</div>
+              {/* The rule stands whether or not it currently bites, so the line is always there and the filter never
+                  changes height under the pointer. */}
+              <p id={filterHintId} className="course-filter__hint">Mindestens ein Kurs muss sichtbar bleiben.</p>
+            </div>
+          </div>
+          <p className="sr-only" role="status">{status}</p>
+          {/* Table and scrollable region are named by the heading of the block; a title of their own would say
+              „Studienverlauf“ a third time, under a section and a heading that both say it already. */}
+          <div className="matrix-wrap" role="region" aria-labelledby={matrixHeadingId} tabIndex={0}>
+            <table className="matrix" aria-labelledby={matrixHeadingId}>
+              <thead><tr>
+                <th scope="col">Semester</th><th scope="col">Zeitraum</th><th scope="col">Dauer</th>
+                {visibleCourses.map((course) => <th key={course.id} className="matrix-course" scope="col">{course.code}</th>)}
+              </tr></thead>
+              {semesterRows.map((rows, semesterIndex) => {
+                const semester = semesterIndex + 1;
+                const blocks = buildPhaseBlocks(rows);
+                // One row group per semester: the semester cell spans the group's rows and stays its programmatic heading.
+                const semesterHeading = (rowSpan: number) => <th className="matrix-semester" scope="rowgroup" rowSpan={rowSpan}>Semester {semester}</th>;
+                return <tbody key={semester}>{rows.length
+                  ? rows.map((row, index) => <tr key={row.startDate}>
+                    {index === 0 ? semesterHeading(rows.length) : null}
+                    <th scope="row">{formatCalendarPeriod(row.startDate, row.endDate)}</th>
+                    <td className="matrix-duration">{formatPeriodDuration(row.startDate, row.endDate)}</td>
+                    {blocks[index].map((block) => <PhaseCell key={visibleCourses[block.column].id} {...block} />)}
+                  </tr>)
+                  : <tr>
+                    {semesterHeading(1)}
+                    <th scope="row">Kein Zeitraum</th>
+                    <td className="matrix-duration">Keine</td>
+                    {visibleCourses.map((course) => <PhaseCell key={course.id} cell={noPhaseLabel} />)}
+                  </tr>}</tbody>;
+              })}
+            </table>
+          </div>
+        </div>
       </div>
     </section>
     <section aria-labelledby="events-heading">

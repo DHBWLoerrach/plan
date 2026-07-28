@@ -24,16 +24,14 @@ function SemesterBand({ semesters }: { semesters: TimelineSemester[] }) {
 
 /**
  * The overview above the matrix: the whole block plan on one time axis, with courses that run identically drawn as a
- * single lane. It is hidden from assistive technology and from narrow screens, because the matrix below carries the
- * same plan completely, with the dates the diagram only shows as lengths (BARRIEREFREIHEIT.md).
+ * single lane. The card carries the diagram alone; heading, note and the rule that it stays hidden from assistive
+ * technology and from narrow screens belong to the block around it (BARRIEREFREIHEIT.md).
  */
 export function PlanTimeline({ courses, phases }: { courses: DraftCourse[]; phases: DraftPhase[] }) {
   const timeline = buildPlanTimeline(courses, phases);
   if (!timeline) return null;
 
-  return <div className="timeline" aria-hidden="true">
-    {/* Paired with the caption of the matrix below, which reads „Studienverlauf je Semester“. */}
-    <p className="timeline-title">Studienverlauf im Überblick</p>
+  return <div className="timeline">
     {/* The years are a band of their own above the semester band, so each number stands in its own section and the
         boundaries are the edges of those sections — the diagram itself stays free of vertical lines. */}
     <div className="timeline-years">
