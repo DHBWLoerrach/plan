@@ -72,9 +72,9 @@ function useLabelWidths(labels: string[]) {
 }
 
 /**
- * The overview above the matrix: the whole block plan on one time axis, with courses that run identically drawn as a
- * single lane. The card carries the diagram alone; heading, note and the rule that it stays hidden from assistive
- * technology and from narrow screens belong to the block around it (BARRIEREFREIHEIT.md).
+ * The overview above the matrix: the whole block plan on one time axis, with one lane per course. The card carries
+ * the diagram alone; heading, note and the rule that it stays hidden from assistive technology and from narrow screens
+ * belong to the block around it (BARRIEREFREIHEIT.md).
  */
 export function PlanTimeline({ courses, phases }: { courses: DraftCourse[]; phases: DraftPhase[] }) {
   const timeline = buildPlanTimeline(courses, phases);

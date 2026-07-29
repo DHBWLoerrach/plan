@@ -22,7 +22,7 @@ export interface TimelineYear extends TimelineSpan {
   year: number;
 }
 
-/** One row of the diagram: every course whose phases are identical shares it, so the run is drawn exactly once. */
+/** One row of the diagram: exactly one course, regardless of whether another course has identical phases. */
 export interface TimelineLane {
   codes: string[];
   bars: TimelineBar[];
@@ -92,8 +92,8 @@ function round(value: number): number {
 }
 
 /**
- * The block plan as one diagram over a single time axis, as the overview above the matrix. Courses running identically
- * become one lane, which is the statement the matrix cannot make: it repeats such courses as separate columns.
+ * The block plan as one diagram over a single time axis, as the overview above the matrix. Every course keeps its own
+ * lane, matching the one-column-per-course matrix while the public comparison still has no summary step.
  *
  * The diagram is an addition, never the record. Its bars carry the phase type through fill alone and a short one has
  * no room for a label at all, so the matrix below remains the full and the accessible reading (BARRIEREFREIHEIT.md).
@@ -131,28 +131,18 @@ export function buildPlanTimeline(courses: DraftCourse[], phases: DraftPhase[]):
     });
   }
 
-  const lanes = new Map<string, TimelineLane>();
-  for (const course of courses) {
+  const lanes = courses.map((course) => {
     const ownPhases = shownPhases
       .filter((phase) => phase.courseId === course.id)
       .toSorted((left, right) => left.startDate.localeCompare(right.startDate));
-    // Courses share a lane only where every phase matches in semester, type and period. Anything less would draw the
-    // run of one course and label it with the code of another.
-    const key = ownPhases.map((phase) => `${phase.semester} ${phase.type} ${phase.startDate} ${phase.endDate}`).join("|");
-    const known = lanes.get(key);
-    if (known) {
-      known.codes.push(course.code);
-      continue;
-    }
-    lanes.set(key, {
+    return {
       codes: [course.code],
       bars: ownPhases.map((phase) => ({ type: phase.type, ...span(phase.startDate, phase.endDate) })),
       semesters: laneSemesters(ownPhases, span),
-    });
-  }
+    };
+  });
 
-  const drawn = [...lanes.values()];
-  return { startDate, endDate, years, lanes: drawn, sharedSemesters: sharedSemesters(drawn) };
+  return { startDate, endDate, years, lanes, sharedSemesters: sharedSemesters(lanes) };
 }
 
 function sharedSemesters(lanes: TimelineLane[]): TimelineSemester[] | null {

@@ -33,14 +33,14 @@ describe("buildPlanTimeline", () => {
     ]);
   });
 
-  it("draws courses running identically as one lane", () => {
+  it("draws one lane for every course, even when their phases are identical", () => {
     const timeline = buildPlanTimeline(
       [course("course-a", "TIF26A"), course("course-b", "WWI26A")],
       [...run("course-a"), ...run("course-b")],
     );
 
-    expect(timeline?.lanes).toHaveLength(1);
-    expect(timeline?.lanes[0].codes).toEqual(["TIF26A", "WWI26A"]);
+    expect(timeline?.lanes).toHaveLength(2);
+    expect(timeline?.lanes.map((lane) => lane.codes)).toEqual([["TIF26A"], ["WWI26A"]]);
   });
 
   it("keeps courses apart as soon as one phase differs", () => {

@@ -1,6 +1,7 @@
 import type Database from "better-sqlite3";
 
-import { normalizeCodePrefix } from "@/lib/domain/course-code";
+import type { PublicCut } from "@/lib/domain/public-cut";
+import { normalizeCodePrefix, normalizeCourseCode } from "@/lib/domain/course-code";
 import type { DraftCourse, DraftEvent, DraftPhase } from "@/lib/domain/publication";
 
 /** Server-side pagination of the public search (MVP-SPEZIFIKATION.md). */
@@ -16,22 +17,15 @@ export interface PublicFilters {
 /** The filter keys in the order the search form and the active-filter summary list them. */
 export const filterKeys = ["area", "program", "year", "course"] as const;
 
-export type PublicCourse = DraftCourse & { program: string };
-
-export interface PublicPlan {
-  id: string;
-  name: string;
-  area: string;
-  year: number;
-  courses: PublicCourse[];
-}
+/** A course exactly as its published snapshot names it, enriched with the two designations that address its cuts. */
+export type PublicCourse = DraftCourse & { area: string; program: string; year: number };
 
 export type PublicPlanGroupKey = "current" | "future" | "past";
 
 export interface PublicPlanGroup {
   key: PublicPlanGroupKey;
   label: string;
-  plans: PublicPlan[];
+  courses: PublicCourse[];
 }
 
 export interface PublicSearchResult {
@@ -43,7 +37,13 @@ export interface PublicSearchResult {
   pages: number;
 }
 
-export type PublicPlanDetail = PublicPlan & { phases: DraftPhase[]; events: DraftEvent[] };
+/** Everything a public course or multi-course cut needs to render the same matrix and event list. */
+export interface PublicCutDetail {
+  cut: PublicCut;
+  courses: PublicCourse[];
+  phases: DraftPhase[];
+  events: DraftEvent[];
+}
 
 const groupLabels: Record<PublicPlanGroupKey, string> = {
   current: "Aktuell laufend",
@@ -62,19 +62,15 @@ export function berlinCalendarDay(now: Date = new Date()): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
 }
 
-/**
- * The filter options, formed exclusively from the master data snapshots of existing published versions. Plans of areas
- * and programs renamed later therefore stay findable under the designation they were published with, and no option
- * without a result is offered (MVP-SPEZIFIKATION.md).
- */
+/** The filter options are all and only values carried by still-published snapshots. */
 export function readPublicFilterOptions(sqlite: Database.Database) {
   const areas = sqlite
     .prepare(`SELECT DISTINCT version.area_name AS value FROM published_versions version
-      WHERE EXISTS (SELECT 1 FROM published_course_snapshots snapshot WHERE snapshot.version_id = version.id)
-      ORDER BY version.area_name COLLATE NOCASE`)
+      JOIN published_course_snapshots snapshot ON snapshot.version_id = version.id
+      ORDER BY value COLLATE NOCASE`)
     .all() as { value: string }[];
   const programs = sqlite
-    .prepare("SELECT DISTINCT program_name AS value FROM published_course_snapshots ORDER BY program_name COLLATE NOCASE")
+    .prepare("SELECT DISTINCT program_name AS value FROM published_course_snapshots ORDER BY value COLLATE NOCASE")
     .all() as { value: string }[];
   const years = sqlite
     .prepare("SELECT DISTINCT CAST(substr(study_start, 1, 4) AS INTEGER) AS value FROM published_course_snapshots ORDER BY value DESC")
@@ -86,31 +82,9 @@ export function readPublicFilterOptions(sqlite: Database.Database) {
   };
 }
 
-type PublicPlanRow = {
-  versionId: string;
-  blockPlanId: string;
-  name: string;
-  area: string;
-  year: number;
-  groupKey: PublicPlanGroupKey;
-};
-
-type PublicCourseRow = {
-  versionId: string;
-  id: string;
-  code: string;
-  program: string;
-  studyStart: string;
-  studyEnd: string;
-  semesters: number;
-};
-
+type PublicCourseRow = PublicCourse & { groupKey: PublicPlanGroupKey };
 type EventCourseRow = { eventId: string; courseId: string };
-
-/** The year of studies: the calendar year the studies begin in; it is derived, never stored (FACHLICHE_REGELN.md). */
-function studyStartYear(courses: PublicCourse[]): number {
-  return Number(courses.reduce((earliest, course) => (course.studyStart < earliest ? course.studyStart : earliest), courses[0].studyStart).slice(0, 4));
-}
+type PublishedEventRow = Omit<DraftEvent, "courseIds" | "provisional"> & { provisional: number };
 
 /** The filters as the search applies them: values holding only whitespace count as unset. */
 function normalizeFilters(filters: PublicFilters): PublicFilters {
@@ -122,116 +96,45 @@ function normalizeFilters(filters: PublicFilters): PublicFilters {
   return normalized;
 }
 
-const matchingPlansSql = `
-  WITH matching_plans AS (
-    SELECT version.id AS versionId, version.block_plan_id AS blockPlanId, version.block_plan_name AS name,
-      version.area_name AS area, CAST(substr(MIN(snapshot.study_start), 1, 4) AS INTEGER) AS year,
-      CASE
-        WHEN MIN(snapshot.study_start) > ? THEN 'future'
-        WHEN MAX(snapshot.study_end) < ? THEN 'past'
-        ELSE 'current'
-      END AS groupKey
-    FROM published_versions version
-    JOIN published_course_snapshots snapshot ON snapshot.version_id = version.id
-    WHERE (? IS NULL OR version.area_name = ?)
-      AND (? IS NULL OR EXISTS (
-        SELECT 1 FROM published_course_snapshots filtered_snapshot
-        WHERE filtered_snapshot.version_id = version.id AND filtered_snapshot.program_name = ?
-      ))
-      AND (? IS NULL OR EXISTS (
-        SELECT 1 FROM published_course_search_keys search_key
-        JOIN published_course_snapshots filtered_snapshot ON filtered_snapshot.id = search_key.course_snapshot_id
-        WHERE filtered_snapshot.version_id = version.id
-          AND search_key.normalized_code >= ? AND search_key.normalized_code < ?
-      ))
-    GROUP BY version.id
-    HAVING (? IS NULL OR CAST(substr(MIN(snapshot.study_start), 1, 4) AS INTEGER) = ?)
-  )
-`;
+/** A malformed year is deliberately a value that cannot match, never an omitted filter. */
+function yearParameter(year: string | undefined): number | null {
+  if (!year) return null;
+  return /^\d{4}$/.test(year) ? Number(year) : -1;
+}
 
-const planOrderSql = `
-  ORDER BY CASE groupKey WHEN 'current' THEN 0 WHEN 'future' THEN 1 ELSE 2 END,
-    CASE WHEN groupKey = 'future' THEN year END ASC,
-    CASE WHEN groupKey <> 'future' THEN year END DESC,
-    name COLLATE NOCASE ASC, blockPlanId ASC
-`;
-
-/**
- * The exclusive upper bound of a course code prefix: every string beginning with the prefix sorts before it. The
- * search compares the prefix as a range rather than through `LIKE`, so that `_` and `%` of a search term stay ordinary
- * characters and SQLite can answer the comparison from the index on the normalised code.
- */
+/** The exclusive upper bound of a course-code prefix, which keeps wildcard characters literal in SQLite. */
 function afterCodePrefix(prefix: string): string {
   return `${prefix}\u{10FFFF}`;
 }
 
-/**
- * The year the view keeps showing must not silently drop out of the query: a value that is no calendar year matches no
- * plan, just like an unknown area does. `Number` would answer `NaN` for it, which SQLite binds as `NULL` — and `NULL`
- * is how this query says "filter unset".
- */
-function yearParameter(year: string | undefined): number | null {
-  if (!year) return null;
-  const parsed = Number(year);
-  return Number.isInteger(parsed) ? parsed : -1;
-}
+const matchingCoursesSql = `
+  FROM published_course_snapshots snapshot
+  JOIN published_versions version ON version.id = snapshot.version_id
+  JOIN published_course_search_keys search_key ON search_key.course_snapshot_id = snapshot.id
+  WHERE (? IS NULL OR version.area_name = ?)
+    AND (? IS NULL OR snapshot.program_name = ?)
+    AND (? IS NULL OR CAST(substr(snapshot.study_start, 1, 4) AS INTEGER) = ?)
+    AND (? IS NULL OR (search_key.normalized_code >= ? AND search_key.normalized_code < ?))
+`;
 
-function matchingPlanParameters(filters: PublicFilters, coursePrefix: string | null, today: string) {
+function matchingCourseParameters(filters: PublicFilters, coursePrefix: string | null) {
   const year = yearParameter(filters.year);
   return [
-    today, today,
     filters.area ?? null, filters.area ?? null,
     filters.program ?? null, filters.program ?? null,
-    coursePrefix, coursePrefix, coursePrefix && afterCodePrefix(coursePrefix),
     year, year,
+    coursePrefix, coursePrefix, coursePrefix && afterCodePrefix(coursePrefix),
   ];
 }
 
-/** The page's plans are filtered, grouped and ordered by SQLite before their visible courses are read. */
-function readMatchingPlanPage(
-  sqlite: Database.Database,
-  filters: PublicFilters,
-  coursePrefix: string | null,
-  today: string,
-  limit: number,
-  offset: number,
-): PublicPlanRow[] {
-  return sqlite.prepare(`${matchingPlansSql} SELECT * FROM matching_plans ${planOrderSql} LIMIT ? OFFSET ?`)
-    .all(...matchingPlanParameters(filters, coursePrefix, today), limit, offset) as PublicPlanRow[];
-}
+const courseOrderSql = `
+  ORDER BY CASE groupKey WHEN 'current' THEN 0 WHEN 'future' THEN 1 ELSE 2 END,
+    CASE WHEN groupKey = 'future' THEN year END ASC,
+    CASE WHEN groupKey <> 'future' THEN year END DESC,
+    code COLLATE NOCASE ASC
+`;
 
-function countMatchingPlans(sqlite: Database.Database, filters: PublicFilters, coursePrefix: string | null, today: string): number {
-  return (sqlite.prepare(`${matchingPlansSql} SELECT count(*) AS count FROM matching_plans`)
-    .get(...matchingPlanParameters(filters, coursePrefix, today)) as { count: number }).count;
-}
-
-function readCoursesForPlanPage(sqlite: Database.Database, versionIds: string[]): Map<string, PublicCourse[]> {
-  if (!versionIds.length) return new Map();
-  const rows = sqlite.prepare(`SELECT version_id AS versionId, id, code, program_name AS program,
-      study_start AS studyStart, study_end AS studyEnd, semesters
-    FROM published_course_snapshots
-    WHERE version_id IN (${versionIds.map(() => "?").join(", ")})
-    ORDER BY version_id, code COLLATE NOCASE`).all(...versionIds) as PublicCourseRow[];
-  const coursesByVersion = new Map<string, PublicCourse[]>();
-  for (const row of rows) {
-    const courses = coursesByVersion.get(row.versionId) ?? [];
-    courses.push({
-      id: row.id,
-      code: row.code,
-      program: row.program,
-      studyStart: row.studyStart,
-      studyEnd: row.studyEnd,
-      semesters: row.semesters,
-    });
-    coursesByVersion.set(row.versionId, courses);
-  }
-  return coursesByVersion;
-}
-
-/**
- * The published plans matching the filters, in their groups and on the requested page. All filters combine with AND;
- * the reference day decides the grouping.
- */
+/** The public search works on courses, not the former internal block-plan grouping. */
 export function searchPublicPlans(
   sqlite: Database.Database,
   request: PublicFilters & { page?: string },
@@ -239,23 +142,20 @@ export function searchPublicPlans(
 ): PublicSearchResult {
   const filters = normalizeFilters(request);
   const coursePrefix = normalizeCodePrefix(filters.course);
-  const total = countMatchingPlans(sqlite, filters, coursePrefix, today);
+  const parameters = matchingCourseParameters(filters, coursePrefix);
+  const total = (sqlite.prepare(`SELECT count(*) AS count ${matchingCoursesSql}`).get(...parameters) as { count: number }).count;
   const pages = Math.max(Math.ceil(total / plansPerPage), 1);
   const page = Math.min(Math.max(Math.trunc(Number(request.page)) || 1, 1), pages);
-  const matchingPlans = readMatchingPlanPage(sqlite, filters, coursePrefix, today, plansPerPage, (page - 1) * plansPerPage);
-  const coursesByVersion = readCoursesForPlanPage(sqlite, matchingPlans.map((plan) => plan.versionId));
-  const grouped: Record<PublicPlanGroupKey, PublicPlan[]> = { current: [], future: [], past: [] };
-  for (const plan of matchingPlans) {
-    grouped[plan.groupKey].push({
-      id: plan.blockPlanId,
-      name: plan.name,
-      area: plan.area,
-      year: plan.year,
-      courses: coursesByVersion.get(plan.versionId) ?? [],
-    });
-  }
+  const rows = sqlite.prepare(`SELECT snapshot.id, snapshot.code, version.area_name AS area, snapshot.program_name AS program,
+      snapshot.study_start AS studyStart, snapshot.study_end AS studyEnd, snapshot.semesters,
+      CAST(substr(snapshot.study_start, 1, 4) AS INTEGER) AS year,
+      CASE WHEN snapshot.study_start > ? THEN 'future' WHEN snapshot.study_end < ? THEN 'past' ELSE 'current' END AS groupKey
+      ${matchingCoursesSql} ${courseOrderSql} LIMIT ? OFFSET ?`)
+    .all(today, today, ...parameters, plansPerPage, (page - 1) * plansPerPage) as PublicCourseRow[];
+  const grouped: Record<PublicPlanGroupKey, PublicCourse[]> = { current: [], future: [], past: [] };
+  for (const { groupKey, ...course } of rows) grouped[groupKey].push(course);
   return {
-    groups: groupOrder.map((key) => ({ key, label: groupLabels[key], plans: grouped[key] })),
+    groups: groupOrder.map((key) => ({ key, label: groupLabels[key], courses: grouped[key] })),
     filters,
     total,
     page,
@@ -263,35 +163,63 @@ export function searchPublicPlans(
   };
 }
 
-/**
- * A published block plan with everything the public detail view shows. Without a published version — withdrawn, never
- * published or an unknown id — it reads nothing, so all three cases stay publicly indistinguishable
- * (MVP-SPEZIFIKATION.md).
- */
-export function readPublicPlan(sqlite: Database.Database, blockPlanId: string): PublicPlanDetail | null {
-  const version = sqlite
-    .prepare("SELECT id, block_plan_name AS name, area_name AS area FROM published_versions WHERE block_plan_id = ?")
-    .get(blockPlanId) as { id: string; name: string; area: string } | undefined;
-  if (!version) return null;
-  const courses = sqlite
-    .prepare(`SELECT id, code, program_name AS program, study_start AS studyStart, study_end AS studyEnd, semesters
-      FROM published_course_snapshots WHERE version_id = ? ORDER BY code COLLATE NOCASE`)
-    .all(version.id) as PublicCourse[];
-  if (!courses.length) return null;
-  const phases = sqlite
-    .prepare(`SELECT course_snapshot_id AS courseId, semester, phase_type AS type, start_date AS startDate, end_date AS endDate
-      FROM published_phases WHERE version_id = ? ORDER BY semester, start_date`)
-    .all(version.id) as DraftPhase[];
-  const events = sqlite
-    .prepare(`SELECT id, title, description, category, start_date AS startDate, end_date AS endDate, provisional
-      FROM published_events WHERE version_id = ? ORDER BY start_date, title COLLATE NOCASE`)
-    .all(version.id) as (Omit<DraftEvent, "courseIds" | "provisional"> & { provisional: number })[];
+function cutQuery(cut: PublicCut): { sql: string; parameters: unknown[] } | null {
+  switch (cut.kind) {
+    case "course": {
+      const code = normalizeCourseCode(cut.code);
+      return code ? {
+        sql: `JOIN published_course_search_keys search_key ON search_key.course_snapshot_id = snapshot.id
+          WHERE search_key.normalized_code = ?`,
+        parameters: [code],
+      } : null;
+    }
+    case "year":
+      return { sql: "WHERE CAST(substr(snapshot.study_start, 1, 4) AS INTEGER) = ?", parameters: [cut.year] };
+    case "area":
+      return {
+        sql: "WHERE version.area_name = ? AND CAST(substr(snapshot.study_start, 1, 4) AS INTEGER) = ?",
+        parameters: [cut.name, cut.year],
+      };
+    case "program":
+      return {
+        sql: "WHERE snapshot.program_name = ? AND CAST(substr(snapshot.study_start, 1, 4) AS INTEGER) = ?",
+        parameters: [cut.name, cut.year],
+      };
+  }
+}
+
+function readCoursesForCut(sqlite: Database.Database, cut: PublicCut): PublicCourse[] {
+  const query = cutQuery(cut);
+  if (!query) return [];
+  return sqlite.prepare(`SELECT snapshot.id, snapshot.code, version.area_name AS area, snapshot.program_name AS program,
+      snapshot.study_start AS studyStart, snapshot.study_end AS studyEnd, snapshot.semesters,
+      CAST(substr(snapshot.study_start, 1, 4) AS INTEGER) AS year
+    FROM published_course_snapshots snapshot
+    JOIN published_versions version ON version.id = snapshot.version_id
+    ${query.sql}
+    ORDER BY snapshot.code COLLATE NOCASE`)
+    .all(...query.parameters) as PublicCourse[];
+}
+
+function readDetailForCourses(sqlite: Database.Database, courses: PublicCourse[]) {
+  const ids = courses.map((course) => course.id);
+  const placeholders = ids.map(() => "?").join(", ");
+  const phases = sqlite.prepare(`SELECT course_snapshot_id AS courseId, semester, phase_type AS type, start_date AS startDate, end_date AS endDate
+      FROM published_phases WHERE course_snapshot_id IN (${placeholders}) ORDER BY semester, start_date, end_date`)
+    .all(...ids) as DraftPhase[];
+  const events = sqlite.prepare(`SELECT DISTINCT event.id, event.title, event.description, event.category,
+      event.start_date AS startDate, event.end_date AS endDate, event.provisional
+    FROM published_events event
+    JOIN published_event_courses link ON link.event_id = event.id
+    WHERE link.course_snapshot_id IN (${placeholders})
+    ORDER BY event.start_date, event.title COLLATE NOCASE, event.id`)
+    .all(...ids) as PublishedEventRow[];
   const eventCourses = sqlite.prepare(`SELECT link.event_id AS eventId, link.course_snapshot_id AS courseId
     FROM published_event_courses link
-    JOIN published_events event ON event.id = link.event_id
     JOIN published_course_snapshots snapshot ON snapshot.id = link.course_snapshot_id
-    WHERE event.version_id = ? ORDER BY link.event_id, snapshot.code COLLATE NOCASE`)
-    .all(version.id) as EventCourseRow[];
+    WHERE link.course_snapshot_id IN (${placeholders})
+    ORDER BY link.event_id, snapshot.code COLLATE NOCASE`)
+    .all(...ids) as EventCourseRow[];
   const courseIdsByEvent = new Map<string, string[]>();
   for (const { eventId, courseId } of eventCourses) {
     const courseIds = courseIdsByEvent.get(eventId) ?? [];
@@ -299,16 +227,18 @@ export function readPublicPlan(sqlite: Database.Database, blockPlanId: string): 
     courseIdsByEvent.set(eventId, courseIds);
   }
   return {
-    id: blockPlanId,
-    name: version.name,
-    area: version.area,
-    year: studyStartYear(courses),
-    courses,
     phases,
-    events: events.map((event) => ({
-      ...event,
-      provisional: Boolean(event.provisional),
-      courseIds: courseIdsByEvent.get(event.id) ?? [],
-    })),
+    events: events.map((event) => ({ ...event, provisional: Boolean(event.provisional), courseIds: courseIdsByEvent.get(event.id) ?? [] })),
   };
+}
+
+/**
+ * Reads one published course or one published cut. Every query starts at snapshots and joins only published versions;
+ * an absent result therefore makes unknown, draft-only and withdrawn addresses publicly indistinguishable.
+ */
+export function readPublicCut(sqlite: Database.Database, cut: PublicCut): PublicCutDetail | null {
+  const courses = readCoursesForCut(sqlite, cut);
+  if (!courses.length) return null;
+  const canonicalCut = cut.kind === "course" ? { kind: "course" as const, code: courses[0].code } : cut;
+  return { cut: canonicalCut, courses, ...readDetailForCourses(sqlite, courses) };
 }

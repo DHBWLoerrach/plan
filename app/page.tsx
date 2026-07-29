@@ -2,6 +2,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 
 import { SiteShell } from "@/components/site-shell";
+import { publicCutPath } from "@/lib/domain/public-cut";
 import { filterKeys, type PublicFilters, type PublicPlanGroup } from "@/lib/services/public-search";
 
 import { publicSearchData, searchParam } from "./data";
@@ -26,17 +27,17 @@ function options(published: (string | number)[], current: string | undefined) {
 }
 
 function PlanGroupSection({ group }: { group: PublicPlanGroup }) {
-  if (!group.plans.length) return null;
+  if (!group.courses.length) return null;
   return <section className="plan-group" aria-labelledby={`group-${group.key}`}>
     <h3 id={`group-${group.key}`}>{group.label}</h3>
-    <div className="plan-grid">{group.plans.map((plan) => <article className="plan-card" key={plan.id}>
-      <p>{plan.area}</p>
-      <h4><Link href={`/${plan.id}`}>{plan.name}</Link></h4>
+    <div className="plan-grid">{group.courses.map((course) => <article className="plan-card" key={course.id}>
+      <p>{course.area}</p>
+      <h4><Link href={publicCutPath({ kind: "course", code: course.code })}>{course.code}</Link></h4>
       <dl>
-        <div><dt>Jahrgang</dt><dd>{plan.year}</dd></div>
-        <div><dt>Kurse</dt><dd>{plan.courses.map((course) => course.code).join(", ")}</dd></div>
+        <div><dt>Studiengang</dt><dd>{course.program}</dd></div>
+        <div><dt>Jahrgang</dt><dd>{course.year}</dd></div>
       </dl>
-      <Link className="text-link" href={`/${plan.id}`}>Blockplan ansehen<span className="sr-only"> — {plan.name}</span> <span aria-hidden="true">→</span></Link>
+      <Link className="text-link" href={publicCutPath({ kind: "course", code: course.code })}>Kursplan ansehen<span className="sr-only"> — {course.code}</span> <span aria-hidden="true">→</span></Link>
     </article>)}</div>
   </section>;
 }
@@ -100,7 +101,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
           <label>Kurskennung<input name="course" defaultValue={filters.course ?? ""} aria-describedby="filter-hint" placeholder="z. B. TIF24" /></label>
         </div>
         <div className="filter-actions">
-          <button className="button" type="submit">Blockpläne suchen</button>
+          <button className="button" type="submit">Kurse suchen</button>
           <Link href="/">Filter zurücksetzen</Link>
         </div>
       </form>
@@ -109,7 +110,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
     <section className="results" aria-labelledby="results-heading">
       <h2 className="sr-only" id="results-heading">Suchergebnis</h2>
       <div className="results__heading" role="status">
-        <p><strong>{result.total}</strong> {result.total === 1 ? "Blockplan" : "Blockpläne"} gefunden</p>
+        <p><strong>{result.total}</strong> {result.total === 1 ? "Kurs" : "Kurse"} gefunden</p>
         <span>{result.total ? `Seite ${result.page} von ${result.pages} · ` : ""}{filterText}</span>
       </div>
       {result.total ? <>
@@ -124,10 +125,10 @@ export default async function Home({ searchParams }: PageProps<"/">) {
             : <span>Nächste Seite</span>}
         </nav> : null}
       </> : <div className="empty-state">
-        <h3>{activeFilters.length ? "Keine Blockpläne für diese Filter" : "Noch keine veröffentlichten Blockpläne"}</h3>
+        <h3>{activeFilters.length ? "Keine Kurse für diese Filter" : "Noch keine veröffentlichten Kurse"}</h3>
         <p>{activeFilters.length
           ? "Setzen Sie die Filter zurück oder wählen Sie andere Werte. Zur Auswahl stehen nur Werte, die veröffentlichte Blockpläne tatsächlich tragen."
-          : "Veröffentlichte Blockpläne erscheinen hier automatisch und können anschließend gefiltert werden."}</p>
+          : "Veröffentlichte Kurse erscheinen hier automatisch und können anschließend gefiltert werden."}</p>
         {activeFilters.length ? <p><Link className="button" href="/">Filter zurücksetzen</Link></p> : null}
       </div>}
     </section>

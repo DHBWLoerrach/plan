@@ -5,15 +5,16 @@ import { cache } from "react";
 import { sqlite } from "@/lib/db";
 import {
   berlinCalendarDay,
+  readPublicCut,
   readPublicFilterOptions,
-  readPublicPlan,
   searchPublicPlans,
+  type PublicCutDetail,
   type PublicFilters,
-  type PublicPlanDetail,
   type PublicSearchResult,
 } from "@/lib/services/public-search";
+import type { PublicCut } from "@/lib/domain/public-cut";
 
-export type { PublicFilters, PublicPlanDetail, PublicSearchResult };
+export type { PublicCutDetail, PublicFilters, PublicSearchResult };
 
 /** The filter options and the matching page of published plans, grouped for the current Berlin calendar day. */
 export function publicSearchData(request: PublicFilters & { page?: string }) {
@@ -24,10 +25,10 @@ export function publicSearchData(request: PublicFilters & { page?: string }) {
 }
 
 /**
- * The published version of a block plan, or `null` when none is publicly visible. Page and `generateMetadata` ask for
- * the same plan, so the read is memoised per request — the Next.js guide names React `cache` for reads without `fetch`.
+ * The published snapshots of one public cut, or `null` when none is visible. Page and `generateMetadata` ask for the
+ * same data, so the read is memoised per request — the Next.js guide names React `cache` for reads without `fetch`.
  */
-export const publicPlanData = cache((blockPlanId: string): PublicPlanDetail | null => readPublicPlan(sqlite, blockPlanId));
+export const publicCutData = cache((cut: PublicCut): PublicCutDetail | null => readPublicCut(sqlite, cut));
 
 /** A single search parameter as the public URL carries it: a repeated parameter counts through its first value. */
 export function searchParam(searchParams: Record<string, string | string[] | undefined>, key: string): string | undefined {
