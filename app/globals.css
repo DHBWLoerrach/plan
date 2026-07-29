@@ -64,8 +64,17 @@ p[role="status"] { margin: 0; color: var(--success); }
 .wordmark__product { color: var(--gray); font-size: .8rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
 .site-header__actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .5rem 1.3rem; }
 .site-header nav, .site-footer nav { display: flex; flex-wrap: wrap; gap: 1.3rem; }
-.site-header nav a { font-size: .95rem; text-decoration: none; }
-.site-header nav a:hover { color: var(--red); text-decoration: underline; text-underline-offset: .3rem; }
+/* Signing in is an action and carries a button, but a quieter one than the buttons in the content: next
+   to the wordmark it offers a way in, it is not the point of the page. Its outline is lighter than the
+   borders of the form controls and still holds 3.19:1 against white, the floor for the boundary of a
+   control. */
+.site-header nav .button { min-height: 2.25rem; padding: .4rem .85rem; border-color: #86929a; font-size: .9rem; font-weight: 500; }
+.site-header nav .button:hover { border-color: var(--red); color: var(--red); }
+.site-header nav .button:active { background: #e2e5e6; }
+/* Signed in there are two ways on side by side, so the overview takes the shape of the account menu
+   beside it and draws its frame only under the pointer. */
+.site-header nav a:not(.button) { display: inline-flex; align-items: center; min-height: 2.75rem; padding: .35rem .55rem; border: 1px solid transparent; font-size: .88rem; text-decoration: none; }
+.site-header nav a:not(.button):hover { border-color: var(--line); background: var(--surface); color: var(--red); }
 /* Account menu: the panel is a [popover] in the top layer and is therefore enclosed by no ancestor,
    so an anchor on the button is the only way to place it. */
 .account-menu__toggle { anchor-name: --account-menu; position: relative; display: flex; align-items: center; gap: .5rem; min-height: 2.75rem; padding: .35rem .55rem; border: 1px solid transparent; background: none; color: var(--ink); font: inherit; font-size: .88rem; cursor: pointer; }
@@ -92,15 +101,24 @@ p[role="status"] { margin: 0; color: var(--success); }
 .account-menu__panel .button { width: 100%; }
 
 .site-main { flex: 1 0 auto; padding: 2rem 0 3rem; }
+/* The public search opens with a heading of its own, which brings the space the other pages take from
+   the frame. It therefore starts closer to the header than they do. */
+.site-main:has(> .search-hero) { padding-top: .75rem; }
 .eyebrow { margin: 0 0 .7rem; color: var(--red); font-weight: 700; font-size: .76rem; letter-spacing: .12em; text-transform: uppercase; }
 
-.search-hero { padding: .5rem 0 1.75rem; }
+.search-hero { padding: 0 0 1.75rem; }
 .search-hero h1 { margin: 0; font-size: clamp(2rem, 4.5vw, 2.9rem); font-weight: 800; line-height: 1.05; letter-spacing: -.025em; }
 .search-hero__lead { margin: 1rem 0 0; color: var(--gray); font-size: 1.05rem; }
-/* The note carries the same statement as the former panel, but as a marker beside the text instead of
-   a block of its own: the restriction to published versions is a caveat, not a second heading. */
-.search-hero__note { display: inline-flex; align-items: center; gap: .55rem; margin: 1rem 0 0; padding: .4rem .8rem; background: var(--surface); color: var(--gray); font-size: .87rem; }
-.search-hero__note::before { content: ""; width: .5rem; height: .5rem; flex: none; border-radius: 50%; background: var(--red); }
+/* The note carries the same statement as the former panel, but as a line beside the text instead of a
+   block of its own: the restriction to published versions is a caveat, not a second heading. It holds
+   no surface either, since the padding of a filled box would set its text off the column edge that
+   mark, heading and lead all share. */
+.search-hero__note { display: flex; align-items: center; gap: .55rem; margin: .3rem 0 0; color: var(--gray-strong); font-size: .87rem; }
+/* The mark stays grey: the restriction is a statement about the state of the data, not a warning. Red
+   is reserved for what has gone wrong (see the alert and warning colours). Centring sets the circle on
+   the middle of the line box, where it reads a touch low against the letters beside it; the pixel back
+   up is an optical correction and has no computed counterpart. */
+.search-hero__note-icon { width: 1.05rem; height: 1.05rem; flex: none; position: relative; top: -1px; }
 
 /* Roter Balken als Überschriften-Signatur (Anmutung der DHBW-Seiten) */
 .search-hero h1::after, .search-panel h1::after, .plan-detail h1::after, .section-heading h2::after, .not-found h1::after { content: ""; display: block; width: 3rem; height: .28rem; margin-top: .55rem; background: var(--red); }

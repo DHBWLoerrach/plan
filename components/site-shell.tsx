@@ -28,7 +28,11 @@ export async function SiteShell({ nav, children }: { nav?: ReactNode; children: 
           <span className="wordmark__product">Plan</span>
         </Link>
         <div className="site-header__actions">
-          <nav aria-label="Hauptnavigation"><Link href={account ? "/intern" : "/intern/anmelden"}>{account ? "Übersicht" : "Anmelden"}</Link></nav>
+          {/* Signing in is the one thing a guest can do here and carries the shape of a button. Signed in,
+              the overview is a way on beside the account menu and takes the quieter shape of that menu. */}
+          <nav aria-label="Hauptnavigation">{account
+            ? <Link href="/intern">Übersicht</Link>
+            : <Link className="button button--ghost" href="/intern/anmelden">Anmelden</Link>}</nav>
           {account ? <AccountMenu account={account} /> : null}
         </div>
       </div>

@@ -70,7 +70,14 @@ export default async function Home({ searchParams }: PageProps<"/">) {
       <p className="eyebrow">Studienbetrieb</p>
       <h1>Blockpläne</h1>
       <p className="search-hero__lead">Theorie- und Praxisphasen sowie prüfungsrelevante Termine je Kurs und Jahrgang.</p>
-      <p className="search-hero__note">Es werden nur freigegebene Blockpläne angezeigt.</p>
+      <p className="search-hero__note">
+        <svg className="search-hero__note-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+          <circle cx="8" cy="8" r="7.1" fill="none" stroke="currentColor" strokeWidth="1.4" />
+          <circle cx="8" cy="4.6" r=".95" fill="currentColor" />
+          <path d="M8 7.2v4.6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        </svg>
+        Es werden ausschließlich Blockpläne angezeigt, die bereits freigegeben wurden.
+      </p>
     </section>
 
     <section className="search-panel" aria-labelledby="search-heading">
