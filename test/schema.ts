@@ -21,7 +21,28 @@ export function migrationIds() {
  * of that behaviour instead of only by the tests of the migration mechanism.
  */
 export function applySchema(sqlite: Database.Database) {
-  for (const migrationId of migrationIds()) {
+  apply(sqlite, migrationIds());
+}
+
+/**
+ * Builds the schema as it stood right after `migrationId`, that migration included. A test of a data
+ * migration needs this: it sets up a state in the old model, applies the migration that follows and
+ * checks the outcome — which the full build leaves no moment for.
+ *
+ * Named by the full migration id rather than its version number, because two migrations may share a
+ * number and the bookkeeping table records the id as well.
+ */
+export function applySchemaThrough(sqlite: Database.Database, migrationId: string) {
+  const ordered = migrationIds();
+  const position = ordered.indexOf(migrationId);
+  // A name nobody recognises would otherwise build the whole schema, and a test written against the
+  // old model would silently assert against the new one.
+  if (position === -1) throw new Error(`Unbekannte Migration: ${migrationId}. Vorhanden sind: ${ordered.join(", ")}.`);
+  apply(sqlite, ordered.slice(0, position + 1));
+}
+
+function apply(sqlite: Database.Database, ids: string[]) {
+  for (const migrationId of ids) {
     sqlite.exec(readFileSync(path.join(migrationsDirectory, `${migrationId}.sql`), "utf8"));
   }
 }
