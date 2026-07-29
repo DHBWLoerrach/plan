@@ -1,3 +1,7 @@
+---
+status: superseded by ADR-0010
+---
+
 # Versionsgrenze: Kurszuordnungen gehören zum Blockplan, nicht zur Fassung
 
 Ein Blockplan existiert gleichzeitig als Entwurf und als höchstens eine veröffentlichte Fassung, also braucht jede Angabe eine Zuordnung zu einer der beiden Ebenen. Identität, Bereich, aktuelle Bezeichnung und aktuelle Kurszuordnungen hängen am Blockplan selbst, ebenso der aus den Kursen abgeleitete Jahrgang. Kursphasen und prüfungsrelevante Termine gehören einer Fassung; die veröffentlichte Fassung speichert zusätzlich die bei ihrer Freigabe geltenden öffentlichen Anzeigenamen und Kursangaben als Snapshots.

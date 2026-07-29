@@ -2,11 +2,13 @@
 
 Die kanonischen Begriffe stehen im [`CONTEXT.md`](../CONTEXT.md). Dieses Dokument definiert die verbindlichen Invarianten, Lebenszyklen und Berechtigungen des MVP.
 
+Planungs- und Veröffentlichungseinheit ist der Kurs; „Blockplan“ bezeichnet die veröffentlichte Darstellung eines oder mehrerer Kurse in einem gewählten Zuschnitt und ist keine eigene Entitätsart (siehe [ADR 0010](adr/0010-kurs-als-planungs-und-veroeffentlichungseinheit.md)).
+
 ## Regelklassen
 
 **Strukturregeln** gelten bei jedem Schreibvorgang. Ein Verstoß wird nicht gespeichert.
 
-**Veröffentlichungsregeln** gelten zusätzlich beim Veröffentlichen eines Blockplans. Ein Entwurf darf sie vorübergehend verletzen.
+**Veröffentlichungsregeln** gelten zusätzlich beim Veröffentlichen eines Kurses. Ein Planungsstand darf sie vorübergehend verletzen.
 
 Die Regeln im Abschnitt [Veröffentlichungsprüfung](#veröffentlichungsprüfung) sind Veröffentlichungsregeln. Alle übrigen Datenregeln sind Strukturregeln, soweit sie nicht ausdrücklich einen Lebenszyklus oder eine Berechtigung beschreiben.
 
@@ -14,7 +16,8 @@ Die Regeln im Abschnitt [Veröffentlichungsprüfung](#veröffentlichungsprüfung
 
 - Texte werden an beiden Rändern getrimmt. Pflichttexte dürfen danach nicht leer sein; leere optionale Texte werden als nicht angegeben behandelt.
 - Bei menschlichen Bezeichnungen werden aufeinanderfolgende Leerzeichen für den Anzeigewert auf eines reduziert.
-- Bereichsbezeichnungen, Studiengangskürzel, Kurskennungen und vergebene Blockplanbezeichnungen sind ohne Beachtung der Groß-/Kleinschreibung eindeutig. Bereichsbezeichnungen, Studiengangskürzel und Kurskennungen sind systemweit eindeutig; Blockplanbezeichnungen innerhalb ihres Bereichs.
+- Bereichsbezeichnungen, Studiengangskürzel und Kurskennungen sind ohne Beachtung der Groß-/Kleinschreibung systemweit eindeutig.
+- **Bereichsbezeichnungen, Studiengangsbezeichnungen und Studiengangskürzel sind zusätzlich gegen jeden Wert eindeutig, der in einer veröffentlichten Fassung vorkommt.** Eine Bezeichnung, die durch eine Umbenennung frei geworden ist, darf keiner anderen Entität derselben Art gegeben werden, solange noch eine veröffentlichte Fassung sie zeigt. Andernfalls fielen die Kurse zweier verschiedener Bereiche oder Studiengänge desselben Jahrgangs in denselben Zuschnitt, weil Zuschnitte und öffentliche Filter über die Bezeichnungen der Snapshots gebildet werden. Dieselbe Erwägung trägt die entsprechende Veröffentlichungsregel für Kurskennungen.
 - Dienstliche E-Mail-Adressen müssen syntaktisch gültig sein, werden getrimmt und kleingeschrieben und sind systemweit eindeutig. Das MVP beschränkt sie nicht auf eine bestimmte Domain.
 - Passwörter werden weder getrimmt noch normalisiert.
 
@@ -26,7 +29,6 @@ Nach der Normalisierung gelten folgende Höchstlängen in Unicode-Codepoints:
 | Studiengangsbezeichnung    |         160 |
 | Studiengangskürzel         |          20 |
 | Kurskennung                |          32 |
-| Blockplanbezeichnung       |         160 |
 | Termintitel                |         160 |
 | Terminbeschreibung         |       2.000 |
 | Dienstliche E-Mail-Adresse |         254 |
@@ -45,90 +47,102 @@ Werte werden bei einer Überschreitung abgelehnt und niemals abgeschnitten.
 
 - Ein Studiengang besitzt eine unveränderliche systemische Identität, eine erforderliche Bezeichnung, ein erforderliches Kürzel, genau einen Bereich und eine Anzahl Semester von 6 oder 7.
 - Bezeichnung und Kürzel dürfen durch eine versionierte Datenmigration geändert werden. Bereich und Anzahl Semester dürfen dabei nur geändert werden, solange noch kein Kurs vom Studiengang abhängt.
+- Eine Migration, die eine Bezeichnung oder ein Kürzel ändert, prüft die Reservierung historischer Bezeichner: Der neue Wert darf in keiner veröffentlichten Fassung vorkommen, und der freigewordene alte Wert bleibt gesperrt, solange eine veröffentlichte Fassung ihn zeigt. Weil das MVP für Bereiche und Studiengänge keinen Schreibweg über die Anwendung besitzt, liegt diese Prüfung bei der Migration und nicht in der Fachlogik.
 - Eine spätere Korrektur von Bereich oder Semesterzahl bei bestehenden Kursen erfordert eine gesonderte, außerhalb der Anwendung dokumentierte Datenmigration.
 - Studiengänge werden im MVP weder stillgelegt noch entfernt.
 
 ## Kurs
 
+### Angaben
+
 - Ein Kurs besitzt eine unveränderliche systemische Identität sowie Kurskennung, Studiengang, Studienbeginn und Studienende als Pflichtangaben.
 - Studienbeginn und Studienende sind gültige gregorianische Kalendertage im Format `YYYY-MM-DD`; der Studienbeginn liegt vor dem Studienende.
 - Der Jahrgang ist das Kalenderjahr des Studienbeginns und wird nicht gesondert gespeichert.
 - Der verwaltende Bereich ist der Bereich des Studiengangs und wird nicht gesondert am Kurs gespeichert.
+- Die Anzahl Semester ist die des Studiengangs und wird nicht gesondert am Kurs gespeichert.
 - Die Kurskennung hat kein erzwungenes Format und ist keine Datenquelle für den Jahrgang.
-- Ein Kurs besteht unabhängig von einem Blockplan und ist höchstens einem Blockplan zugeordnet.
 
-Ein Kurs trägt keinen Veröffentlichungszustand. Er ist jederzeit:
+Ein Kurs besitzt seinen Planungsstand aus Kursverlauf und prüfungsrelevanten Terminen sowie höchstens eine veröffentlichte Fassung. Er führt außerdem eine dauerhafte Markierung, ob er schon einmal veröffentlicht wurde, sowie Zeitpunkt und internes Konto seiner letzten Änderung.
 
-- in allen vier Angaben änderbar, wobei Studiengang und Studienbeginn nach einer Änderung weiterhin zu einer bestehenden Blockplanzuordnung passen müssen und der geänderte Studienzeitraum weiterhin alle bereits erfassten Kursphasen des Kurses umfassen muss. Eine Änderung, die eine Kursphase aus dem Studienzeitraum fallen ließe, wird abgelehnt; die betroffenen Kursphasen sind zuerst anzupassen;
-- einem Blockplan zuordenbar und von ihm lösbar;
-- löschbar, sofern keine aktuell veröffentlichte Fassung ihn zeigt. Eine solche Löschung wird unter Nennung des Blockplans abgelehnt; nach einer Zurücknahme oder einer Neuveröffentlichung ohne den Kurs ist er wieder löschbar.
+Als Änderung gelten Änderungen an den vier Kursangaben, am Kursverlauf und an den prüfungsrelevanten Terminen. Veröffentlichen und Zurücknehmen verändern diese Angaben nicht.
+
+### Änderbarkeit
+
+Ein Kurs ist jederzeit in allen vier Angaben änderbar, auch nach einer Veröffentlichung. Dabei gilt:
+
+- Der geänderte Studienzeitraum muss weiterhin alle erfassten Kursphasen des Kurses umfassen. Eine Änderung, die eine Kursphase aus dem Studienzeitraum fallen ließe, wird abgelehnt; die betroffenen Kursphasen sind zuerst anzupassen.
+- Ein geänderter Studiengang muss mindestens so viele Semester besitzen, wie die höchste erfasste Kursphase des Kurses verlangt. Andernfalls wird die Änderung abgelehnt.
 
 Änderungen an Kursangaben wirken öffentlich erst mit der nächsten Veröffentlichung; veröffentlichte Fassungen zeigen ausschließlich ihre eigenen Snapshots.
 
-Ein Kurs darf intern bereits einem anderen Blockplan zugeordnet sein, während die veröffentlichte Fassung des bisherigen Blockplans ihn noch zeigt. Veröffentlicht werden darf der neue Blockplan erst, nachdem keine veröffentlichte Fassung eines anderen Blockplans mehr auf dieselbe Kurs-ID verweist.
+### Löschung
 
-Eine Kurszuordnung setzt voraus:
+- Ein Kurs mit veröffentlichter Fassung wird nicht gelöscht. Die Löschung wird abgelehnt, solange seine Fassung besteht; nach einer Zurücknahme ist er löschbar.
+- Beim Löschen entfallen sein Kursverlauf und seine prüfungsrelevanten Termine mit ihm.
+- Ohne die Sperre könnte öffentlich Sichtbares durch eine Stammdatenlöschung verschwinden. Zurücknehmen bleibt der einzige und stets ausdrückliche Weg, eine Veröffentlichung zu beenden.
+- Nach der Löschung ist die Kurskennung wieder frei.
 
-- Der Studiengang gehört zum Bereich des Blockplans.
-- Jahrgang und Anzahl Semester stimmen mit allen bereits zugeordneten Kursen überein.
-- Der Blockplan enthält danach höchstens 20 Kurse.
+### Anlage aus einer Vorlage
 
-Beim Lösen oder Löschen eines zugeordneten Kurses entfallen seine Kursphasen und seine Zuordnungen zu prüfungsrelevanten Terminen im Entwurf dieses Blockplans. Ein verbleibender Termin muss weiterhin mindestens einen Kurs betreffen; andernfalls wird die Operation unter Nennung der betroffenen Termine abgelehnt. Termine werden nie automatisch gelöscht.
+Ein Kurs kann als Übernahme aus einer Vorlage angelegt werden. Vorlage darf jeder bestehende Kurs sein, unabhängig von Bereich und Studiengang.
 
-## Blockplan und Fassungen
+- Kurskennung, Studiengang und Studienbeginn werden für den neuen Kurs erfasst. Das Studienende wird aus der Dauer des Studienzeitraums der Vorlage vorgeschlagen und ist änderbar.
+- Der Studiengang des neuen Kurses muss dieselbe Anzahl Semester besitzen wie der Studiengang der Vorlage.
+- Übernommen werden wahlweise der Kursverlauf, die prüfungsrelevanten Termine oder beides.
+- Alle übernommenen Kalendertage werden um dieselbe Verschiebung versetzt: die Differenz der beiden Studienbeginne, gerundet auf das nächste Vielfache von sieben Tagen. Innerhalb desselben Jahrgangs mit gleichem Studienbeginn ist die Verschiebung null.
+- Die Rundung erhält die Wochentage. Sie ist nötig, weil der Studienzeitraum datumsverankert ist — 1. Oktober bis 30. September —, Kursphasen aber wochenverankert sind. Eine tagesgenaue Verschiebung träfe die Ränder des Studienzeitraums und verschöbe jede Phasengrenze auf einen anderen Wochentag.
+- Ragt eine übernommene Kursphase über den Studienzeitraum des neuen Kurses hinaus, wird sie auf dessen Grenze gekürzt. Verbleibende Lücken an den Rändern werden nicht automatisch geschlossen; die Veröffentlichungsprüfung benennt sie.
+- Übernommene Termine werden nicht gekürzt. Liegt einer außerhalb des Studienzeitraums, ist das eine Veröffentlichungsregel und im Planungsstand vorübergehend zulässig.
+- Der neue Kurs ist danach vollständig eigenständig. Zwischen ihm und der Vorlage besteht keine Verbindung, kein Abgleich und keine gemeinsame Änderung.
 
-### Blockplan
+Die Übernahme gibt es ausschließlich bei der Anlage. Übernehmen in einen bestehenden Kurs ist nicht vorgesehen.
 
-- Ein Blockplan besitzt eine unveränderliche systemische Identität, genau einen unveränderlichen Bereich, eine optionale Bezeichnung und jederzeit mindestens einen Kurs.
-- Anlage des Blockplans und Zuordnung seines ersten Kurses sind eine gemeinsame Operation.
-- Jahrgang und Anzahl Semester werden aus den zugeordneten Kursen abgeleitet und nicht am Blockplan gespeichert.
-- Innerhalb eines Bereichs und Jahrgangs darf es mehrere Blockpläne geben.
-- Der letzte Kurs kann weder gelöst noch gelöscht werden. Stattdessen kann ein Blockplan ohne veröffentlichte Fassung als Ganzes gelöscht werden; seine Kurse bleiben blockplanlos bestehen und sind danach einzeln löschbar. Das gilt sowohl für noch nie veröffentlichte als auch für zurückgenommene Blockpläne.
-- Ein Blockplan mit veröffentlichter Fassung wird nicht gelöscht.
+### Veröffentlichungszustand
 
-Ohne vergebene Bezeichnung wird der interne Name aus Jahrgang und aktuellen Kurskennungen abgeleitet, beispielsweise „2026 · TIF26A, WWI26A“; der Bereich ist kein Bestandteil des Namens und wird überall separat angezeigt. Eine vergebene Bezeichnung ersetzt diesen Namen. Angezeigte Namen müssen insgesamt nicht eindeutig sein; stabile IDs und die immer sichtbaren Kurskennungen unterscheiden Blockpläne.
-
-Ein Blockplan besitzt durchgehend einen Entwurf und höchstens eine veröffentlichte Fassung. Aktuelle Bezeichnung und Kurszuordnungen gehören zum Blockplan und wirken intern sofort. Kursphasen und prüfungsrelevante Termine gehören genau einer Fassung.
-
-Ein Blockplan führt dauerhaft die Markierung, ob er schon einmal veröffentlicht wurde. Sein Veröffentlichungszustand ist:
+Der Veröffentlichungszustand eines Kurses ist:
 
 - **noch nie veröffentlicht**, wenn keine veröffentlichte Fassung existiert und die Markierung nicht gesetzt ist;
 - **veröffentlicht**, wenn eine veröffentlichte Fassung existiert;
 - **zurückgenommen**, wenn keine veröffentlichte Fassung existiert und die Markierung gesetzt ist.
 
-### Entwurf
+Der Planungsstand ist kein Zustand dieser Reihe, sondern existiert in allen dreien.
 
-- Der Entwurf ist nur für die Bereichsbearbeitung seines Bereichs und die Systemadministration sichtbar.
-- Er führt, wann und durch welches interne Konto er zuletzt geändert wurde.
-- Änderungen an Kursphasen und Terminen verändern ausschließlich den Entwurf, bis erneut veröffentlicht wird.
+## Planungsstand und Bearbeitung
 
-Als Änderung des bearbeitbaren Planungsstands gelten außerdem Änderungen an der aktuellen Blockplanbezeichnung, an seinen Kurszuordnungen und an den vier Angaben eines zugeordneten Kurses. Sie aktualisieren ebenfalls, wann und durch welches interne Konto der Entwurf zuletzt geändert wurde. Veröffentlichen und Zurücknehmen verändern diese Angaben nicht.
+- Der Planungsstand ist für die Bereichsbearbeitung aller Bereiche und die Systemadministration lesbar, aber nur für die Bereichsbearbeitung seines eigenen Bereichs und die Systemadministration bearbeitbar (siehe [ADR 0011](adr/0011-systemweite-leseeinsicht-in-kurse.md)).
+- Änderungen am Planungsstand verändern ausschließlich diesen, bis erneut veröffentlicht wird.
 
 Normale, granulare Speicheraktionen verwenden Last-write-wins und besitzen keine Konfliktwarnung. Sie prüfen Berechtigung, Existenz, Strukturregeln und weitere Zustandsvoraussetzungen stets gegen den aktuellen Stand.
 
-### Veröffentlichung und Zurücknahme
+### Keine Gleichheitsregel zwischen Kursen
 
-- Veröffentlichen prüft alle Struktur- und Veröffentlichungsregeln und ersetzt die bisherige veröffentlichte Fassung atomar durch eine Kopie des aktuellen Entwurfs.
-- Der Entwurf bleibt dabei unverändert bestehen und anschließend weiter bearbeitbar.
-- Die Fassung übernimmt als Snapshots die zu diesem Zeitpunkt geltenden Bezeichnungen von Blockplan, Bereich und Studiengängen sowie je Kurs Kurskennung, Studienbeginn und Studienende. Jeder Kurs-Snapshot verweist zur Herkunft auf die unveränderliche Kurs-ID.
-- Kursphasen und betroffene Kurse eines Termins in einer veröffentlichten Fassung verweisen ausschließlich auf Kurs-Snapshots derselben Fassung. Die Herkunfts-ID eines Snapshots dient der Zuordnung zum ursprünglichen Kurs, ersetzt aber diese Beziehung innerhalb der Fassung nicht.
-- Die veröffentlichte Fassung ist dadurch vollständig eigenständig: Die öffentlich sichtbare Kursmenge und alle öffentlich angezeigten Angaben ergeben sich ausschließlich aus der Fassung.
-- Die erste Veröffentlichung setzt dauerhaft die Markierung des Blockplans, schon einmal veröffentlicht worden zu sein.
-- Öffentlich sichtbarer Inhalt ändert sich nur durch Veröffentlichen oder Zurücknehmen. Interne Änderungen an Bezeichnungen, Stammdaten oder Kurszuordnungen bleiben bis zur nächsten Veröffentlichung unsichtbar.
+Keine Invariante verlangt, dass Kursphasen oder Termine verschiedener Kurse übereinstimmen. Abweichungen sind zulässig und häufig beabsichtigt — etwa wenn ein Studiengang eine Prüfungsform kennt, die ein anderer nicht kennt. Übereinstimmung wird deshalb angezeigt und nicht erzwungen; die Zusammenfassung übereinstimmender Angaben in einer Gegenüberstellung ist eine Anzeigeregel und steht in [`MVP-SPEZIFIKATION.md`](MVP-SPEZIFIKATION.md).
+
+## Veröffentlichung und Zurücknahme
+
+- Veröffentlichen und Zurücknehmen sind ein Vorgang je Kurs. Eine Sammelfreigabe über mehrere Kurse gibt es nicht.
+- Veröffentlichen prüft alle Struktur- und Veröffentlichungsregeln des Kurses und ersetzt seine bisherige veröffentlichte Fassung atomar durch eine Kopie seines aktuellen Planungsstands.
+- Der Planungsstand bleibt dabei unverändert bestehen und anschließend weiter bearbeitbar.
+- Die Fassung übernimmt als Snapshots die zu diesem Zeitpunkt geltenden Bezeichnungen von Bereich und Studiengang, die Anzahl Semester sowie Kurskennung, Studienbeginn und Studienende. Sie verweist zur Herkunft auf die unveränderliche Kurs-ID.
+- Kursphasen und Termine einer veröffentlichten Fassung gehören ausschließlich dieser Fassung. Die veröffentlichte Fassung ist dadurch vollständig eigenständig: Alle öffentlich angezeigten Angaben ergeben sich ausschließlich aus ihr.
+- Die erste Veröffentlichung setzt dauerhaft die Markierung des Kurses, schon einmal veröffentlicht worden zu sein.
+- Öffentlich sichtbarer Inhalt ändert sich nur durch Veröffentlichen oder Zurücknehmen. Interne Änderungen an Stammdaten, Kursverlauf und Terminen bleiben bis zur nächsten Veröffentlichung unsichtbar.
 - Frühere Revisionen werden weder angezeigt noch wiederhergestellt.
-- Eine Zurücknahme löscht die veröffentlichte Fassung atomar und entfernt den Blockplan damit aus allen öffentlichen Ansichten.
-- Eine erneute Veröffentlichung veröffentlicht stets den aktuellen Entwurf.
+- Eine Zurücknahme löscht die veröffentlichte Fassung atomar und entfernt den Kurs damit aus allen öffentlichen Ansichten.
+- Eine erneute Veröffentlichung veröffentlicht stets den aktuellen Planungsstand.
 
-## Kursphase
+Ein vollständig geplanter Kurs wird unabhängig von allen anderen Kursen veröffentlicht. Dass ein Jahrgang oder ein Bereich zu einem Zeitpunkt nur teilweise öffentlich ist, ist ein zulässiger und beabsichtigter Zustand.
 
-- Eine Kursphase gehört genau einer Fassung und genau einem Kurs dieses Blockplans beziehungsweise in einer veröffentlichten Fassung genau dessen Kurs-Snapshot. Sie besitzt Startdatum, Enddatum, Semester und Phasentyp.
+## Kursverlauf
+
+- Eine Kursphase gehört genau einem Kurs und genau einer Ebene, also entweder seinem Planungsstand oder einer veröffentlichten Fassung. Sie besitzt Startdatum, Enddatum, Semester und Phasentyp.
 - Start- und Enddatum sind gültige gregorianische Kalendertage im Format `YYYY-MM-DD`; das Startdatum liegt vor oder auf dem Enddatum.
 - Eine Kursphase liegt vollständig innerhalb des Studienzeitraums ihres Kurses.
-- Das Semester ist eine ganze Zahl von 1 bis zur Anzahl Semester des Blockplans.
+- Das Semester ist eine ganze Zahl von 1 bis zur Anzahl Semester des Studiengangs ihres Kurses.
 - Der Phasentyp ist genau `Theorie` oder `Praxis`.
 - Gleichartige Kursphasen dürfen unmittelbar aufeinander folgen.
-- Eine gemeinsame Anlage für mehrere Kurse erzeugt für jeden ausgewählten Kurs eine eigenständige Kursphase mit zunächst gleichen Angaben. Zwischen diesen Kursphasen besteht danach keine gemeinsame Identität; spätere Änderungen wirken nur auf die jeweils bearbeitete Kursphase.
-- Die zeitlichen Grenzen desselben Semesters dürfen zwischen den Kursen eines Blockplans voneinander abweichen.
+- Eine gemeinsame Anlage für mehrere ausgewählte Kurse erzeugt für jeden Kurs eine eigenständige Kursphase mit zunächst gleichen Angaben und setzt Schreibrechte für jeden ausgewählten Kurs voraus. Zwischen diesen Kursphasen besteht danach keine gemeinsame Identität; spätere Änderungen wirken nur auf die jeweils bearbeitete Kursphase (siehe [ADR 0006](adr/0006-kursphasen-ohne-gemeinsame-identitaet.md)).
+- Die zeitlichen Grenzen desselben Semesters dürfen zwischen Kursen voneinander abweichen.
 
 ### Semester
 
@@ -136,26 +150,28 @@ Das Studienjahr wird aus dem Semester abgeleitet: Semester 1 und 2 bilden Studie
 
 ## Prüfungsrelevanter Termin
 
-- Ein Termin gehört genau einer Fassung und besitzt Titel, optionale Beschreibung, Kategorie, Zeitangabe, ein binäres Merkmal „vorläufig“ und mindestens einen betroffenen Kurs desselben Blockplans.
-- Derselbe Kurs darf im Geltungsbereich eines Termins höchstens einmal vorkommen.
+- Ein Termin gehört genau einem Kurs und genau einer Ebene, also entweder dessen Planungsstand oder einer veröffentlichten Fassung. Er besitzt Titel, optionale Beschreibung, Kategorie, Zeitangabe und ein binäres Merkmal „vorläufig“.
 - Die Kategorie ist genau `Anmeldung`, `Abgabe`, `Präsentation`, `Prüfung` oder `Sonstiges`.
+- Eine gemeinsame Anlage für mehrere ausgewählte Kurse erzeugt je Kurs einen eigenständigen Termin mit zunächst gleichen Angaben und setzt ebenfalls Schreibrechte für jeden ausgewählten Kurs voraus. Auch zwischen diesen Terminen besteht danach keine gemeinsame Identität.
 
 Die Zeitangabe besteht aus einem erforderlichen Startdatum und einem optionalen Enddatum. Beide sind gültige gregorianische Kalendertage im Format `YYYY-MM-DD`; ein angegebenes Enddatum liegt auf oder nach dem Startdatum. Ohne Enddatum bezeichnet der Termin genau den Starttag, andernfalls den beidseitig inklusiven Datumsbereich. Kalendertage sind zeitzonenlos. Das Merkmal „vorläufig“ sagt aus, dass die Zeitangabe noch nicht verbindlich ist; ein vorläufiger Termin ist gültig und veröffentlichbar und wird überall textlich als vorläufig gekennzeichnet. Einen eigenen Bestätigungsablauf oder weitere Stufen gibt es nicht.
 
-Ein Termin trägt weder ein eigenes Semester noch eine eigene Kursphase. Sein Semester wird je betroffenem Kurs aus der Kursphase abgeleitet, die sein Startdatum abdeckt. Fehlt eine solche Kursphase im noch unvollständigen Entwurf, ist das Semester dort vorübergehend nicht ableitbar; die Oberfläche benennt dies ausdrücklich. Ein Termin über einen Semesterwechsel gehört zum Semester seines Beginns; bei mehreren Kursen darf das abgeleitete Semester unterschiedlich sein. In einer veröffentlichten Fassung ist das Semester aufgrund der Veröffentlichungsprüfung für jeden betroffenen Kurs ableitbar.
+Ein Termin trägt weder ein eigenes Semester noch eine eigene Kursphase. Sein Semester wird aus der Kursphase abgeleitet, die sein Startdatum abdeckt. Fehlt eine solche Kursphase im noch unvollständigen Planungsstand, ist das Semester dort vorübergehend nicht ableitbar; die Oberfläche benennt dies ausdrücklich. Ein Termin über einen Semesterwechsel gehört zum Semester seines Beginns. In einer veröffentlichten Fassung ist das Semester aufgrund der Veröffentlichungsprüfung stets ableitbar.
 
 ## Veröffentlichungsprüfung
 
-Eine Veröffentlichung ist nur möglich, wenn zusätzlich folgende Regeln erfüllt sind:
+Ein Kurs ist nur veröffentlichbar, wenn zusätzlich folgende Regeln erfüllt sind:
 
-- Jeder zugeordnete Kurs besitzt einen vollständigen Verlauf.
-- Die Kursphasen jedes Kurses decken jeden Kalendertag seines einschließlich beider Grenztage geltenden Studienzeitraums genau einmal ab.
+- Sein Kursverlauf ist vollständig: Die Kursphasen decken jeden Kalendertag seines einschließlich beider Grenztage geltenden Studienzeitraums genau einmal ab.
 - Die Kursphasen schließen lückenlos aneinander an und überlappen sich nicht.
 - Die Semester sind entlang der Zeitachse monoton nicht fallend.
-- Jedes Semester von 1 bis zur Anzahl Semester des Studiengangs kommt mindestens einmal vor; alle Kursphasen eines Semesters bilden einen zusammenhängenden Abschnitt.
-- Jeder Termin liegt vollständig innerhalb des Studienzeitraums jedes betroffenen Kurses.
-- Keine veröffentlichte Fassung eines anderen Blockplans verweist auf einen der zu veröffentlichenden Kurse.
-- Keine veröffentlichte Fassung eines anderen Blockplans zeigt eine Kurskennung, die ohne Beachtung der Groß-/Kleinschreibung einer zu veröffentlichenden Kurskennung entspricht.
+- Jedes Semester von 1 bis zur Anzahl Semester seines Studiengangs kommt mindestens einmal vor; alle Kursphasen eines Semesters bilden einen zusammenhängenden Abschnitt.
+- Jeder Termin liegt vollständig innerhalb des Studienzeitraums.
+- Keine veröffentlichte Fassung eines anderen Kurses zeigt eine Kurskennung, die ohne Beachtung der Groß-/Kleinschreibung der zu veröffentlichenden entspricht.
+
+Die letzte Regel ist trotz der systemweiten Eindeutigkeit aktueller Kurskennungen nötig, weil eine Kennung nach der Veröffentlichung geändert werden darf und die Fassung die zum Zeitpunkt ihrer Freigabe geltende Kennung behält. Wird ein veröffentlichter Kurs umbenannt, ist seine alte Kennung unter den aktuellen Kursen wieder frei und kann einem anderen Kurs gegeben werden; erst dessen Veröffentlichung ließe zwei Fassungen dieselbe Kennung zeigen. Sie vergleicht deshalb Snapshots und nicht aktuelle Kursangaben. Da die veröffentlichte Kurskennung zugleich die öffentliche Adresse ist, wäre die Adressierung sonst mehrdeutig.
+
+Eine Kollisionsprüfung auf die Kursidentität ist dagegen nicht erforderlich: Ein Kurs besitzt höchstens eine eigene veröffentlichte Fassung und kann in keiner anderen vorkommen.
 
 ## Interne Konten
 
@@ -197,12 +213,12 @@ Eine Sperrung entfernt Passwort, Sitzungen und offene Passwortlinks. Die Freigab
 
 Die **Bereichsbearbeitung** darf in ihren Bereichen:
 
-- Kurse anlegen und bearbeiten;
-- Kurse Blockplänen zuordnen und von ihnen lösen;
-- Kurse löschen, die keine aktuell veröffentlichte Fassung zeigt;
-- Blockplanentwürfe anlegen und bearbeiten;
-- Blockpläne ohne veröffentlichte Fassung löschen;
-- Blockpläne veröffentlichen und Veröffentlichungen zurücknehmen.
+- Kurse anlegen, auch als Übernahme aus einer Vorlage;
+- Kursangaben, Kursverlauf und prüfungsrelevante Termine bearbeiten;
+- Kurse ohne veröffentlichte Fassung löschen;
+- Kurse veröffentlichen und Veröffentlichungen zurücknehmen.
+
+Darüber hinaus darf sie **Kurse aller Bereiche einschließlich ihrer Planungsstände lesen** und als Vorlage einer Übernahme verwenden. Schreibende Vorgänge bleiben auf die zugeordneten Bereiche beschränkt; maßgeblich ist der Bereich des Studiengangs des jeweiligen Kurses (siehe [ADR 0011](adr/0011-systemweite-leseeinsicht-in-kurse.md)).
 
 Die **Systemadministration** besitzt die Rechte der Bereichsbearbeitung in allen Bereichen und darf zusätzlich:
 

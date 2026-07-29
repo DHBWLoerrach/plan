@@ -1,4 +1,10 @@
+---
+status: amended by ADR-0010
+---
+
 # Veröffentlichte Fassung als vollständiger Snapshot, Kurse ohne Veröffentlichungszustand
+
+> [ADR 0010](0010-kurs-als-planungs-und-veroeffentlichungseinheit.md) hält den vollständigen Snapshot fest, hebt aber die Aussage „Kurse tragen keinen Veröffentlichungszustand“ auf: Der Kurs ist dort selbst die Veröffentlichungseinheit.
 
 Die veröffentlichte Fassung übernimmt als Snapshot alles, was sie öffentlich zeigt: neben den Bezeichnungen von Blockplan, Bereich und Studiengängen auch je Kurs Kurskennung, Studienbeginn und Studienende. Jeder Kurs-Snapshot verweist zur Herkunft auf die unveränderliche Kurs-ID. Kurse tragen dadurch keinen Veröffentlichungszustand: Sie bleiben jederzeit bearbeitbar, zuordenbar und lösbar und sind löschbar, sobald keine aktuell veröffentlichte Fassung sie zeigt. Ob ein Blockplan schon einmal veröffentlicht wurde, hält eine dauerhafte Markierung am Blockplan fest; sie unterscheidet „noch nie veröffentlicht“ von „zurückgenommen“ und ersetzt die frühere Ableitung über Kursmerkmale (ADR 0008). Die Zurücknahme selbst löscht weiterhin die veröffentlichte Fassung.
 

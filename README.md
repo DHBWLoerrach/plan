@@ -1,9 +1,12 @@
 # DHBW Lörrach Plan
 
-Webanwendung zur Verwaltung und Veröffentlichung von Blockplänen der DHBW Lörrach:
-Theorie- und Praxisphasen sowie prüfungsrelevante Termine je Kurs und Jahrgang.
-Die Blockplanverwaltung ist der erste Baustein einer breiter angelegten Anwendung
-für den Studienbetrieb.
+Webanwendung zur Planung und Veröffentlichung der Blockpläne der DHBW Lörrach:
+Theorie- und Praxisphasen sowie prüfungsrelevante Termine je Kurs. Geplant und
+veröffentlicht wird der einzelne Kurs; Blockpläne entstehen daraus als Darstellung
+in einem gewählten Zuschnitt innerhalb eines Jahrgangs — ein einzelner Kurs, der
+ganze Jahrgang oder ein Studiengang beziehungsweise ein Bereich darin.
+Die Blockplanung ist der erste Baustein einer breiter angelegten
+Anwendung für den Studienbetrieb.
 
 Die Anwendung trägt den Produktnamen **DHBW Lörrach Plan** und ist für den Betrieb
 unter `https://plan.apps.szi.dhbw-loerrach.de` vorgesehen. Das Repository und
@@ -11,17 +14,26 @@ seine technischen Artefakte behalten den Namen `dhbw-mgmt`.
 
 ## Stand
 
-Die fachliche Spezifikation ist abgeschlossen, der MVP-Funktionsumfang ist
-implementiert (Next.js 16, React 19, TypeScript, Tailwind CSS 4, SQLite über
-Drizzle, Better Auth).
+Der implementierte MVP-Funktionsumfang (Next.js 16, React 19, TypeScript,
+Tailwind CSS 4, SQLite über Drizzle, Better Auth) bildet noch das **frühere
+Blockplanmodell** ab, in dem der Blockplan die Planungs- und
+Veröffentlichungseinheit war.
 
 Umgesetzt sind die öffentliche Suche mit URL-basierten Filtern und die öffentliche
-Detailansicht, der semesterweise Entwurfseditor mit Vorschau, Veröffentlichung und
+Detailansicht, der semesterweise Editor mit Vorschau, Veröffentlichung und
 Zurücknahme, die Kurs- und Blockplanverwaltung, die Kontenverwaltung mit
 Passwortlinks sowie die Kommandozeilenbefehle für das initiale
 Systemadministrationskonto und den Notfall-Passwort-Reset. Nonce-basierte CSP,
 Security-Header, Origin-Prüfung und der Betriebsweg aus Sicherung, Migration und
 Wiederherstellung sind umgesetzt und getestet.
+
+Die fachliche Spezifikation wurde inzwischen auf den Kurs als Planungs- und
+Veröffentlichungseinheit umgestellt (siehe
+[ADR 0010](docs/adr/0010-kurs-als-planungs-und-veroeffentlichungseinheit.md) und
+[ADR 0011](docs/adr/0011-systemweite-leseeinsicht-in-kurse.md)). Dokumentation und
+Implementierung weichen dadurch **bewusst** voneinander ab; maßgeblich ist die
+Dokumentation. Code, Datenbankschema und Migrationen folgen in einer gesonderten
+Umsetzungsrunde.
 
 Offen ist die Datenschutzerklärung: Der Footer verweist auf die allgemeinen
 DHBW-Hinweise, während [`docs/ARCHITEKTUR_UND_BETRIEB.md`](docs/ARCHITEKTUR_UND_BETRIEB.md)
@@ -33,7 +45,9 @@ produktives Deployment hat noch nicht stattgefunden.
 Nach dem MVP soll die Anwendung über die Blockplanung hinaus wachsen — etwa um
 Studienverlauf und Curricula, Vorlesungsplanung und Dozierendenmanagement. Diese
 Bereiche sind bewusst noch nicht spezifiziert; die kanonische Domänensprache in
-[`CONTEXT.md`](CONTEXT.md) umfasst ausschließlich die Blockplanverwaltung.
+[`CONTEXT.md`](CONTEXT.md) umfasst ausschließlich die Blockplanung. Dass
+der Kurs seine Planangaben selbst trägt, ist die Voraussetzung dafür, dass diese
+Themen später ohne Bruch an ihm andocken können.
 
 ## Dokumentation
 

@@ -1,5 +1,13 @@
 # Vorlage für KI-Agents: Blockpläne aus PDFs als SQL-Entwurf importieren
 
+> **Hinweis zum Stand.** Diese Vorlage erzeugt SQL gegen das **aktuell implementierte**
+> Datenbankschema, das noch das frühere Blockplanmodell führt. Sie ist deshalb weiterhin
+> lauffähig, folgt aber nicht dem fachlichen Schnitt aus
+> [ADR 0010](adr/0010-kurs-als-planungs-und-veroeffentlichungseinheit.md) und wird
+> gemeinsam mit dem Schema in der Umsetzungsrunde überarbeitet. Die begrifflichen
+> Festlegungen in [`../CONTEXT.md`](../CONTEXT.md) und
+> [`FACHLICHE_REGELN.md`](FACHLICHE_REGELN.md) gehen ihr vor.
+
 Diese Vorlage ist absichtlich eigenständig. Sie kann zusammen mit einem oder mehreren Blockplan-PDFs an einen KI-Agenten gegeben werden, der weder dieses Projekt noch dessen Quellcode kennt.
 
 Der Agent erzeugt ausschließlich einen **Blockplan-Entwurf**. Er darf keine Veröffentlichung erzeugen und keine Tabellen oder Stammdaten verändern.

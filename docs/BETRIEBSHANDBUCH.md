@@ -76,7 +76,7 @@ Migrationen laufen nicht nebenbei: Die Anwendung wird dafür gestoppt.
    ```
 5. **Neues Image starten und verifizieren:** Container-Healthcheck, HTTP-Erreichbarkeit, eine
    erneute Sicherung als Datenbankprüfung sowie ein fachlicher Smoke-Test (öffentliche Suche öffnen,
-   einen veröffentlichten Blockplan aufrufen, intern anmelden).
+   einen veröffentlichten Kurs aufrufen, intern anmelden).
 6. **Dokumentieren:** Sicherungsdatei, Migrationsstand vor und nach dem Schritt, Prüfergebnis und ein
    gegebenenfalls ausgeführter Rückweg.
 
