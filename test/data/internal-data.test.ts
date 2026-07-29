@@ -20,6 +20,7 @@ import {
 } from "@/app/intern/konten/data";
 import {
   type CourseSort,
+  courseCutData,
   courseListData,
   findInternalCourse,
   programOptions,
@@ -245,6 +246,27 @@ describe("internal account data", () => {
 });
 
 describe("internal course data", () => {
+  it("forms a Zuschnitt only from selected courses of one year and keeps their drafts together", () => {
+    const sqlite = createDatabase();
+
+    const cut = courseCutData(sqlite, systemAdmin, {
+      year: "2024",
+      courseIds: ["course-business", "course-tech-assigned"],
+    });
+
+    expect(cut?.year).toBe("2024");
+    expect(cut?.courses.map((course) => course.code)).toEqual(["TIF24A", "WWI24A"]);
+    expect(cut?.phases).toEqual(expect.arrayContaining([
+      expect.objectContaining({ courseId: "course-tech-assigned" }),
+      expect.objectContaining({ courseId: "course-business" }),
+    ]));
+    expect(cut?.events).toEqual([expect.objectContaining({ title: "Prüfung", courseIds: ["course-tech-assigned"] })]);
+    expect(courseCutData(sqlite, systemAdmin, {
+      year: "2024",
+      courseIds: ["course-tech-2025", "course-tech-assigned"],
+    })).toBeNull();
+  });
+
   it("limits list data, filters and program options to manageable areas", () => {
     const sqlite = createDatabase();
 

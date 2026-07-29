@@ -47,6 +47,16 @@ describe("createCourse", () => {
     });
   });
 
+  it("can prepare a new course for the hidden technical planning layer", () => {
+    const sqlite = createDatabase();
+    insertAdmin(sqlite, "admin");
+
+    const id = createCourse(sqlite, { accountId: "admin", createTechnicalPlan: true, code: "TIF24A", programId: "prog-tif", studyStart: "2024-10-01", studyEnd: "2027-09-30" });
+
+    expect(sqlite.prepare(`SELECT plan.area_id AS areaId FROM courses course
+      JOIN block_plans plan ON plan.id = course.block_plan_id WHERE course.id = ?`).get(id)).toEqual({ areaId: "area-01" });
+  });
+
   it("rejects a duplicate code regardless of case", () => {
     const sqlite = createDatabase();
     insertAdmin(sqlite, "admin");

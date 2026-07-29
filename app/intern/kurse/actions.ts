@@ -42,7 +42,7 @@ function revalidateCourseViews(courseId: string) {
 export async function createCourseAction(_: CourseFormState, formData: FormData): Promise<CourseFormState> {
   let courseId: string;
   try {
-    courseId = createCourse(sqlite, { accountId: await requireAccountId(), ...courseInput(formData) });
+    courseId = createCourse(sqlite, { accountId: await requireAccountId(), createTechnicalPlan: true, ...courseInput(formData) });
   } catch (error) {
     return { error: errorMessage(error) };
   }

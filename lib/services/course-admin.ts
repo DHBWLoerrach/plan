@@ -15,7 +15,7 @@ type NormalizedCourse = { code: string; normalizedCode: string; programId: strin
 type ProgramRow = { id: string; areaId: string; semesters: number };
 type CourseRow = { id: string; programId: string; blockPlanId: string | null };
 
-export function createCourse(sqlite: Database.Database, input: { accountId: string } & CourseInput): string {
+export function createCourse(sqlite: Database.Database, input: { accountId: string; createTechnicalPlan?: boolean } & CourseInput): string {
   const normalized = normalizeCourseInput(input);
   return sqlite.transaction(() => {
     // The only write without a course to ask: the area comes from the study program the course is about to get.
@@ -23,8 +23,15 @@ export function createCourse(sqlite: Database.Database, input: { accountId: stri
     assertAreaEditPermission(sqlite, input.accountId, program.areaId);
     assertCodeAvailable(sqlite, normalized.normalizedCode, null);
     const id = randomUUID();
+    const blockPlanId = input.createTechnicalPlan ? randomUUID() : null;
+    if (blockPlanId) {
+      sqlite.prepare(`INSERT INTO block_plans
+        (id, area_id, name, normalized_name, has_ever_been_published, draft_updated_at, draft_updated_by_account_id)
+        VALUES (?, ?, NULL, NULL, 0, ?, ?)`)
+        .run(blockPlanId, program.areaId, new Date().toISOString(), input.accountId);
+    }
     sqlite.prepare(`INSERT INTO courses (id, program_id, block_plan_id, code, normalized_code, study_start, study_end)
-      VALUES (?, ?, NULL, ?, ?, ?, ?)`).run(id, normalized.programId, normalized.code, normalized.normalizedCode, normalized.studyStart, normalized.studyEnd);
+      VALUES (?, ?, ?, ?, ?, ?, ?)`).run(id, normalized.programId, blockPlanId, normalized.code, normalized.normalizedCode, normalized.studyStart, normalized.studyEnd);
     return id;
   })();
 }
@@ -97,4 +104,3 @@ function normalizeCourseInput(input: CourseInput): NormalizedCourse {
   if (studyStart >= studyEnd) throw new Error("Der Studienbeginn muss vor dem Studienende liegen.");
   return { code, normalizedCode: normalizeCourseCode(code), programId, studyStart, studyEnd };
 }
-
