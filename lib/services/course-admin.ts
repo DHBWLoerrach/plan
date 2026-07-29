@@ -5,33 +5,25 @@ import type Database from "better-sqlite3";
 import { normalizeCalendarDay } from "@/lib/domain/calendar-day";
 import { normalizeCourseCode } from "@/lib/domain/course-code";
 import { assertAreaEditPermission, assertCourseEditPermission } from "@/lib/services/authorization";
-import { assertCourseFitsBlockPlan } from "@/lib/services/course-assignment";
-import { assertStudyPeriodCoversDraftPhases, clearCourseFromDraft, touchDraft } from "@/lib/services/draft-changes";
+import { touchCourse } from "@/lib/services/phase-admin";
 
 const maximumCodeLength = 32;
-
 type CourseInput = { code: string; programId: string; studyStart: string; studyEnd: string };
-type NormalizedCourse = { code: string; normalizedCode: string; programId: string; studyStart: string; studyEnd: string };
+type NormalizedCourse = CourseInput & { normalizedCode: string };
 type ProgramRow = { id: string; areaId: string; semesters: number };
-type CourseRow = { id: string; programId: string; blockPlanId: string | null };
+type CourseRow = { id: string; programId: string };
 
-export function createCourse(sqlite: Database.Database, input: { accountId: string; createTechnicalPlan?: boolean } & CourseInput): string {
+export function createCourse(sqlite: Database.Database, input: { accountId: string } & CourseInput): string {
   const normalized = normalizeCourseInput(input);
   return sqlite.transaction(() => {
-    // The only write without a course to ask: the area comes from the study program the course is about to get.
     const program = requireProgram(sqlite, normalized.programId);
     assertAreaEditPermission(sqlite, input.accountId, program.areaId);
     assertCodeAvailable(sqlite, normalized.normalizedCode, null);
     const id = randomUUID();
-    const blockPlanId = input.createTechnicalPlan ? randomUUID() : null;
-    if (blockPlanId) {
-      sqlite.prepare(`INSERT INTO block_plans
-        (id, area_id, name, normalized_name, has_ever_been_published, draft_updated_at, draft_updated_by_account_id)
-        VALUES (?, ?, NULL, NULL, 0, ?, ?)`)
-        .run(blockPlanId, program.areaId, new Date().toISOString(), input.accountId);
-    }
-    sqlite.prepare(`INSERT INTO courses (id, program_id, block_plan_id, code, normalized_code, study_start, study_end)
-      VALUES (?, ?, ?, ?, ?, ?, ?)`).run(id, normalized.programId, blockPlanId, normalized.code, normalized.normalizedCode, normalized.studyStart, normalized.studyEnd);
+    sqlite.prepare(`INSERT INTO courses
+      (id, program_id, code, normalized_code, study_start, study_end, has_ever_been_published, draft_updated_at, draft_updated_by_account_id)
+      VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)`)
+      .run(id, normalized.programId, normalized.code, normalized.normalizedCode, normalized.studyStart, normalized.studyEnd, new Date().toISOString(), input.accountId);
     return id;
   })();
 }
@@ -44,32 +36,25 @@ export function updateCourse(sqlite: Database.Database, input: { accountId: stri
     assertCourseEditPermission(sqlite, input.accountId, input.courseId);
     const currentProgram = requireProgram(sqlite, course.programId);
     const program = requireProgram(sqlite, normalized.programId);
-    // Moving a course into a study program of another area is a write on both sides.
     if (program.areaId !== currentProgram.areaId) assertAreaEditPermission(sqlite, input.accountId, program.areaId);
     assertCodeAvailable(sqlite, normalized.normalizedCode, input.courseId);
-    assertStudyPeriodCoversDraftPhases(sqlite, input.courseId, normalized);
-    if (course.blockPlanId) {
-      assertCourseFitsBlockPlan(sqlite, course.blockPlanId, { id: input.courseId, areaId: program.areaId, semesters: program.semesters, studyStart: normalized.studyStart });
-    }
+    const outsidePhase = sqlite.prepare("SELECT 1 FROM course_phases WHERE course_id = ? AND (start_date < ? OR end_date > ?)")
+      .get(input.courseId, normalized.studyStart, normalized.studyEnd);
+    if (outsidePhase) throw new Error("Der Studienzeitraum muss alle Kursphasen des Kurses umfassen. Passen Sie zuerst die Kursphasen an.");
+    const highestSemester = sqlite.prepare("SELECT max(semester) FROM course_phases WHERE course_id = ?").pluck().get(input.courseId) as number | null;
+    if (highestSemester && highestSemester > program.semesters) throw new Error(`Der Studiengang benötigt mindestens ${highestSemester} Semester für die erfassten Kursphasen.`);
     sqlite.prepare("UPDATE courses SET program_id = ?, code = ?, normalized_code = ?, study_start = ?, study_end = ? WHERE id = ?")
       .run(normalized.programId, normalized.code, normalized.normalizedCode, normalized.studyStart, normalized.studyEnd, input.courseId);
-    if (course.blockPlanId) touchDraft(sqlite, course.blockPlanId, input.accountId, now);
+    touchCourse(sqlite, input.courseId, input.accountId, now);
   })();
 }
 
-export function deleteCourse(sqlite: Database.Database, input: { accountId: string; courseId: string; now?: Date }): void {
-  const now = input.now ?? new Date();
+export function deleteCourse(sqlite: Database.Database, input: { accountId: string; courseId: string }): void {
   sqlite.transaction(() => {
-    const course = requireCourse(sqlite, input.courseId);
+    requireCourse(sqlite, input.courseId);
     assertCourseEditPermission(sqlite, input.accountId, input.courseId);
-    const publishedIn = sqlite.prepare(`SELECT version.block_plan_name AS name FROM published_course_snapshots snapshot
-      JOIN published_versions version ON version.id = snapshot.version_id WHERE snapshot.source_course_id = ?`).get(input.courseId) as { name: string } | undefined;
-    if (publishedIn) throw new Error(`Der Kurs ist in der veröffentlichten Fassung „${publishedIn.name}“ sichtbar und kann nicht gelöscht werden.`);
-    if (course.blockPlanId) {
-      const remaining = (sqlite.prepare("SELECT COUNT(*) AS count FROM courses WHERE block_plan_id = ?").get(course.blockPlanId) as { count: number }).count;
-      if (remaining <= 1) throw new Error("Der letzte Kurs eines Blockplans kann nicht gelöscht werden. Löschen Sie stattdessen den Blockplan.");
-      clearCourseFromDraft(sqlite, course.blockPlanId, input.courseId);
-      touchDraft(sqlite, course.blockPlanId, input.accountId, now);
+    if (sqlite.prepare("SELECT 1 FROM published_courses WHERE course_id = ?").get(input.courseId)) {
+      throw new Error("Der Kurs besitzt eine veröffentlichte Fassung und kann nicht gelöscht werden. Nehmen Sie sie zuerst zurück.");
     }
     sqlite.prepare("DELETE FROM courses WHERE id = ?").run(input.courseId);
   })();
@@ -82,7 +67,7 @@ function requireProgram(sqlite: Database.Database, programId: string): ProgramRo
 }
 
 function requireCourse(sqlite: Database.Database, courseId: string): CourseRow {
-  const course = sqlite.prepare("SELECT id, program_id AS programId, block_plan_id AS blockPlanId FROM courses WHERE id = ?").get(courseId) as CourseRow | undefined;
+  const course = sqlite.prepare("SELECT id, program_id AS programId FROM courses WHERE id = ?").get(courseId) as CourseRow | undefined;
   if (!course) throw new Error("Der Kurs wurde nicht gefunden.");
   return course;
 }
@@ -93,7 +78,6 @@ function assertCodeAvailable(sqlite: Database.Database, normalizedCode: string, 
 }
 
 function normalizeCourseInput(input: CourseInput): NormalizedCourse {
-  // The Kurskennung has no enforced format (FACHLICHE_REGELN.md), so only trim; interior characters stay verbatim.
   const code = input.code.trim();
   if (!code) throw new Error("Die Kurskennung ist erforderlich.");
   if ([...code].length > maximumCodeLength) throw new Error(`Die Kurskennung darf höchstens ${maximumCodeLength} Zeichen lang sein.`);

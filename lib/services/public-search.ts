@@ -65,15 +65,14 @@ export function berlinCalendarDay(now: Date = new Date()): string {
 /** The filter options are all and only values carried by still-published snapshots. */
 export function readPublicFilterOptions(sqlite: Database.Database) {
   const areas = sqlite
-    .prepare(`SELECT DISTINCT version.area_name AS value FROM published_versions version
-      JOIN published_course_snapshots snapshot ON snapshot.version_id = version.id
+    .prepare(`SELECT DISTINCT area_name AS value FROM published_courses
       ORDER BY value COLLATE NOCASE`)
     .all() as { value: string }[];
   const programs = sqlite
-    .prepare("SELECT DISTINCT program_name AS value FROM published_course_snapshots ORDER BY value COLLATE NOCASE")
+    .prepare("SELECT DISTINCT program_name AS value FROM published_courses ORDER BY value COLLATE NOCASE")
     .all() as { value: string }[];
   const years = sqlite
-    .prepare("SELECT DISTINCT CAST(substr(study_start, 1, 4) AS INTEGER) AS value FROM published_course_snapshots ORDER BY value DESC")
+    .prepare("SELECT DISTINCT CAST(substr(study_start, 1, 4) AS INTEGER) AS value FROM published_courses ORDER BY value DESC")
     .all() as { value: number }[];
   return {
     areas: areas.map((option) => option.value),
@@ -108,10 +107,9 @@ function afterCodePrefix(prefix: string): string {
 }
 
 const matchingCoursesSql = `
-  FROM published_course_snapshots snapshot
-  JOIN published_versions version ON version.id = snapshot.version_id
-  JOIN published_course_search_keys search_key ON search_key.course_snapshot_id = snapshot.id
-  WHERE (? IS NULL OR version.area_name = ?)
+  FROM published_courses snapshot
+  JOIN published_course_search_keys search_key ON search_key.published_course_id = snapshot.id
+  WHERE (? IS NULL OR snapshot.area_name = ?)
     AND (? IS NULL OR snapshot.program_name = ?)
     AND (? IS NULL OR CAST(substr(snapshot.study_start, 1, 4) AS INTEGER) = ?)
     AND (? IS NULL OR (search_key.normalized_code >= ? AND search_key.normalized_code < ?))
@@ -146,7 +144,7 @@ export function searchPublicPlans(
   const total = (sqlite.prepare(`SELECT count(*) AS count ${matchingCoursesSql}`).get(...parameters) as { count: number }).count;
   const pages = Math.max(Math.ceil(total / plansPerPage), 1);
   const page = Math.min(Math.max(Math.trunc(Number(request.page)) || 1, 1), pages);
-  const rows = sqlite.prepare(`SELECT snapshot.id, snapshot.code, version.area_name AS area, snapshot.program_name AS program,
+  const rows = sqlite.prepare(`SELECT snapshot.id, snapshot.code, snapshot.area_name AS area, snapshot.program_name AS program,
       snapshot.study_start AS studyStart, snapshot.study_end AS studyEnd, snapshot.semesters,
       CAST(substr(snapshot.study_start, 1, 4) AS INTEGER) AS year,
       CASE WHEN snapshot.study_start > ? THEN 'future' WHEN snapshot.study_end < ? THEN 'past' ELSE 'current' END AS groupKey
@@ -168,7 +166,7 @@ function cutQuery(cut: PublicCut): { sql: string; parameters: unknown[] } | null
     case "course": {
       const code = normalizeCourseCode(cut.code);
       return code ? {
-        sql: `JOIN published_course_search_keys search_key ON search_key.course_snapshot_id = snapshot.id
+        sql: `JOIN published_course_search_keys search_key ON search_key.published_course_id = snapshot.id
           WHERE search_key.normalized_code = ?`,
         parameters: [code],
       } : null;
@@ -177,7 +175,7 @@ function cutQuery(cut: PublicCut): { sql: string; parameters: unknown[] } | null
       return { sql: "WHERE CAST(substr(snapshot.study_start, 1, 4) AS INTEGER) = ?", parameters: [cut.year] };
     case "area":
       return {
-        sql: "WHERE version.area_name = ? AND CAST(substr(snapshot.study_start, 1, 4) AS INTEGER) = ?",
+        sql: "WHERE snapshot.area_name = ? AND CAST(substr(snapshot.study_start, 1, 4) AS INTEGER) = ?",
         parameters: [cut.name, cut.year],
       };
     case "program":
@@ -191,11 +189,10 @@ function cutQuery(cut: PublicCut): { sql: string; parameters: unknown[] } | null
 function readCoursesForCut(sqlite: Database.Database, cut: PublicCut): PublicCourse[] {
   const query = cutQuery(cut);
   if (!query) return [];
-  return sqlite.prepare(`SELECT snapshot.id, snapshot.code, version.area_name AS area, snapshot.program_name AS program,
+  return sqlite.prepare(`SELECT snapshot.id, snapshot.code, snapshot.area_name AS area, snapshot.program_name AS program,
       snapshot.study_start AS studyStart, snapshot.study_end AS studyEnd, snapshot.semesters,
       CAST(substr(snapshot.study_start, 1, 4) AS INTEGER) AS year
-    FROM published_course_snapshots snapshot
-    JOIN published_versions version ON version.id = snapshot.version_id
+    FROM published_courses snapshot
     ${query.sql}
     ORDER BY snapshot.code COLLATE NOCASE`)
     .all(...query.parameters) as PublicCourse[];
@@ -204,21 +201,17 @@ function readCoursesForCut(sqlite: Database.Database, cut: PublicCut): PublicCou
 function readDetailForCourses(sqlite: Database.Database, courses: PublicCourse[]) {
   const ids = courses.map((course) => course.id);
   const placeholders = ids.map(() => "?").join(", ");
-  const phases = sqlite.prepare(`SELECT course_snapshot_id AS courseId, semester, phase_type AS type, start_date AS startDate, end_date AS endDate
-      FROM published_phases WHERE course_snapshot_id IN (${placeholders}) ORDER BY semester, start_date, end_date`)
+  const phases = sqlite.prepare(`SELECT published_course_id AS courseId, semester, phase_type AS type, start_date AS startDate, end_date AS endDate
+      FROM published_phases WHERE published_course_id IN (${placeholders}) ORDER BY semester, start_date, end_date`)
     .all(...ids) as DraftPhase[];
   const events = sqlite.prepare(`SELECT DISTINCT event.id, event.title, event.description, event.category,
       event.start_date AS startDate, event.end_date AS endDate, event.provisional
     FROM published_events event
-    JOIN published_event_courses link ON link.event_id = event.id
-    WHERE link.course_snapshot_id IN (${placeholders})
+    WHERE event.published_course_id IN (${placeholders})
     ORDER BY event.start_date, event.title COLLATE NOCASE, event.id`)
     .all(...ids) as PublishedEventRow[];
-  const eventCourses = sqlite.prepare(`SELECT link.event_id AS eventId, link.course_snapshot_id AS courseId
-    FROM published_event_courses link
-    JOIN published_course_snapshots snapshot ON snapshot.id = link.course_snapshot_id
-    WHERE link.course_snapshot_id IN (${placeholders})
-    ORDER BY link.event_id, snapshot.code COLLATE NOCASE`)
+  const eventCourses = sqlite.prepare(`SELECT id AS eventId, published_course_id AS courseId FROM published_events
+    WHERE published_course_id IN (${placeholders}) ORDER BY id`)
     .all(...ids) as EventCourseRow[];
   const courseIdsByEvent = new Map<string, string[]>();
   for (const { eventId, courseId } of eventCourses) {

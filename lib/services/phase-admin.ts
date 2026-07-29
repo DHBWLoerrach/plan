@@ -6,103 +6,84 @@ import { normalizeCalendarDayField } from "@/lib/domain/calendar-day";
 import { FieldError } from "@/lib/domain/field-error";
 import { type PhaseType, isPhaseType } from "@/lib/domain/phase-type";
 import { assertCourseEditPermission, assertCoursesEditPermission } from "@/lib/services/authorization";
-import { assertDraftEditPermission, requireCoursesOfBlockPlan, touchDraft } from "@/lib/services/draft-changes";
 
 export type PhaseField = "courseIds" | "semester" | "type" | "startDate" | "endDate";
-
 export type PhaseDetails = { semester: string; type: string; startDate: string; endDate: string };
-
 export type PhaseInput = PhaseDetails & { courseIds: string[] };
 
+type CourseRow = { id: string; code: string; semesters: number; studyStart: string; studyEnd: string };
 type NormalizedPhase = { semester: number; type: PhaseType; startDate: string; endDate: string };
-type PlanRow = { id: string; semesters: number };
-type PhaseCourse = { id: string; code: string; studyStart: string; studyEnd: string };
 
-/** The number of semesters of a block plan, derived from any of its courses; all of them share it (FACHLICHE_REGELN.md). */
-const planColumns = `plan.id,
-  (SELECT program.semesters FROM courses course JOIN programs program ON program.id = course.program_id
-    WHERE course.block_plan_id = plan.id LIMIT 1) AS semesters`;
-const courseColumns = "course.id, course.code, course.study_start AS studyStart, course.study_end AS studyEnd";
-
-/**
- * Creates one course phase per selected course. The phases start out with equal details but stay independent: they
- * share no identity, so a later change affects only the phase being edited (FACHLICHE_REGELN.md).
- */
-export function createDraftPhases(sqlite: Database.Database, input: { accountId: string; blockPlanId: string; now?: Date } & PhaseInput): string[] {
+/** Creates one independent course phase for every selected course. */
+export function createDraftPhases(sqlite: Database.Database, input: { accountId: string; now?: Date } & PhaseInput): string[] {
   const now = input.now ?? new Date();
   return sqlite.transaction(() => {
-    const plan = requirePlan(sqlite, input.blockPlanId);
-    assertDraftEditPermission(sqlite, input.accountId, plan.id);
-    const courseIds = requireCoursesOfBlockPlan(sqlite, {
-      blockPlanId: plan.id,
-      courseIds: input.courseIds,
-      field: "courseIds" satisfies PhaseField,
-      emptyMessage: "Wählen Sie mindestens einen Kurs für die Kursphase.",
-      foreignMessage: "Ein ausgewählter Kurs gehört nicht zu diesem Blockplan.",
-    });
-    // A joint creation requires the permission for every selected course (FACHLICHE_REGELN.md).
-    assertCoursesEditPermission(sqlite, input.accountId, courseIds);
-    const phase = normalizePhaseDetails(input, plan.semesters);
-    // Every selected course keeps its own study period (FACHLICHE_REGELN.md), so the shared details must fit each of them.
-    for (const course of readCourses(sqlite, courseIds)) assertPhaseWithinStudyPeriod(phase, course);
+    const courses = requireCourses(sqlite, input.courseIds);
+    assertCoursesEditPermission(sqlite, input.accountId, courses.map((course) => course.id));
     const ids: string[] = [];
-    const addPhase = sqlite.prepare(`INSERT INTO draft_phases (id, block_plan_id, course_id, semester, phase_type, start_date, end_date)
-      VALUES (?, ?, ?, ?, ?, ?, ?)`);
-    for (const courseId of courseIds) {
+    const add = sqlite.prepare(`INSERT INTO course_phases (id, course_id, semester, phase_type, start_date, end_date)
+      VALUES (?, ?, ?, ?, ?, ?)`);
+    for (const course of courses) {
+      const phase = normalizePhaseDetails(input, course.semesters);
+      assertPhaseWithinStudyPeriod(phase, course);
       const id = randomUUID();
+      add.run(id, course.id, phase.semester, phase.type, phase.startDate, phase.endDate);
+      touchCourse(sqlite, course.id, input.accountId, now);
       ids.push(id);
-      addPhase.run(id, plan.id, courseId, phase.semester, phase.type, phase.startDate, phase.endDate);
     }
-    touchDraft(sqlite, plan.id, input.accountId, now);
     return ids;
   })();
 }
 
-/** Changes one saved course phase. Its course stays; only the edited phase changes, never a jointly created sibling. */
 export function updateDraftPhase(sqlite: Database.Database, input: { accountId: string; phaseId: string; now?: Date } & PhaseDetails): void {
   const now = input.now ?? new Date();
   sqlite.transaction(() => {
-    const plan = requirePlanOfPhase(sqlite, input.phaseId);
     const course = requireCourseOfPhase(sqlite, input.phaseId);
     assertCourseEditPermission(sqlite, input.accountId, course.id);
-    const phase = normalizePhaseDetails(input, plan.semesters);
+    const phase = normalizePhaseDetails(input, course.semesters);
     assertPhaseWithinStudyPeriod(phase, course);
-    sqlite.prepare("UPDATE draft_phases SET semester = ?, phase_type = ?, start_date = ?, end_date = ? WHERE id = ?")
+    sqlite.prepare("UPDATE course_phases SET semester = ?, phase_type = ?, start_date = ?, end_date = ? WHERE id = ?")
       .run(phase.semester, phase.type, phase.startDate, phase.endDate, input.phaseId);
-    touchDraft(sqlite, plan.id, input.accountId, now);
+    touchCourse(sqlite, course.id, input.accountId, now);
   })();
 }
 
-/** Deletes one course phase from the draft; the published version stays untouched until the next publication. */
 export function deleteDraftPhase(sqlite: Database.Database, input: { accountId: string; phaseId: string; now?: Date }): void {
   const now = input.now ?? new Date();
   sqlite.transaction(() => {
-    const plan = requirePlanOfPhase(sqlite, input.phaseId);
     const course = requireCourseOfPhase(sqlite, input.phaseId);
     assertCourseEditPermission(sqlite, input.accountId, course.id);
-    sqlite.prepare("DELETE FROM draft_phases WHERE id = ?").run(input.phaseId);
-    touchDraft(sqlite, plan.id, input.accountId, now);
+    sqlite.prepare("DELETE FROM course_phases WHERE id = ?").run(input.phaseId);
+    touchCourse(sqlite, course.id, input.accountId, now);
   })();
 }
 
-function requirePlan(sqlite: Database.Database, blockPlanId: string): PlanRow {
-  const plan = sqlite.prepare(`SELECT ${planColumns} FROM block_plans plan WHERE plan.id = ?`).get(blockPlanId) as PlanRow | undefined;
-  if (!plan) throw new Error("Der Blockplan wurde nicht gefunden.");
-  return plan;
+export function touchCourse(sqlite: Database.Database, courseId: string, accountId: string, now: Date): void {
+  sqlite.prepare("UPDATE courses SET draft_updated_at = ?, draft_updated_by_account_id = ? WHERE id = ?")
+    .run(now.toISOString(), accountId, courseId);
 }
 
-function requirePlanOfPhase(sqlite: Database.Database, phaseId: string): PlanRow {
-  const plan = sqlite.prepare(`SELECT ${planColumns} FROM draft_phases phase
-    JOIN block_plans plan ON plan.id = phase.block_plan_id WHERE phase.id = ?`).get(phaseId) as PlanRow | undefined;
-  if (!plan) throw new Error("Die Kursphase wurde nicht gefunden.");
-  return plan;
+function requireCourses(sqlite: Database.Database, rawIds: string[]): CourseRow[] {
+  const ids = [...new Set(rawIds.map((id) => id.trim()).filter(Boolean))];
+  if (!ids.length) throw new FieldError("courseIds", "Wählen Sie mindestens einen Kurs für die Kursphase.");
+  const placeholders = ids.map(() => "?").join(", ");
+  const courses = sqlite.prepare(`SELECT course.id, course.code, program.semesters, course.study_start AS studyStart, course.study_end AS studyEnd
+    FROM courses course JOIN programs program ON program.id = course.program_id WHERE course.id IN (${placeholders})`).all(...ids) as CourseRow[];
+  if (courses.length !== ids.length) throw new FieldError("courseIds", "Ein ausgewählter Kurs wurde nicht gefunden.");
+  return courses;
+}
+
+function requireCourseOfPhase(sqlite: Database.Database, phaseId: string): CourseRow {
+  const course = sqlite.prepare(`SELECT course.id, course.code, program.semesters, course.study_start AS studyStart, course.study_end AS studyEnd
+    FROM course_phases phase JOIN courses course ON course.id = phase.course_id JOIN programs program ON program.id = course.program_id
+    WHERE phase.id = ?`).get(phaseId) as CourseRow | undefined;
+  if (!course) throw new Error("Die Kursphase wurde nicht gefunden.");
+  return course;
 }
 
 function normalizePhaseDetails(input: PhaseDetails, semesters: number): NormalizedPhase {
   const semester = Number(input.semester.trim());
-  if (!Number.isInteger(semester) || semester < 1 || semester > semesters) {
-    throw new FieldError("semester", `Das Semester muss eine ganze Zahl von 1 bis ${semesters} sein.`);
-  }
+  if (!Number.isInteger(semester) || semester < 1 || semester > semesters) throw new FieldError("semester", `Das Semester muss eine ganze Zahl von 1 bis ${semesters} sein.`);
   if (!isPhaseType(input.type)) throw new FieldError("type", "Der Phasentyp muss Theorie oder Praxis sein.");
   const startDate = normalizeCalendarDayField(input.startDate, "startDate", "Das Startdatum");
   const endDate = normalizeCalendarDayField(input.endDate, "endDate", "Das Enddatum");
@@ -110,26 +91,8 @@ function normalizePhaseDetails(input: PhaseDetails, semesters: number): Normaliz
   return { semester, type: input.type, startDate, endDate };
 }
 
-/**
- * A course phase lies completely within the study period of its course (FACHLICHE_REGELN.md). The message names the
- * course, because a joint creation spans several courses whose study periods may differ.
- */
-function assertPhaseWithinStudyPeriod(phase: NormalizedPhase, course: PhaseCourse): void {
+function assertPhaseWithinStudyPeriod(phase: NormalizedPhase, course: CourseRow): void {
   const message = `Der Zeitraum muss innerhalb des Studienzeitraums von ${course.code} liegen.`;
   if (phase.startDate < course.studyStart) throw new FieldError("startDate", message);
   if (phase.endDate > course.studyEnd) throw new FieldError("endDate", message);
-}
-
-function readCourses(sqlite: Database.Database, courseIds: string[]): PhaseCourse[] {
-  const placeholders = courseIds.map(() => "?").join(", ");
-  const courses = sqlite.prepare(`SELECT ${courseColumns} FROM courses course WHERE course.id IN (${placeholders})`).all(...courseIds) as PhaseCourse[];
-  if (courses.length !== courseIds.length) throw new Error("Ein ausgewählter Kurs wurde nicht gefunden.");
-  return courses;
-}
-
-function requireCourseOfPhase(sqlite: Database.Database, phaseId: string): PhaseCourse {
-  const course = sqlite.prepare(`SELECT ${courseColumns} FROM draft_phases phase
-    JOIN courses course ON course.id = phase.course_id WHERE phase.id = ?`).get(phaseId) as PhaseCourse | undefined;
-  if (!course) throw new Error("Die Kursphase wurde nicht gefunden.");
-  return course;
 }

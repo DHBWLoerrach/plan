@@ -31,13 +31,6 @@ export default async function CourseCutPage({ searchParams }: CutPageProps) {
     <h1>Zuschnitt Jahrgang {cut.year}</h1>
     <p>Der Zuschnitt wird nicht gespeichert. Er zeigt und bearbeitet nur die hier ausgewählten Kurse nebeneinander.</p>
     <CourseCutEditor courses={cut.courses} phases={cut.phases} events={cut.events} />
-    <section className="workspace-panel" aria-labelledby="preview-heading">
-      <h2 id="preview-heading">Vorschau und Veröffentlichung</h2>
-      <p>Vorschau, Veröffentlichen und Zurücknehmen laufen vorübergehend je technischer Planungsgruppe. Die Auswahl bleibt dabei auf diesen Zuschnitt bezogen.</p>
-      <ul className="entry-list">{cut.previewLinks.map((entry) => <li key={entry.blockPlanId}>
-        <Link className="text-link" href={`/intern/blockplaene/${entry.blockPlanId}/vorschau`}>Vorschau und Veröffentlichung für {entry.codes.join(", ")}</Link>
-      </li>)}</ul>
-    </section>
     <p><Link className="text-link" href={`/intern/kurse?year=${encodeURIComponent(cut.year)}`}>Zurück zur Kursliste</Link></p>
   </article></SiteShell>;
 }

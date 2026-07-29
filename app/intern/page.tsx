@@ -24,7 +24,7 @@ export default async function InternalHome() {
   const manages = managesAnyArea(account);
   const areas = manages ? manageableAreas(sqlite, account) : [];
   const courses = manages
-    ? courseListData(sqlite, account, { area: null, program: null, year: null, assignment: null }, "year").courses
+    ? courseListData(sqlite, account, { area: null, program: null, year: null }, "year").courses
     : [];
 
   return <SiteShell nav={<InternalNav account={account} current="home" />}><section className="search-panel" aria-labelledby="internal-heading">

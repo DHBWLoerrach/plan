@@ -44,14 +44,14 @@ export function readPublicCourseBlockPlan(sqlite: Database.Database, courseCode:
     .prepare(`SELECT snapshot.id, snapshot.code, snapshot.program_name AS program, snapshot.program_abbreviation AS programAbbreviation,
         snapshot.study_start AS studyStart, snapshot.study_end AS studyEnd, snapshot.semesters
       FROM published_course_search_keys search_key
-      JOIN published_course_snapshots snapshot ON snapshot.id = search_key.course_snapshot_id
+      JOIN published_courses snapshot ON snapshot.id = search_key.published_course_id
       WHERE search_key.normalized_code = ?`)
     .get(normalizedCode) as PublishedCourseRow | undefined;
   if (!course) return { kind: "not-found" };
 
   const phases = sqlite
     .prepare(`SELECT semester, phase_type AS type, start_date AS startDate, end_date AS endDate
-      FROM published_phases WHERE course_snapshot_id = ? ORDER BY semester, start_date, end_date`)
+      FROM published_phases WHERE published_course_id = ? ORDER BY semester, start_date, end_date`)
     .all(course.id) as PublishedPhaseRow[];
   return {
     kind: "found",

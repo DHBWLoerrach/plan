@@ -19,11 +19,9 @@ export default async function CoursesPage({ searchParams }: PageProps<"/intern/k
   const area = searchParam(raw, "area");
   const program = searchParam(raw, "program");
   const year = searchParam(raw, "year");
-  const rawAssignment = searchParam(raw, "assignment");
-  const assignment = rawAssignment === "assigned" || rawAssignment === "unassigned" ? rawAssignment : null;
   const requestedSort = searchParam(raw, "sort");
   const sort = isCourseSort(requestedSort) ? requestedSort : "code";
-  const { areas, programs, years, courses } = courseListData(sqlite, account, { area, program, year, assignment }, sort);
+  const { areas, programs, years, courses } = courseListData(sqlite, account, { area, program, year }, sort);
 
   return <SiteShell nav={<InternalNav account={account} current="kurse" />}><section className="search-panel" aria-labelledby="courses-heading">
     <p className="eyebrow">Interner Bereich</p>

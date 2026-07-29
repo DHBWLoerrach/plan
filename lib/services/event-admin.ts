@@ -5,133 +5,80 @@ import type Database from "better-sqlite3";
 import { normalizeCalendarDayField } from "@/lib/domain/calendar-day";
 import { type EventCategory, isEventCategory } from "@/lib/domain/event-category";
 import { FieldError } from "@/lib/domain/field-error";
-import { assertCoursesEditPermission } from "@/lib/services/authorization";
-import { assertDraftEditPermission, requireCoursesOfBlockPlan, touchDraft } from "@/lib/services/draft-changes";
+import { assertCourseEditPermission, assertCoursesEditPermission } from "@/lib/services/authorization";
+import { touchCourse } from "@/lib/services/phase-admin";
 
 export type EventField = "title" | "description" | "category" | "startDate" | "endDate" | "courseIds";
-
-export type EventInput = {
-  title: string;
-  description: string;
-  category: string;
-  startDate: string;
-  endDate: string;
-  provisional: boolean;
-  courseIds: string[];
-};
-
-type NormalizedEvent = {
-  title: string;
-  description: string | null;
-  category: EventCategory;
-  startDate: string;
-  endDate: string | null;
-  provisional: boolean;
-  courseIds: string[];
-};
-
+export type EventInput = { title: string; description: string; category: string; startDate: string; endDate: string; provisional: boolean; courseIds: string[] };
+type NormalizedEvent = { title: string; description: string | null; category: EventCategory; startDate: string; endDate: string | null; provisional: boolean };
 const maximumTitleLength = 160;
 const maximumDescriptionLength = 2000;
 
-/** Creates an examination-relevant event in the draft of a block plan. */
-export function createDraftEvent(sqlite: Database.Database, input: { accountId: string; blockPlanId: string; now?: Date } & EventInput): string {
+/** Stores one independent event for every selected course. */
+export function createDraftEvent(sqlite: Database.Database, input: { accountId: string; now?: Date } & EventInput): string[] {
   const event = normalizeEventInput(input);
   const now = input.now ?? new Date();
   return sqlite.transaction(() => {
-    const blockPlanId = requirePlan(sqlite, input.blockPlanId);
-    assertDraftEditPermission(sqlite, input.accountId, blockPlanId);
-    const courseIds = affectedCourses(sqlite, blockPlanId, event.courseIds);
-    // A joint creation requires the permission for every selected course (FACHLICHE_REGELN.md).
+    const courseIds = requireCourseIds(sqlite, input.courseIds);
     assertCoursesEditPermission(sqlite, input.accountId, courseIds);
-    const id = randomUUID();
-    sqlite.prepare(`INSERT INTO draft_events (id, block_plan_id, title, description, category, start_date, end_date, provisional)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(id, input.blockPlanId, event.title, event.description, event.category, event.startDate, event.endDate, event.provisional ? 1 : 0);
-    const addCourse = sqlite.prepare("INSERT INTO draft_event_courses (event_id, course_id) VALUES (?, ?)");
-    for (const courseId of courseIds) addCourse.run(id, courseId);
-    touchDraft(sqlite, input.blockPlanId, input.accountId, now);
-    return id;
+    const add = sqlite.prepare(`INSERT INTO course_events (id, course_id, title, description, category, start_date, end_date, provisional)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
+    return courseIds.map((courseId) => {
+      const id = randomUUID();
+      add.run(id, courseId, event.title, event.description, event.category, event.startDate, event.endDate, event.provisional ? 1 : 0);
+      touchCourse(sqlite, courseId, input.accountId, now);
+      return id;
+    });
   })();
 }
 
-/** Replaces every detail of an event, including the set of affected courses. */
-export function updateDraftEvent(sqlite: Database.Database, input: { accountId: string; eventId: string; now?: Date } & EventInput): void {
+export function updateDraftEvent(sqlite: Database.Database, input: { accountId: string; eventId: string; now?: Date } & Omit<EventInput, "courseIds">): void {
   const event = normalizeEventInput(input);
   const now = input.now ?? new Date();
   sqlite.transaction(() => {
-    const blockPlanId = requirePlanOfEvent(sqlite, input.eventId);
-    // Both sides of the change are asked: the courses that carry the event today and the ones taking it on.
-    assertEventEditPermission(sqlite, input.accountId, input.eventId);
-    const courseIds = affectedCourses(sqlite, blockPlanId, event.courseIds);
-    assertCoursesEditPermission(sqlite, input.accountId, courseIds);
-    sqlite.prepare("UPDATE draft_events SET title = ?, description = ?, category = ?, start_date = ?, end_date = ?, provisional = ? WHERE id = ?")
+    const courseId = requireCourseOfEvent(sqlite, input.eventId);
+    assertCourseEditPermission(sqlite, input.accountId, courseId);
+    sqlite.prepare("UPDATE course_events SET title = ?, description = ?, category = ?, start_date = ?, end_date = ?, provisional = ? WHERE id = ?")
       .run(event.title, event.description, event.category, event.startDate, event.endDate, event.provisional ? 1 : 0, input.eventId);
-    sqlite.prepare("DELETE FROM draft_event_courses WHERE event_id = ?").run(input.eventId);
-    const addCourse = sqlite.prepare("INSERT INTO draft_event_courses (event_id, course_id) VALUES (?, ?)");
-    for (const courseId of courseIds) addCourse.run(input.eventId, courseId);
-    touchDraft(sqlite, blockPlanId, input.accountId, now);
+    touchCourse(sqlite, courseId, input.accountId, now);
   })();
 }
 
-/** Deletes an event from the draft; its course assignments go with it. Events are never deleted automatically. */
 export function deleteDraftEvent(sqlite: Database.Database, input: { accountId: string; eventId: string; now?: Date }): void {
   const now = input.now ?? new Date();
   sqlite.transaction(() => {
-    const blockPlanId = requirePlanOfEvent(sqlite, input.eventId);
-    assertEventEditPermission(sqlite, input.accountId, input.eventId);
-    sqlite.prepare("DELETE FROM draft_events WHERE id = ?").run(input.eventId);
-    touchDraft(sqlite, blockPlanId, input.accountId, now);
+    const courseId = requireCourseOfEvent(sqlite, input.eventId);
+    assertCourseEditPermission(sqlite, input.accountId, courseId);
+    sqlite.prepare("DELETE FROM course_events WHERE id = ?").run(input.eventId);
+    touchCourse(sqlite, courseId, input.accountId, now);
   })();
 }
 
-function requirePlan(sqlite: Database.Database, blockPlanId: string): string {
-  const plan = sqlite.prepare("SELECT id FROM block_plans WHERE id = ?").pluck().get(blockPlanId) as string | undefined;
-  if (!plan) throw new Error("Der Blockplan wurde nicht gefunden.");
-  return plan;
+function requireCourseIds(sqlite: Database.Database, rawIds: string[]): string[] {
+  const ids = [...new Set(rawIds.map((id) => id.trim()).filter(Boolean))];
+  if (!ids.length) throw new FieldError("courseIds", "Ein Termin betrifft mindestens einen Kurs.");
+  const placeholders = ids.map(() => "?").join(", ");
+  if ((sqlite.prepare(`SELECT count(*) AS count FROM courses WHERE id IN (${placeholders})`).get(...ids) as { count: number }).count !== ids.length) {
+    throw new FieldError("courseIds", "Ein ausgewählter Kurs wurde nicht gefunden.");
+  }
+  return ids;
 }
 
-function requirePlanOfEvent(sqlite: Database.Database, eventId: string): string {
-  const plan = sqlite.prepare(`SELECT plan.id FROM draft_events event
-    JOIN block_plans plan ON plan.id = event.block_plan_id WHERE event.id = ?`).pluck().get(eventId) as string | undefined;
-  if (!plan) throw new Error("Der Termin wurde nicht gefunden.");
-  return plan;
+function requireCourseOfEvent(sqlite: Database.Database, eventId: string): string {
+  const courseId = sqlite.prepare("SELECT course_id FROM course_events WHERE id = ?").pluck().get(eventId) as string | undefined;
+  if (!courseId) throw new Error("Der Termin wurde nicht gefunden.");
+  return courseId;
 }
 
-/** Asks the courses that carry the event today: changing or deleting it changes what each of them shows. */
-function assertEventEditPermission(sqlite: Database.Database, accountId: string, eventId: string): void {
-  const courseIds = sqlite.prepare("SELECT course_id FROM draft_event_courses WHERE event_id = ?").pluck().all(eventId) as string[];
-  assertCoursesEditPermission(sqlite, accountId, courseIds);
-}
-
-function affectedCourses(sqlite: Database.Database, blockPlanId: string, courseIds: string[]): string[] {
-  return requireCoursesOfBlockPlan(sqlite, {
-    blockPlanId,
-    courseIds,
-    field: "courseIds" satisfies EventField,
-    emptyMessage: "Ein Termin betrifft mindestens einen Kurs.",
-    foreignMessage: "Ein betroffener Kurs gehört nicht zu diesem Blockplan.",
-  });
-}
-
-function normalizeEventInput(input: EventInput): NormalizedEvent {
-  // The title is a human designation: trimmed with interior whitespace collapsed (FACHLICHE_REGELN.md).
+function normalizeEventInput(input: Omit<EventInput, "courseIds">): NormalizedEvent {
   const title = input.title.trim().replace(/\s+/gu, " ");
   if (!title) throw new FieldError("title", "Der Termintitel ist erforderlich.");
   if ([...title].length > maximumTitleLength) throw new FieldError("title", `Der Termintitel darf höchstens ${maximumTitleLength} Zeichen lang sein.`);
   const description = input.description.trim();
-  if ([...description].length > maximumDescriptionLength) {
-    throw new FieldError("description", `Die Terminbeschreibung darf höchstens ${maximumDescriptionLength} Zeichen lang sein.`);
-  }
+  if ([...description].length > maximumDescriptionLength) throw new FieldError("description", `Die Terminbeschreibung darf höchstens ${maximumDescriptionLength} Zeichen lang sein.`);
   if (!isEventCategory(input.category)) throw new FieldError("category", "Die Kategorie des Termins ist ungültig.");
   const startDate = normalizeCalendarDayField(input.startDate, "startDate", "Das Startdatum");
   const endDate = input.endDate.trim() ? normalizeCalendarDayField(input.endDate, "endDate", "Das Enddatum") : null;
   if (endDate && endDate < startDate) throw new FieldError("endDate", "Das Enddatum darf nicht vor dem Startdatum liegen.");
-  return {
-    title,
-    description: description || null,
-    category: input.category,
-    startDate,
-    endDate,
-    provisional: input.provisional,
-    courseIds: input.courseIds,
-  };
+  return { title, description: description || null, category: input.category, startDate, endDate, provisional: input.provisional };
 }

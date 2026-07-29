@@ -71,7 +71,7 @@ describe("backupDatabase", () => {
 
     const report = await backupDatabase({ databasePath, targetPath: path.join(directory, "snapshot.sqlite") });
 
-    expect(report.migrations).toEqual(["0000_initial", "0001_foreign_key_indexes", "0002_published_course_search_keys", "0003_unique_published_course_code"]);
+    expect(report.migrations).toEqual(["0000_initial", "0001_foreign_key_indexes", "0002_published_course_search_keys", "0003_unique_published_course_code", "0004_course_as_planning_unit"]);
   });
 
   it("names the migration state in the order the migrations were applied", async () => {
@@ -320,7 +320,7 @@ describe("operational commands", () => {
 
     expect(output).toContain("0000_initial");
     const sqlite = new Database(databasePath, { readonly: true });
-    expect(sqlite.prepare("SELECT id FROM _migrations").pluck().all()).toEqual(["0000_initial", "0001_foreign_key_indexes", "0002_published_course_search_keys", "0003_unique_published_course_code"]);
+    expect(sqlite.prepare("SELECT id FROM _migrations").pluck().all()).toEqual(["0000_initial", "0001_foreign_key_indexes", "0002_published_course_search_keys", "0003_unique_published_course_code", "0004_course_as_planning_unit"]);
     sqlite.close();
   });
 

@@ -33,3 +33,20 @@ describe("applySchemaThrough", () => {
     expect(hasSchemaObject(sqlite, "table", "courses")).toBe(false);
   });
 });
+
+describe("course planning schema", () => {
+  it("has only course-owned planning and publication tables with foreign-key indexes", () => {
+    const sqlite = new Database(":memory:");
+    applySchema(sqlite);
+
+    for (const table of ["course_phases", "course_events", "published_courses", "published_phases", "published_events"]) {
+      expect(hasSchemaObject(sqlite, "table", table)).toBe(true);
+    }
+    for (const table of ["block_plans", "draft_phases", "draft_events", "draft_event_courses", "published_versions", "published_course_snapshots", "published_event_courses"]) {
+      expect(hasSchemaObject(sqlite, "table", table)).toBe(false);
+    }
+    for (const index of ["course_phases_by_course", "course_events_by_course", "published_phases_by_course", "published_events_by_course"]) {
+      expect(hasSchemaObject(sqlite, "index", index)).toBe(true);
+    }
+  });
+});
