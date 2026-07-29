@@ -92,7 +92,7 @@ p[role="status"] { margin: 0; color: var(--success); }
 .site-main { flex: 1 0 auto; padding: 2rem 0 3rem; }
 .eyebrow { margin: 0 0 .7rem; color: var(--red); font-weight: 700; font-size: .76rem; letter-spacing: .12em; text-transform: uppercase; }
 
-.search-hero { padding: clamp(.5rem, 2vw, 1.5rem) 0 1.75rem; }
+.search-hero { padding: .5rem 0 1.75rem; }
 .search-hero h1 { margin: 0; font-size: clamp(2rem, 4.5vw, 2.9rem); font-weight: 800; line-height: 1.05; letter-spacing: -.025em; }
 .search-hero__lead { margin: 1rem 0 0; color: var(--gray); font-size: 1.05rem; }
 /* The note carries the same statement as the former panel, but as a marker beside the text instead of

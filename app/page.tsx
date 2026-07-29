@@ -70,7 +70,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
       <p className="eyebrow">Studienbetrieb</p>
       <h1>Blockpläne</h1>
       <p className="search-hero__lead">Theorie- und Praxisphasen sowie prüfungsrelevante Termine je Kurs und Jahrgang.</p>
-      <p className="search-hero__note">Öffentlich sichtbar ist ausschließlich der veröffentlichte Stand.</p>
+      <p className="search-hero__note">Es werden nur freigegebene Blockpläne angezeigt.</p>
     </section>
 
     <section className="search-panel" aria-labelledby="search-heading">
