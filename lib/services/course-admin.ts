@@ -4,7 +4,7 @@ import type Database from "better-sqlite3";
 
 import { normalizeCalendarDay } from "@/lib/domain/calendar-day";
 import { normalizeCourseCode } from "@/lib/domain/course-code";
-import { assertAreaEditPermission } from "@/lib/services/authorization";
+import { assertAreaEditPermission, assertCourseEditPermission } from "@/lib/services/authorization";
 import { assertCourseFitsBlockPlan } from "@/lib/services/course-assignment";
 import { assertStudyPeriodCoversDraftPhases, clearCourseFromDraft, touchDraft } from "@/lib/services/draft-changes";
 
@@ -18,6 +18,7 @@ type CourseRow = { id: string; programId: string; blockPlanId: string | null };
 export function createCourse(sqlite: Database.Database, input: { accountId: string } & CourseInput): string {
   const normalized = normalizeCourseInput(input);
   return sqlite.transaction(() => {
+    // The only write without a course to ask: the area comes from the study program the course is about to get.
     const program = requireProgram(sqlite, normalized.programId);
     assertAreaEditPermission(sqlite, input.accountId, program.areaId);
     assertCodeAvailable(sqlite, normalized.normalizedCode, null);
@@ -33,9 +34,10 @@ export function updateCourse(sqlite: Database.Database, input: { accountId: stri
   const now = input.now ?? new Date();
   sqlite.transaction(() => {
     const course = requireCourse(sqlite, input.courseId);
+    assertCourseEditPermission(sqlite, input.accountId, input.courseId);
     const currentProgram = requireProgram(sqlite, course.programId);
-    assertAreaEditPermission(sqlite, input.accountId, currentProgram.areaId);
     const program = requireProgram(sqlite, normalized.programId);
+    // Moving a course into a study program of another area is a write on both sides.
     if (program.areaId !== currentProgram.areaId) assertAreaEditPermission(sqlite, input.accountId, program.areaId);
     assertCodeAvailable(sqlite, normalized.normalizedCode, input.courseId);
     assertStudyPeriodCoversDraftPhases(sqlite, input.courseId, normalized);
@@ -52,8 +54,7 @@ export function deleteCourse(sqlite: Database.Database, input: { accountId: stri
   const now = input.now ?? new Date();
   sqlite.transaction(() => {
     const course = requireCourse(sqlite, input.courseId);
-    const program = requireProgram(sqlite, course.programId);
-    assertAreaEditPermission(sqlite, input.accountId, program.areaId);
+    assertCourseEditPermission(sqlite, input.accountId, input.courseId);
     const publishedIn = sqlite.prepare(`SELECT version.block_plan_name AS name FROM published_course_snapshots snapshot
       JOIN published_versions version ON version.id = snapshot.version_id WHERE snapshot.source_course_id = ?`).get(input.courseId) as { name: string } | undefined;
     if (publishedIn) throw new Error(`Der Kurs ist in der veröffentlichten Fassung „${publishedIn.name}“ sichtbar und kann nicht gelöscht werden.`);

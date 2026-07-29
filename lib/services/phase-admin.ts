@@ -5,8 +5,8 @@ import type Database from "better-sqlite3";
 import { normalizeCalendarDayField } from "@/lib/domain/calendar-day";
 import { FieldError } from "@/lib/domain/field-error";
 import { type PhaseType, isPhaseType } from "@/lib/domain/phase-type";
-import { assertAreaEditPermission } from "@/lib/services/authorization";
-import { requireCoursesOfBlockPlan, touchDraft } from "@/lib/services/draft-changes";
+import { assertCourseEditPermission, assertCoursesEditPermission } from "@/lib/services/authorization";
+import { assertDraftEditPermission, requireCoursesOfBlockPlan, touchDraft } from "@/lib/services/draft-changes";
 
 export type PhaseField = "courseIds" | "semester" | "type" | "startDate" | "endDate";
 
@@ -15,14 +15,14 @@ export type PhaseDetails = { semester: string; type: string; startDate: string; 
 export type PhaseInput = PhaseDetails & { courseIds: string[] };
 
 type NormalizedPhase = { semester: number; type: PhaseType; startDate: string; endDate: string };
-type PlanRow = { id: string; areaId: string; semesters: number };
-type PhaseCourse = { code: string; studyStart: string; studyEnd: string };
+type PlanRow = { id: string; semesters: number };
+type PhaseCourse = { id: string; code: string; studyStart: string; studyEnd: string };
 
 /** The number of semesters of a block plan, derived from any of its courses; all of them share it (FACHLICHE_REGELN.md). */
-const planColumns = `plan.id, plan.area_id AS areaId,
+const planColumns = `plan.id,
   (SELECT program.semesters FROM courses course JOIN programs program ON program.id = course.program_id
     WHERE course.block_plan_id = plan.id LIMIT 1) AS semesters`;
-const courseColumns = "course.code, course.study_start AS studyStart, course.study_end AS studyEnd";
+const courseColumns = "course.id, course.code, course.study_start AS studyStart, course.study_end AS studyEnd";
 
 /**
  * Creates one course phase per selected course. The phases start out with equal details but stay independent: they
@@ -32,7 +32,7 @@ export function createDraftPhases(sqlite: Database.Database, input: { accountId:
   const now = input.now ?? new Date();
   return sqlite.transaction(() => {
     const plan = requirePlan(sqlite, input.blockPlanId);
-    assertAreaEditPermission(sqlite, input.accountId, plan.areaId);
+    assertDraftEditPermission(sqlite, input.accountId, plan.id);
     const courseIds = requireCoursesOfBlockPlan(sqlite, {
       blockPlanId: plan.id,
       courseIds: input.courseIds,
@@ -40,6 +40,8 @@ export function createDraftPhases(sqlite: Database.Database, input: { accountId:
       emptyMessage: "Wählen Sie mindestens einen Kurs für die Kursphase.",
       foreignMessage: "Ein ausgewählter Kurs gehört nicht zu diesem Blockplan.",
     });
+    // A joint creation requires the permission for every selected course (FACHLICHE_REGELN.md).
+    assertCoursesEditPermission(sqlite, input.accountId, courseIds);
     const phase = normalizePhaseDetails(input, plan.semesters);
     // Every selected course keeps its own study period (FACHLICHE_REGELN.md), so the shared details must fit each of them.
     for (const course of readCourses(sqlite, courseIds)) assertPhaseWithinStudyPeriod(phase, course);
@@ -61,9 +63,10 @@ export function updateDraftPhase(sqlite: Database.Database, input: { accountId: 
   const now = input.now ?? new Date();
   sqlite.transaction(() => {
     const plan = requirePlanOfPhase(sqlite, input.phaseId);
-    assertAreaEditPermission(sqlite, input.accountId, plan.areaId);
+    const course = requireCourseOfPhase(sqlite, input.phaseId);
+    assertCourseEditPermission(sqlite, input.accountId, course.id);
     const phase = normalizePhaseDetails(input, plan.semesters);
-    assertPhaseWithinStudyPeriod(phase, requireCourseOfPhase(sqlite, input.phaseId));
+    assertPhaseWithinStudyPeriod(phase, course);
     sqlite.prepare("UPDATE draft_phases SET semester = ?, phase_type = ?, start_date = ?, end_date = ? WHERE id = ?")
       .run(phase.semester, phase.type, phase.startDate, phase.endDate, input.phaseId);
     touchDraft(sqlite, plan.id, input.accountId, now);
@@ -75,7 +78,8 @@ export function deleteDraftPhase(sqlite: Database.Database, input: { accountId: 
   const now = input.now ?? new Date();
   sqlite.transaction(() => {
     const plan = requirePlanOfPhase(sqlite, input.phaseId);
-    assertAreaEditPermission(sqlite, input.accountId, plan.areaId);
+    const course = requireCourseOfPhase(sqlite, input.phaseId);
+    assertCourseEditPermission(sqlite, input.accountId, course.id);
     sqlite.prepare("DELETE FROM draft_phases WHERE id = ?").run(input.phaseId);
     touchDraft(sqlite, plan.id, input.accountId, now);
   })();

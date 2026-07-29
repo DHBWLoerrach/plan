@@ -147,6 +147,17 @@ describe("createDraftPhases", () => {
     expect(() => createDraftPhases(sqlite, { accountId: "editor", blockPlanId, ...validPhase([first]) })).toThrow("nicht zur Bearbeitung dieses Bereichs");
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM draft_phases").get()).toEqual({ count: 0 });
   });
+
+  it("answers an account without permission before it says anything about the courses", () => {
+    const sqlite = createDatabase();
+    const { blockPlanId } = createPlanWithCourses(sqlite);
+    const foreign = addCourse(sqlite, "TIF26C");
+    insertEditor(sqlite, "editor", []);
+
+    // Both field errors would tell an account that may not edit here which courses this block plan carries.
+    expect(() => createDraftPhases(sqlite, { accountId: "editor", blockPlanId, ...validPhase([]) })).toThrow("nicht zur Bearbeitung dieses Bereichs");
+    expect(() => createDraftPhases(sqlite, { accountId: "editor", blockPlanId, ...validPhase([foreign]) })).toThrow("nicht zur Bearbeitung dieses Bereichs");
+  });
 });
 
 describe("updateDraftPhase", () => {

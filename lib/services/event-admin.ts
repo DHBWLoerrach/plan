@@ -5,8 +5,8 @@ import type Database from "better-sqlite3";
 import { normalizeCalendarDayField } from "@/lib/domain/calendar-day";
 import { type EventCategory, isEventCategory } from "@/lib/domain/event-category";
 import { FieldError } from "@/lib/domain/field-error";
-import { assertAreaEditPermission } from "@/lib/services/authorization";
-import { requireCoursesOfBlockPlan, touchDraft } from "@/lib/services/draft-changes";
+import { assertCoursesEditPermission } from "@/lib/services/authorization";
+import { assertDraftEditPermission, requireCoursesOfBlockPlan, touchDraft } from "@/lib/services/draft-changes";
 
 export type EventField = "title" | "description" | "category" | "startDate" | "endDate" | "courseIds";
 
@@ -38,9 +38,11 @@ export function createDraftEvent(sqlite: Database.Database, input: { accountId: 
   const event = normalizeEventInput(input);
   const now = input.now ?? new Date();
   return sqlite.transaction(() => {
-    const plan = requirePlan(sqlite, input.blockPlanId);
-    assertAreaEditPermission(sqlite, input.accountId, plan.areaId);
-    const courseIds = affectedCourses(sqlite, plan.id, event.courseIds);
+    const blockPlanId = requirePlan(sqlite, input.blockPlanId);
+    assertDraftEditPermission(sqlite, input.accountId, blockPlanId);
+    const courseIds = affectedCourses(sqlite, blockPlanId, event.courseIds);
+    // A joint creation requires the permission for every selected course (FACHLICHE_REGELN.md).
+    assertCoursesEditPermission(sqlite, input.accountId, courseIds);
     const id = randomUUID();
     sqlite.prepare(`INSERT INTO draft_events (id, block_plan_id, title, description, category, start_date, end_date, provisional)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(id, input.blockPlanId, event.title, event.description, event.category, event.startDate, event.endDate, event.provisional ? 1 : 0);
@@ -56,15 +58,17 @@ export function updateDraftEvent(sqlite: Database.Database, input: { accountId: 
   const event = normalizeEventInput(input);
   const now = input.now ?? new Date();
   sqlite.transaction(() => {
-    const plan = requirePlanOfEvent(sqlite, input.eventId);
-    assertAreaEditPermission(sqlite, input.accountId, plan.areaId);
-    const courseIds = affectedCourses(sqlite, plan.id, event.courseIds);
+    const blockPlanId = requirePlanOfEvent(sqlite, input.eventId);
+    // Both sides of the change are asked: the courses that carry the event today and the ones taking it on.
+    assertEventEditPermission(sqlite, input.accountId, input.eventId);
+    const courseIds = affectedCourses(sqlite, blockPlanId, event.courseIds);
+    assertCoursesEditPermission(sqlite, input.accountId, courseIds);
     sqlite.prepare("UPDATE draft_events SET title = ?, description = ?, category = ?, start_date = ?, end_date = ?, provisional = ? WHERE id = ?")
       .run(event.title, event.description, event.category, event.startDate, event.endDate, event.provisional ? 1 : 0, input.eventId);
     sqlite.prepare("DELETE FROM draft_event_courses WHERE event_id = ?").run(input.eventId);
     const addCourse = sqlite.prepare("INSERT INTO draft_event_courses (event_id, course_id) VALUES (?, ?)");
     for (const courseId of courseIds) addCourse.run(input.eventId, courseId);
-    touchDraft(sqlite, plan.id, input.accountId, now);
+    touchDraft(sqlite, blockPlanId, input.accountId, now);
   })();
 }
 
@@ -72,24 +76,30 @@ export function updateDraftEvent(sqlite: Database.Database, input: { accountId: 
 export function deleteDraftEvent(sqlite: Database.Database, input: { accountId: string; eventId: string; now?: Date }): void {
   const now = input.now ?? new Date();
   sqlite.transaction(() => {
-    const plan = requirePlanOfEvent(sqlite, input.eventId);
-    assertAreaEditPermission(sqlite, input.accountId, plan.areaId);
+    const blockPlanId = requirePlanOfEvent(sqlite, input.eventId);
+    assertEventEditPermission(sqlite, input.accountId, input.eventId);
     sqlite.prepare("DELETE FROM draft_events WHERE id = ?").run(input.eventId);
-    touchDraft(sqlite, plan.id, input.accountId, now);
+    touchDraft(sqlite, blockPlanId, input.accountId, now);
   })();
 }
 
-function requirePlan(sqlite: Database.Database, blockPlanId: string): { id: string; areaId: string } {
-  const plan = sqlite.prepare("SELECT id, area_id AS areaId FROM block_plans WHERE id = ?").get(blockPlanId) as { id: string; areaId: string } | undefined;
+function requirePlan(sqlite: Database.Database, blockPlanId: string): string {
+  const plan = sqlite.prepare("SELECT id FROM block_plans WHERE id = ?").pluck().get(blockPlanId) as string | undefined;
   if (!plan) throw new Error("Der Blockplan wurde nicht gefunden.");
   return plan;
 }
 
-function requirePlanOfEvent(sqlite: Database.Database, eventId: string): { id: string; areaId: string } {
-  const plan = sqlite.prepare(`SELECT plan.id, plan.area_id AS areaId FROM draft_events event
-    JOIN block_plans plan ON plan.id = event.block_plan_id WHERE event.id = ?`).get(eventId) as { id: string; areaId: string } | undefined;
+function requirePlanOfEvent(sqlite: Database.Database, eventId: string): string {
+  const plan = sqlite.prepare(`SELECT plan.id FROM draft_events event
+    JOIN block_plans plan ON plan.id = event.block_plan_id WHERE event.id = ?`).pluck().get(eventId) as string | undefined;
   if (!plan) throw new Error("Der Termin wurde nicht gefunden.");
   return plan;
+}
+
+/** Asks the courses that carry the event today: changing or deleting it changes what each of them shows. */
+function assertEventEditPermission(sqlite: Database.Database, accountId: string, eventId: string): void {
+  const courseIds = sqlite.prepare("SELECT course_id FROM draft_event_courses WHERE event_id = ?").pluck().all(eventId) as string[];
+  assertCoursesEditPermission(sqlite, accountId, courseIds);
 }
 
 function affectedCourses(sqlite: Database.Database, blockPlanId: string, courseIds: string[]): string[] {

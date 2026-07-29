@@ -158,6 +158,17 @@ describe("createDraftEvent", () => {
     expect(() => createDraftEvent(sqlite, { ...validEvent(first), accountId: "editor", blockPlanId })).toThrow("nicht zur Bearbeitung dieses Bereichs");
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM draft_events").get()).toEqual({ count: 0 });
   });
+
+  it("answers an account without permission before it says anything about the courses", () => {
+    const sqlite = createDatabase();
+    const { blockPlanId, first } = createPlanWithCourses(sqlite);
+    const foreign = addCourse(sqlite, "TIF26C");
+    insertEditor(sqlite, "editor", []);
+
+    // Both field errors would tell an account that may not edit here which courses this block plan carries.
+    expect(() => createDraftEvent(sqlite, { ...validEvent(first), accountId: "editor", blockPlanId, courseIds: [] })).toThrow("nicht zur Bearbeitung dieses Bereichs");
+    expect(() => createDraftEvent(sqlite, { ...validEvent(first), accountId: "editor", blockPlanId, courseIds: [foreign] })).toThrow("nicht zur Bearbeitung dieses Bereichs");
+  });
 });
 
 describe("updateDraftEvent", () => {
@@ -207,6 +218,7 @@ describe("updateDraftEvent", () => {
     expect(() => updateDraftEvent(sqlite, { ...validEvent(first), accountId: "admin", eventId: "unknown" })).toThrow("Termin wurde nicht gefunden");
     expect(() => updateDraftEvent(sqlite, { ...validEvent(first), accountId: "editor", eventId })).toThrow("nicht zur Bearbeitung dieses Bereichs");
   });
+
 });
 
 describe("deleteDraftEvent", () => {

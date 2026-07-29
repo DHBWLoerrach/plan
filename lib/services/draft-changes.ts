@@ -1,6 +1,18 @@
 import type Database from "better-sqlite3";
 
 import { FieldError } from "@/lib/domain/field-error";
+import { assertCourseEditPermission } from "@/lib/services/authorization";
+
+/**
+ * The permission to write into the draft of a block plan, asked before any structural rule answers: an account without
+ * it must not learn from a field error which courses the plan carries. Every course of a block plan belongs to its area
+ * (`course-assignment.ts`), so any of them gives the same answer; the courses actually written to are asked separately.
+ */
+export function assertDraftEditPermission(sqlite: Database.Database, accountId: string, blockPlanId: string): void {
+  const courseId = sqlite.prepare("SELECT id FROM courses WHERE block_plan_id = ? ORDER BY id LIMIT 1").pluck().get(blockPlanId) as string | undefined;
+  if (!courseId) throw new Error("Sie sind nicht zur Bearbeitung berechtigt.");
+  assertCourseEditPermission(sqlite, accountId, courseId);
+}
 
 /**
  * The courses a draft entry applies to: at least one, each of them assigned to this block plan and counted once
