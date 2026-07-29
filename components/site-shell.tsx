@@ -27,7 +27,7 @@ export async function SiteShell({ nav, children }: { nav?: ReactNode; children: 
           <span className="wordmark__product">Plan</span>
         </Link>
         <div className="site-header__actions">
-          <nav aria-label="Hauptnavigation"><Link href="/">Öffentliche Suche</Link><Link href="/intern">Interner Bereich</Link></nav>
+          <nav aria-label="Hauptnavigation"><Link href="/intern">Interner Bereich</Link></nav>
           {account ? <AccountMenu account={account} /> : null}
         </div>
       </div>
