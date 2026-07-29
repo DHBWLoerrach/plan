@@ -331,7 +331,8 @@ p[role="status"] { margin: 0; color: var(--success); }
 /* The patch of a legend entry carries the fill and the abbreviation and nothing else — no frame, because a frame
    beside the framed options of the filter would read as one more thing to click. */
 .phase-legend span { display: inline-flex; align-items: center; justify-content: center; width: 1.8rem; height: 1.4rem; flex: none; color: var(--ink); font-size: .8rem; font-weight: 700; }
-.event-description { display: block; margin-top: .35rem; color: var(--gray); font-size: .9rem; font-weight: 400; }
+.event-description { display: block; margin-top: .35rem; padding: 0; list-style: none; color: var(--gray); font-size: .9rem; font-weight: 400; }
+.event-description li + li { margin-top: .2rem; }
 .event-courses { margin: 0; padding: 0; list-style: none; }
 .event-courses li + li { margin-top: .3rem; }
 .provisional { display: block; width: max-content; margin-top: .35rem; padding: .1rem .45rem; background: var(--warning-bg); border: 1px solid var(--warning-border); color: var(--warning); font-size: .75rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }

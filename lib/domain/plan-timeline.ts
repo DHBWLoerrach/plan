@@ -1,4 +1,5 @@
 import { inclusiveDays } from "@/lib/domain/calendar-day";
+import { groupComparableCourses } from "@/lib/domain/plan-comparison";
 import type { PhaseType } from "@/lib/domain/phase-type";
 import type { DraftCourse, DraftPhase } from "@/lib/domain/publication";
 
@@ -22,7 +23,7 @@ export interface TimelineYear extends TimelineSpan {
   year: number;
 }
 
-/** One row of the diagram: exactly one course, regardless of whether another course has identical phases. */
+/** One row of the diagram: one course or the courses whose complete phase sequences agree. */
 export interface TimelineLane {
   codes: string[];
   bars: TimelineBar[];
@@ -92,8 +93,8 @@ function round(value: number): number {
 }
 
 /**
- * The block plan as one diagram over a single time axis, as the overview above the matrix. Every course keeps its own
- * lane, matching the one-column-per-course matrix while the public comparison still has no summary step.
+ * The block plan as one diagram over a single time axis, as the overview above the matrix. Courses with equal complete
+ * phase sequences share a lane; a changed semester, type or boundary produces its own lane again.
  *
  * The diagram is an addition, never the record. Its bars carry the phase type through fill alone and a short one has
  * no room for a label at all, so the matrix below remains the full and the accessible reading (BARRIEREFREIHEIT.md).
@@ -131,12 +132,12 @@ export function buildPlanTimeline(courses: DraftCourse[], phases: DraftPhase[]):
     });
   }
 
-  const lanes = courses.map((course) => {
+  const lanes = groupComparableCourses(courses, shownPhases).map((group) => {
     const ownPhases = shownPhases
-      .filter((phase) => phase.courseId === course.id)
+      .filter((phase) => phase.courseId === group.courses[0].id)
       .toSorted((left, right) => left.startDate.localeCompare(right.startDate));
     return {
-      codes: [course.code],
+      codes: group.courses.map((course) => course.code),
       bars: ownPhases.map((phase) => ({ type: phase.type, ...span(phase.startDate, phase.endDate) })),
       semesters: laneSemesters(ownPhases, span),
     };

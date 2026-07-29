@@ -5,6 +5,7 @@ import { useId, useState, type MouseEvent } from "react";
 import { PlanTimeline } from "@/components/plan-timeline";
 import { formatCalendarPeriod, formatPeriodDuration } from "@/lib/domain/calendar-format";
 import { eventCategoryLabel } from "@/lib/domain/event-category";
+import { groupComparableCourses, groupComparableEvents, type ComparableCourseGroup } from "@/lib/domain/plan-comparison";
 import { phaseTypeLabel } from "@/lib/domain/phase-type";
 import { buildSemesterMatrix, deriveEventSemester, noPhaseLabel, type DraftCourse, type DraftEvent, type DraftPhase, type MatrixRow } from "@/lib/domain/publication";
 
@@ -20,10 +21,11 @@ function phaseCell(cell: string): { phase: string; abbreviation: string } {
 }
 
 interface PhaseBlock {
-  column: number;
+  group: ComparableCourseGroup;
   cell: string;
   rowSpan: number;
   duration: string;
+  headers: string;
 }
 
 /**
@@ -31,7 +33,7 @@ interface PhaseBlock {
  * phase of one course can cover several rows; those rows become one cell that carries the phase and its length
  * exactly once, instead of repeating the phase and leaving the reader to add the rows up.
  */
-function buildPhaseBlocks(rows: MatrixRow[]): PhaseBlock[][] {
+function buildPhaseBlocks(rows: MatrixRow[], groups: ComparableCourseGroup[], semester: number): PhaseBlock[][] {
   const blocks: PhaseBlock[][] = rows.map(() => []);
   for (let column = 0; column < (rows[0]?.cells.length ?? 0); column += 1) {
     for (let index = 0; index < rows.length;) {
@@ -39,16 +41,27 @@ function buildPhaseBlocks(rows: MatrixRow[]): PhaseBlock[][] {
       let last = index;
       while (rows[last + 1]?.cells[column] === cell) last += 1;
       // Pushed column by column, so the cells of a row stay in the order of their columns.
-      blocks[index].push({ column, cell, rowSpan: last - index + 1, duration: formatPeriodDuration(rows[index].startDate, rows[last].endDate) });
+      blocks[index].push({
+        group: groups[column],
+        cell,
+        rowSpan: last - index + 1,
+        duration: formatPeriodDuration(rows[index].startDate, rows[last].endDate),
+        headers: [
+          `matrix-semester-${semester}`,
+          ...rows.slice(index, last + 1).map((row) => `matrix-period-${semester}-${row.startDate}`),
+          ...groups[column].courses.map((course) => `matrix-course-${course.id}`),
+        ].join(" "),
+      });
       index = last + 1;
     }
   }
   return blocks;
 }
 
-function PhaseCell({ cell, rowSpan = 1, duration }: { cell: string; rowSpan?: number; duration?: string }) {
+function PhaseCell({ cell, group, headers, rowSpan = 1, duration }: { cell: string; group: ComparableCourseGroup; headers: string; rowSpan?: number; duration?: string }) {
   const { phase, abbreviation } = phaseCell(cell);
-  return <td data-phase={phase} rowSpan={rowSpan > 1 ? rowSpan : undefined}>
+  return <td data-phase={phase} headers={headers}
+    colSpan={group.courses.length > 1 ? group.courses.length : undefined} rowSpan={rowSpan > 1 ? rowSpan : undefined}>
     <span className="sr-only">{cell}</span>
     {abbreviation ? <span aria-hidden="true">{abbreviation}</span> : null}
     {/* The merged cell states its own length, because the duration column beside it measures the row, not the phase. */}
@@ -65,11 +78,19 @@ export function PlanMatrix({ courses, phases, events }: { courses: DraftCourse[]
   const filterLabelId = useId();
   const filterHintId = useId();
   const visibleCourses = courses.filter((course) => visibleCourseIds.has(course.id));
+  const visibleCourseGroups = groupComparableCourses(visibleCourses, phases);
   const courseCodes = new Map(courses.map((course) => [course.id, course.code]));
   // Every course of a block plan carries the same number of semesters (FACHLICHE_REGELN.md); hiding columns therefore
   // never removes a semester table.
   const semesters = Math.max(...courses.map((course) => course.semesters), 0);
-  const semesterRows = Array.from({ length: semesters }, (_, index) => buildSemesterMatrix(visibleCourses, phases, index + 1));
+  const semesterRows = Array.from({ length: semesters }, (_, index) => {
+    const rows = buildSemesterMatrix(visibleCourses, phases, index + 1);
+    const indexByCourseId = new Map(visibleCourses.map((course, courseIndex) => [course.id, courseIndex]));
+    return rows.map((row) => ({
+      ...row,
+      cells: visibleCourseGroups.map((group) => row.cells[indexByCourseId.get(group.courses[0].id)!]),
+    }));
+  });
   // The legend explains what the section actually shows: a complete plan never says that a course misses a semester,
   // and a draft under review may. It is drawn from the whole year group rather than from the visible columns, because
   // it names overview and matrix alike and the overview keeps the lane of a course the matrix hides.
@@ -133,8 +154,8 @@ export function PlanMatrix({ courses, phases, events }: { courses: DraftCourse[]
       <div className="plan-block">
         <h3 id={matrixHeadingId}>Planmatrix</h3>
         <p className="plan-block__note">
-          Je Zeilengruppe wird ein Semester und je Spalte ein Kurs dargestellt. Auf schmalen Bildschirmen kann die
-          Tabelle horizontal gescrollt werden.
+          Je Zeilengruppe wird ein Semester dargestellt. Kurse mit gleichem Verlauf teilen sich eine Spalte; auf
+          schmalen Bildschirmen kann die Tabelle horizontal gescrollt werden.
         </p>
         <div className="matrix-card">
           {/* The head of the card carries what the table needs but must not scroll away with it: the selection of the
@@ -175,26 +196,29 @@ export function PlanMatrix({ courses, phases, events }: { courses: DraftCourse[]
               <thead><tr>
                 {/* The column measures the row, a merged phase cell states its own length: the heading says which of
                     the two a duration belongs to. */}
-                <th scope="col">Semester</th><th scope="col">Zeitraum</th><th scope="col">Dauer des Abschnitts</th>
-                {visibleCourses.map((course) => <th key={course.id} className="matrix-course" scope="col">{course.code}</th>)}
-              </tr></thead>
+                <th scope="col" rowSpan={2}>Semester</th><th scope="col" rowSpan={2}>Zeitraum</th><th scope="col" rowSpan={2}>Dauer des Abschnitts</th>
+                {visibleCourseGroups.map((group) => <th key={group.courses.map((course) => course.id).join("-")} className="matrix-course" scope="colgroup"
+                  colSpan={group.courses.length > 1 ? group.courses.length : undefined}>{group.courses.map((course) => course.code).join(" · ")}</th>)}
+              </tr><tr>{visibleCourseGroups.flatMap((group) => group.courses.map((course) => <th key={course.id} className="sr-only"
+                id={`matrix-course-${course.id}`} scope="col">{course.code}</th>))}</tr></thead>
               {semesterRows.map((rows, semesterIndex) => {
                 const semester = semesterIndex + 1;
-                const blocks = buildPhaseBlocks(rows);
+                const blocks = buildPhaseBlocks(rows, visibleCourseGroups, semester);
                 // One row group per semester: the semester cell spans the group's rows and stays its programmatic heading.
-                const semesterHeading = (rowSpan: number) => <th className="matrix-semester" scope="rowgroup" rowSpan={rowSpan}>Semester {semester}</th>;
+                const semesterHeading = (rowSpan: number) => <th id={`matrix-semester-${semester}`} className="matrix-semester" scope="rowgroup" rowSpan={rowSpan}>Semester {semester}</th>;
                 return <tbody key={semester}>{rows.length
                   ? rows.map((row, index) => <tr key={row.startDate}>
                     {index === 0 ? semesterHeading(rows.length) : null}
-                    <th scope="row">{formatCalendarPeriod(row.startDate, row.endDate)}</th>
+                    <th id={`matrix-period-${semester}-${row.startDate}`} scope="row">{formatCalendarPeriod(row.startDate, row.endDate)}</th>
                     <td className="matrix-duration">{formatPeriodDuration(row.startDate, row.endDate)}</td>
-                    {blocks[index].map((block) => <PhaseCell key={visibleCourses[block.column].id} {...block} />)}
+                    {blocks[index].map((block) => <PhaseCell key={block.group.courses.map((course) => course.id).join("-")} {...block} />)}
                   </tr>)
                   : <tr>
                     {semesterHeading(1)}
-                    <th scope="row">Kein Zeitraum</th>
+                    <th id={`matrix-period-${semester}-none`} scope="row">Kein Zeitraum</th>
                     <td className="matrix-duration">Keine</td>
-                    {visibleCourses.map((course) => <PhaseCell key={course.id} cell={noPhaseLabel} />)}
+                    {visibleCourseGroups.map((group) => <PhaseCell key={group.courses.map((course) => course.id).join("-")} cell={noPhaseLabel} group={group}
+                      headers={[`matrix-semester-${semester}`, `matrix-period-${semester}-none`, ...group.courses.map((course) => `matrix-course-${course.id}`)].join(" ")} />)}
                   </tr>}</tbody>;
               })}
             </table>
@@ -214,7 +238,7 @@ export function PlanMatrix({ courses, phases, events }: { courses: DraftCourse[]
           <thead><tr>
             <th scope="col">Zeitangabe</th><th scope="col">Kategorie</th><th scope="col">Titel</th><th scope="col">Betroffene Kurse und Semester</th>
           </tr></thead>
-          <tbody>{events.map((event) => <tr key={event.id}>
+          <tbody>{groupComparableEvents(events).map((event) => <tr key={`${event.category}-${event.title}-${event.startDate}-${event.endDate}-${event.provisional}`}>
             <td>
               {formatCalendarPeriod(event.startDate, event.endDate ?? event.startDate)}
               {event.provisional ? <span className="provisional">Vorläufig</span> : null}
@@ -222,9 +246,11 @@ export function PlanMatrix({ courses, phases, events }: { courses: DraftCourse[]
             <td>{eventCategoryLabel(event.category)}</td>
             <td>
               <strong>{event.title}</strong>
-              {event.description ? <span className="event-description">{event.description}</span> : null}
+              {event.courses.some((course) => course.description) ? <ul className="event-description">{event.courses.map((course) => <li key={course.courseId}>
+                {courseCodes.get(course.courseId)}: {course.description ?? "Keine Beschreibung"}
+              </li>)}</ul> : null}
             </td>
-            <td><ul className="event-courses">{event.courseIds.map((courseId) => {
+            <td><ul className="event-courses">{event.courses.map(({ courseId }) => {
               const semester = deriveEventSemester(phases, courseId, event.startDate);
               return <li key={courseId}>{courseCodes.get(courseId)}: {semester ? `Semester ${semester}` : "Semester nicht ableitbar"}</li>;
             })}</ul></td>
