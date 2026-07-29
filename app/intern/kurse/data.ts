@@ -13,9 +13,10 @@ export type CourseListFilters = { area: string | null; program: string | null; y
 /** What a course is marked with in every internal view: its publication state, whether it is in progress and whether this account may write to it. */
 export type CourseMarking = { state: PublicationState; workInProgress: boolean; editable: boolean };
 export type CourseListRow = CourseMarking & { id: string; code: string; program: string; areaId: string; areaName: string; studyStart: string; studyEnd: string };
-export type CourseListData = { areas: AreaOption[]; programs: ProgramOption[]; years: { year: string }[]; courses: CourseListRow[] };
+export type CourseListData = { areas: AreaOption[]; programs: LabeledOption[]; years: { year: string }[]; courses: CourseListRow[] };
 export type InternalCourse = CourseMarking & { id: string; code: string; programId: string; program: string; areaId: string; areaName: string; studyStart: string; studyEnd: string; publishedIn: string | null };
-export type ProgramOption = { id: string; label: string };
+/** An entry of a select: the value it submits and the text it shows. */
+export type LabeledOption = { id: string; label: string };
 export type CutCourse = DraftCourse & CourseMarking & { areaId: string; areaName: string };
 export type CourseCutData = { year: string; courses: CutCourse[]; phases: (DraftPhase & { id: string })[]; events: (DraftEvent & { affectedCourseCodes: string[] })[] };
 export type CourseSort = "code" | "year";
@@ -80,9 +81,15 @@ export function findInternalCourse(sqlite: Database.Database, courseId: string, 
   return row && markCourse(row, editableAreaIds(sqlite, account));
 }
 
-/** The study programs a course may be assigned to. Assigning one is a write, so this stays within the areas of the account. */
-export function programOptions(sqlite: Database.Database, account: AccountScope): ProgramOption[] {
-  const rows = sqlite.prepare(`SELECT program.id, program.name, program.abbreviation, area.name AS areaName FROM programs program JOIN areas area ON area.id = program.area_id WHERE ? = 1 OR program.area_id IN (SELECT area_id FROM area_assignments WHERE user_id = ?) ORDER BY area.name COLLATE NOCASE, program.name COLLATE NOCASE`).all(account.systemAdmin ? 1 : 0, account.id) as { id: string; name: string; abbreviation: string; areaName: string }[];
+/**
+ * The study programs a course may be assigned to. Assigning one is a write, so this stays within the areas of the
+ * account. `semesters` narrows it further for an adoption, which requires template and target to agree on the number
+ * of semesters — offering the others would only lead into a refusal.
+ */
+export function programOptions(sqlite: Database.Database, account: AccountScope, semesters?: number): LabeledOption[] {
+  const rows = sqlite.prepare(`SELECT program.id, program.name, program.abbreviation, area.name AS areaName FROM programs program JOIN areas area ON area.id = program.area_id
+    WHERE (? = 1 OR program.area_id IN (SELECT area_id FROM area_assignments WHERE user_id = ?)) AND (? IS NULL OR program.semesters = ?)
+    ORDER BY area.name COLLATE NOCASE, program.name COLLATE NOCASE`).all(account.systemAdmin ? 1 : 0, account.id, semesters ?? null, semesters ?? null) as { id: string; name: string; abbreviation: string; areaName: string }[];
   return rows.map((program) => ({ id: program.id, label: `${programLabel(program)} (${program.areaName})` }));
 }
 

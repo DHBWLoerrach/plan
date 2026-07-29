@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { daysBetween, inclusiveDays, plusDays } from "@/lib/domain/calendar-day";
+import { daysBetween, inclusiveDays, isCalendarDay, plusDays } from "@/lib/domain/calendar-day";
+
+describe("isCalendarDay", () => {
+  it("accepts a valid Gregorian day and refuses anything a half-typed field may hold", () => {
+    expect(isCalendarDay("2028-02-29")).toBe(true);
+    expect(isCalendarDay("2027-02-29")).toBe(false);
+    expect(isCalendarDay("2027-3-1")).toBe(false);
+    expect(isCalendarDay("")).toBe(false);
+  });
+});
 
 describe("inclusiveDays", () => {
   it("counts both days of the period", () => {

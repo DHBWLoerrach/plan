@@ -5,6 +5,7 @@ import type Database from "better-sqlite3";
 import { normalizeCalendarDay } from "@/lib/domain/calendar-day";
 import { normalizeCourseCode } from "@/lib/domain/course-code";
 import { assertAreaEditPermission, assertCourseEditPermission } from "@/lib/services/authorization";
+import { adoptIntoCourse, type AdoptionInput } from "@/lib/services/course-adoption";
 import { touchCourse } from "@/lib/services/phase-admin";
 
 const maximumCodeLength = 32;
@@ -13,8 +14,14 @@ type NormalizedCourse = CourseInput & { normalizedCode: string };
 type ProgramRow = { id: string; areaId: string; semesters: number };
 type CourseRow = { id: string; programId: string };
 
-export function createCourse(sqlite: Database.Database, input: { accountId: string } & CourseInput): string {
+/**
+ * Creates a course, empty or as an adoption from a template. The permission is decided on the area of the **new**
+ * course; the template is only read and may belong to any area (FACHLICHE_REGELN.md). Creation and adoption share
+ * this one transaction.
+ */
+export function createCourse(sqlite: Database.Database, input: { accountId: string; adoption?: AdoptionInput; now?: Date } & CourseInput): string {
   const normalized = normalizeCourseInput(input);
+  const now = input.now ?? new Date();
   return sqlite.transaction(() => {
     const program = requireProgram(sqlite, normalized.programId);
     assertAreaEditPermission(sqlite, input.accountId, program.areaId);
@@ -23,7 +30,10 @@ export function createCourse(sqlite: Database.Database, input: { accountId: stri
     sqlite.prepare(`INSERT INTO courses
       (id, program_id, code, normalized_code, study_start, study_end, has_ever_been_published, draft_updated_at, draft_updated_by_account_id)
       VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)`)
-      .run(id, normalized.programId, normalized.code, normalized.normalizedCode, normalized.studyStart, normalized.studyEnd, new Date().toISOString(), input.accountId);
+      .run(id, normalized.programId, normalized.code, normalized.normalizedCode, normalized.studyStart, normalized.studyEnd, now.toISOString(), input.accountId);
+    if (input.adoption) {
+      adoptIntoCourse(sqlite, { courseId: id, studyStart: normalized.studyStart, studyEnd: normalized.studyEnd, semesters: program.semesters, adoption: input.adoption });
+    }
     return id;
   })();
 }

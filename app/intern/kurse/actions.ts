@@ -23,6 +23,16 @@ function courseInput(formData: FormData) {
   };
 }
 
+/**
+ * The adoption of the creation form, or nothing when the course is created empty. What is copied is recomputed here
+ * from the template rather than taken from the form: the preview shows the outcome, it does not carry it.
+ */
+function adoptionInput(formData: FormData) {
+  const templateCourseId = String(formData.get("templateCourseId") ?? "").trim();
+  if (!templateCourseId) return undefined;
+  return { templateCourseId, withPhases: formData.get("withPhases") !== null, withEvents: formData.get("withEvents") !== null };
+}
+
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Die Aktion konnte nicht ausgeführt werden.";
 }
@@ -43,7 +53,7 @@ function revalidateCourseViews(courseId: string) {
 export async function createCourseAction(_: CourseFormState, formData: FormData): Promise<CourseFormState> {
   let courseId: string;
   try {
-    courseId = createCourse(sqlite, { accountId: await requireAccountId(), ...courseInput(formData) });
+    courseId = createCourse(sqlite, { accountId: await requireAccountId(), ...courseInput(formData), adoption: adoptionInput(formData) });
   } catch (error) {
     return { error: errorMessage(error) };
   }

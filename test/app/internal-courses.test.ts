@@ -106,6 +106,13 @@ describe("programOptions", () => {
     expect(programOptions(sqlite, editor).map((program) => program.id)).toEqual(["prog-tif"]);
     expect(programOptions(sqlite, admin).map((program) => program.id)).toEqual(["prog-tif", "prog-wwi"]);
   });
+
+  it("narrows to a number of semesters, so an adoption cannot be aimed at a study program it would be refused for", () => {
+    const sqlite = database();
+    sqlite.prepare("INSERT INTO programs VALUES ('prog-tif7', 'area-technik', 'Informatik sieben', 'TIF7', 7)").run();
+    expect(programOptions(sqlite, admin, 7).map((program) => program.id)).toEqual(["prog-tif7"]);
+    expect(programOptions(sqlite, admin, 6).map((program) => program.id)).toEqual(["prog-tif", "prog-wwi"]);
+  });
 });
 
 describe("courseCutData", () => {
