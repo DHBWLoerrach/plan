@@ -1,3 +1,7 @@
+---
+status: amended by ADR-0010
+---
+
 # Kursphasen verschiedener Kurse besitzen keine gemeinsame Identität
 
 Jede Kursphase gehört genau einem Kurs und trägt Zeitraum, Semester und Phasentyp selbst. Eine Komfortaktion darf für mehrere Kurse eigenständige Kursphasen mit gleichen Ausgangsangaben anlegen, spätere Änderungen wirken aber nur auf die jeweils bearbeitete Kursphase. Damit verzichtet das MVP bewusst auf gemeinsam referenzierte Blockphasen: Es verliert die garantierte gemeinsame Mutation, benötigt dafür aber weder eine Zuordnungsentität noch verwaiste Phasen, Warnhinweise vor gemeinsamen Änderungen oder eine atomare Trennoperation.

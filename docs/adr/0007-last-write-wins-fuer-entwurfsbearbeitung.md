@@ -1,3 +1,7 @@
-# Last-write-wins für granulare Entwurfsbearbeitung
+---
+status: amended by ADR-0010
+---
+
+# Last-write-wins für die granulare Bearbeitung des Planungsstands
 
 Normale Speicheraktionen bearbeiten jeweils nur eine konkrete Plan- oder Kursangabe und verwenden im MVP Last-write-wins. Bei den zwei bis vier unmittelbar zusammenarbeitenden Personen pro Bereich rechtfertigen seltene Überschreibungen weder eine allgemeine Konfliktprüfung noch Warnungs- und Bestätigungspfade in jeder Server Action. Veröffentlichen vergleicht weiterhin den Änderungszeitpunkt der angezeigten Vorschau, ohne dafür einen zusätzlichen Revisionszähler einzuführen; das theoretische Restrisiko gleicher Zeitstempel wird für das MVP akzeptiert. Zurücknehmen adressiert weiterhin die konkrete veröffentlichte Fassungs-ID; Transaktionen, Berechtigungen, Existenzprüfungen und fachliche Regeln bleiben unberührt.

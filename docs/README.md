@@ -10,4 +10,5 @@ Jedes Dokument ist für genau eine Art von Entscheidung maßgeblich. Andere Doku
 - [Öffentliche API](OEFFENTLICHE_API.md): versionierter, schreibgeschützter Vertrag für veröffentlichte Kursphasen.
 - [Seed-Daten](SEED-DATEN.md): verbindliche Bereiche und Studiengänge für den initialen Seed.
 - [Barrierefreiheit](BARRIEREFREIHEIT.md): verbindliche Gestaltungs- und Abnahmekriterien der Barrierefreiheit.
+- [KI-Agent-Kursimport](KI_AGENT_KURSIMPORT.md): eigenständiger Auftragstext, mit dem ein KI-Agent Kurse aus Blockplan-PDFs als SQL-Planungsstand erzeugt. Betriebliche Hilfe außerhalb der Anwendung, kein MVP-Funktionsumfang.
 - [`adr/`](adr/): Begründungen schwer reversibler Entscheidungen und verworfene Alternativen.

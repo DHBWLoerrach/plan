@@ -14,26 +14,22 @@ seine technischen Artefakte behalten den Namen `dhbw-mgmt`.
 
 ## Stand
 
-Der implementierte MVP-Funktionsumfang (Next.js 16, React 19, TypeScript,
-Tailwind CSS 4, SQLite über Drizzle, Better Auth) bildet noch das **frühere
-Blockplanmodell** ab, in dem der Blockplan die Planungs- und
-Veröffentlichungseinheit war.
-
-Umgesetzt sind die öffentliche Suche mit URL-basierten Filtern und die öffentliche
-Detailansicht, der semesterweise Editor mit Vorschau, Veröffentlichung und
-Zurücknahme, die Kurs- und Blockplanverwaltung, die Kontenverwaltung mit
-Passwortlinks sowie die Kommandozeilenbefehle für das initiale
-Systemadministrationskonto und den Notfall-Passwort-Reset. Nonce-basierte CSP,
-Security-Header, Origin-Prüfung und der Betriebsweg aus Sicherung, Migration und
-Wiederherstellung sind umgesetzt und getestet.
-
-Die fachliche Spezifikation wurde inzwischen auf den Kurs als Planungs- und
-Veröffentlichungseinheit umgestellt (siehe
+Implementierung und Dokumentation folgen demselben fachlichen Schnitt: Planungs-
+und Veröffentlichungseinheit ist der Kurs, der Blockplan ist die veröffentlichte
+Darstellung eines Zuschnitts (siehe
 [ADR 0010](docs/adr/0010-kurs-als-planungs-und-veroeffentlichungseinheit.md) und
-[ADR 0011](docs/adr/0011-systemweite-leseeinsicht-in-kurse.md)). Dokumentation und
-Implementierung weichen dadurch **bewusst** voneinander ab; maßgeblich ist die
-Dokumentation. Code, Datenbankschema und Migrationen folgen in einer gesonderten
-Umsetzungsrunde.
+[ADR 0011](docs/adr/0011-systemweite-leseeinsicht-in-kurse.md)).
+
+Umgesetzt sind (Next.js 16, React 19, TypeScript, Tailwind CSS 4, SQLite über
+Drizzle, Better Auth) die öffentliche Suche mit URL-basierten Filtern und die
+öffentlichen Zuschnittansichten, der Zuschnitt-Editor mit Gegenüberstellung,
+Vorschau, Veröffentlichung und Zurücknahme je Kurs, die Kursverwaltung
+einschließlich der Anlage als Übernahme aus einer Vorlage, die systemweite
+Leseeinsicht auf Kurse aller Bereiche bei bereichsgebundenem Schreibrecht, die
+Kontenverwaltung mit Passwortlinks sowie die Kommandozeilenbefehle für das
+initiale Systemadministrationskonto und den Notfall-Passwort-Reset.
+Nonce-basierte CSP, Security-Header, Origin-Prüfung und der Betriebsweg aus
+Sicherung, Migration und Wiederherstellung sind umgesetzt und getestet.
 
 Offen ist die Datenschutzerklärung: Der Footer verweist auf die allgemeinen
 DHBW-Hinweise, während [`docs/ARCHITEKTUR_UND_BETRIEB.md`](docs/ARCHITEKTUR_UND_BETRIEB.md)

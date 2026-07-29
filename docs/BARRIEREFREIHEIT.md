@@ -22,7 +22,7 @@ Vor Go-live wird mit der zuständigen DHBW-Stelle geklärt, ob Erklärung zur Ba
 - Anmeldung, Passwortvergabe und Passwortänderung erlauben Passwortmanager, Autofill und Einfügen und verlangen keine kognitive Aufgabe wie das Abschreiben oder Erinnern zusätzlicher Inhalte.
 - Jede Eingabe besitzt ein sichtbares und programmatisch verknüpftes Label. Pflichtangaben und zulässige Formate sind vor der Eingabe erklärt.
 - Validierungsfehler erscheinen am Feld und zusätzlich in einer Fehlerübersicht; bekannte Korrekturmöglichkeiten werden genannt.
-- Gespeicherte Entwürfe, aktualisierte Vorschauen sowie erfolgreiche oder fehlgeschlagene Veröffentlichungen werden als zugängliche Statusmeldungen ausgegeben.
+- Gespeicherte Planungsstände, aktualisierte Vorschauen sowie erfolgreiche oder fehlgeschlagene Veröffentlichungen werden als zugängliche Statusmeldungen ausgegeben.
 - Semester-Navigation sowie Fehler- und Vollständigkeitsstatus sind programmatisch bestimmt und per Tastatur erreichbar. Ein Status wird nie nur durch Farbe oder Symbol vermittelt.
 - Die gemeinsame Anlage einer Kursphase für mehrere ausgewählte Kurse erklärt vor dem Speichern, dass eigenständige Kursphasen entstehen und spätere Änderungen nur auf die jeweils bearbeitete Kursphase wirken.
 - Jede Bearbeitungsfunktion funktioniert ohne Maus. Falls Phasen visuell sortiert werden, existieren gleichwertige Verschiebe-Schaltflächen; Drag-and-drop ist nie erforderlich.
