@@ -23,6 +23,9 @@ _Avoid_: Entwurf, Arbeitsstand
 
 **Öffentlich sichtbarer Kurs**: Ein Kurs, für den eine veröffentlichte Fassung besteht.
 
+**Kurs in Arbeit**: Ein Kurs ohne veröffentlichte Fassung oder mit einem Planungsstand, der nach der Veröffentlichung geändert wurde. Er ist in allen internen Ansichten textlich als „in Arbeit“ gekennzeichnet, damit ein unfertiger Stand nicht für abgestimmt gehalten wird.
+_Avoid_: Entwurfszustand
+
 **Zurückgenommene Veröffentlichung**: Der Zustand eines zuvor veröffentlichten Kurses, dessen veröffentlichte Fassung entfernt wurde. Sein Planungsstand bleibt bestehen und kann erneut veröffentlicht werden.
 
 **Übernahme**: Die Anlage eines Kurses, dessen Kursverlauf und Termine aus einer Vorlage kopiert und dabei um ganze Wochen verschoben werden.

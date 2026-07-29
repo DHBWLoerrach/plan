@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   buildSemesterMatrix,
   deriveEventSemester,
-  getPublicationState,
   validatePublication,
   type DraftCourse,
   type DraftPhase,
@@ -211,13 +210,5 @@ describe("deriveEventSemester", () => {
   it("reports no semester while the draft has no phase covering the start day", () => {
     expect(deriveEventSemester(completePhases, "course-a", "2027-12-01")).toBeNull();
     expect(deriveEventSemester([], "course-a", "2026-10-05")).toBeNull();
-  });
-});
-
-describe("getPublicationState", () => {
-  it("distinguishes never published, published and withdrawn plans", () => {
-    expect(getPublicationState(false, false)).toBe("never-published");
-    expect(getPublicationState(true, true)).toBe("published");
-    expect(getPublicationState(true, false)).toBe("withdrawn");
   });
 });

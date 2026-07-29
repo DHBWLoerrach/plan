@@ -29,7 +29,7 @@ export default async function CourseCutPage({ searchParams }: CutPageProps) {
   return <SiteShell nav={<InternalNav account={account} current="kurse" />}><article className="plan-detail">
     <p className="eyebrow">Interne Bearbeitung</p>
     <h1>Zuschnitt Jahrgang {cut.year}</h1>
-    <p>Der Zuschnitt wird nicht gespeichert. Er zeigt und bearbeitet nur die hier ausgewählten Kurse nebeneinander.</p>
+    <p>Der Zuschnitt wird nicht gespeichert. Er zeigt und bearbeitet nur die hier ausgewählten Kurse nebeneinander. Kurse fremder Bereiche stehen zum Lesen daneben und lassen sich nicht bearbeiten.</p>
     <CourseCutEditor courses={cut.courses} phases={cut.phases} events={cut.events} />
     <p><Link className="text-link" href={`/intern/kurse?year=${encodeURIComponent(cut.year)}`}>Zurück zur Kursliste</Link></p>
   </article></SiteShell>;

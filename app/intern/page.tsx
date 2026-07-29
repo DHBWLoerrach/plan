@@ -24,7 +24,7 @@ export default async function InternalHome() {
   const manages = managesAnyArea(account);
   const areas = manages ? manageableAreas(sqlite, account) : [];
   const courses = manages
-    ? courseListData(sqlite, account, { area: null, program: null, year: null }, "year").courses
+    ? courseListData(sqlite, account, { area: null, program: null, year: null, code: null, state: null }, "year").courses
     : [];
 
   return <SiteShell nav={<InternalNav account={account} current="home" />}><section className="search-panel" aria-labelledby="internal-heading">
@@ -41,7 +41,7 @@ export default async function InternalHome() {
         {areas.length
           ? <ul className="internal-list">{areas.map((area) => <li key={area.id}>
             <Link href={`/intern/kurse?area=${area.id}`}>{area.name}</Link>
-            <span>{courses.filter((course) => course.areaName === area.name).length === 1 ? "1 Kurs" : `${courses.filter((course) => course.areaName === area.name).length} Kurse`}</span>
+            <span>{courses.filter((course) => course.areaId === area.id).length === 1 ? "1 Kurs" : `${courses.filter((course) => course.areaId === area.id).length} Kurse`}</span>
           </li>)}</ul>
           : <p className="empty-note">Ihnen ist kein Bereich zugeordnet.</p>}
       </>
@@ -50,6 +50,7 @@ export default async function InternalHome() {
     {manages ? <>
       <h2>Kurse bearbeiten</h2>
       <p>Wählen Sie in der Kursliste zuerst einen Jahrgang und bilden Sie daraus einen Zuschnitt. Die Gegenüberstellung zeigt die ausgewählten Kurse nebeneinander; der Zuschnitt wird nicht gespeichert.</p>
+      <p>Die Kursliste zeigt die Kurse aller Bereiche. Kurse fremder Bereiche können Sie lesen, aber nicht bearbeiten.</p>
       <p><Link className="button" href="/intern/kurse">Zur Kursliste</Link></p>
     </> : null}
   </section></SiteShell>;

@@ -4,6 +4,7 @@ import { useId, useState, type MouseEvent } from "react";
 
 import { PlanTimeline } from "@/components/plan-timeline";
 import { formatCalendarPeriod, formatPeriodDuration } from "@/lib/domain/calendar-format";
+import { workInProgressLabel } from "@/lib/domain/course-status";
 import { eventCategoryLabel } from "@/lib/domain/event-category";
 import { groupComparableCourses, groupComparableEvents, type ComparableCourseGroup } from "@/lib/domain/plan-comparison";
 import { phaseTypeLabel } from "@/lib/domain/phase-type";
@@ -71,7 +72,13 @@ function PhaseCell({ cell, group, headers, rowSpan = 1, duration }: { cell: stri
   </td>;
 }
 
-export function PlanMatrix({ courses, phases, events }: { courses: DraftCourse[]; phases: DraftPhase[]; events: DraftEvent[] }) {
+/**
+ * `workInProgressCourseIds` names the courses whose planning state is not the published one. Only the internal views
+ * pass it: a published version is never in progress, so the public matrix leaves it out (ADR 0011).
+ */
+export function PlanMatrix({ courses, phases, events, workInProgressCourseIds = [] }: { courses: DraftCourse[]; phases: DraftPhase[]; events: DraftEvent[]; workInProgressCourseIds?: string[] }) {
+  const inProgress = new Set(workInProgressCourseIds);
+  const columnLabel = (course: { id: string; code: string }) => inProgress.has(course.id) ? `${course.code} (${workInProgressLabel})` : course.code;
   const [visibleCourseIds, setVisibleCourseIds] = useState(() => new Set(courses.map((course) => course.id)));
   const [status, setStatus] = useState({ message: "", announcement: 0 });
   const matrixHeadingId = useId();
@@ -198,9 +205,9 @@ export function PlanMatrix({ courses, phases, events }: { courses: DraftCourse[]
                     the two a duration belongs to. */}
                 <th scope="col" rowSpan={2}>Semester</th><th scope="col" rowSpan={2}>Zeitraum</th><th scope="col" rowSpan={2}>Dauer des Abschnitts</th>
                 {visibleCourseGroups.map((group) => <th key={group.courses.map((course) => course.id).join("-")} className="matrix-course" scope="colgroup"
-                  colSpan={group.courses.length > 1 ? group.courses.length : undefined}>{group.courses.map((course) => course.code).join(" · ")}</th>)}
+                  colSpan={group.courses.length > 1 ? group.courses.length : undefined}>{group.courses.map(columnLabel).join(" · ")}</th>)}
               </tr><tr>{visibleCourseGroups.flatMap((group) => group.courses.map((course) => <th key={course.id} className="sr-only"
-                id={`matrix-course-${course.id}`} scope="col">{course.code}</th>))}</tr></thead>
+                id={`matrix-course-${course.id}`} scope="col">{columnLabel(course)}</th>))}</tr></thead>
               {semesterRows.map((rows, semesterIndex) => {
                 const semester = semesterIndex + 1;
                 const blocks = buildPhaseBlocks(rows, visibleCourseGroups, semester);

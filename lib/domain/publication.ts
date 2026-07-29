@@ -273,11 +273,3 @@ export function buildSemesterMatrix(courses: DraftCourse[], phases: DraftPhase[]
 
   return rows;
 }
-
-export function getPublicationState(hasEverBeenPublished: boolean, hasPublishedVersion: boolean):
-  | "never-published"
-  | "published"
-  | "withdrawn" {
-  if (hasPublishedVersion) return "published";
-  return hasEverBeenPublished ? "withdrawn" : "never-published";
-}
