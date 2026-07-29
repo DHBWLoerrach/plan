@@ -7,10 +7,13 @@ import path from "node:path";
 import Database from "better-sqlite3";
 import { afterEach, describe, expect, it } from "vitest";
 
+import { productionOrigin } from "@/lib/product";
 import { bootstrapInitialSystemAdmin } from "@/lib/services/initial-admin.mjs";
 import { applySchema, migrationIds } from "@/test/schema";
 
 const temporaryDirectories: string[] = [];
+// Intentionally literal: these CLI tests protect the decided production host instead of mirroring their input.
+const productionPasswordLinkPattern = /^https:\/\/plan\.apps\.szi\.dhbw-loerrach\.de\/intern\/passwort-vergeben#[A-Za-z0-9_-]+\n$/;
 
 function createDatabase({ migrated = true }: { migrated?: boolean } = {}) {
   const directory = mkdtempSync(path.join(os.tmpdir(), "dhbw-mgmt-initial-admin-"));
@@ -41,12 +44,12 @@ describe("bootstrapInitialSystemAdmin", () => {
         ...process.env,
         DATABASE_URL: databasePath,
         BETTER_AUTH_SECRET: "a".repeat(32),
-        BETTER_AUTH_URL: "https://blockplan.dhbw-loerrach.de",
+        BETTER_AUTH_URL: productionOrigin,
       },
     });
 
     expect(output.split("\n").filter(Boolean)).toHaveLength(1);
-    expect(output).toMatch(/^https:\/\/blockplan\.dhbw-loerrach\.de\/intern\/passwort-vergeben#[A-Za-z0-9_-]+\n$/);
+    expect(output).toMatch(productionPasswordLinkPattern);
   });
 
   it("creates the first pending system administration account and a hashed password link", () => {
@@ -55,13 +58,13 @@ describe("bootstrapInitialSystemAdmin", () => {
     const passwordLink = bootstrapInitialSystemAdmin({
       databasePath,
       email: "Admin@dhbw-loerrach.de",
-      baseUrl: "https://blockplan.dhbw-loerrach.de",
+      baseUrl: productionOrigin,
       authSecret: "a".repeat(32),
     });
 
     const token = new URL(passwordLink).hash.slice(1);
     const sqlite = new Database(databasePath, { readonly: true });
-    expect(passwordLink).toMatch(/^https:\/\/blockplan\.dhbw-loerrach\.de\/intern\/passwort-vergeben#/);
+    expect(`${passwordLink}\n`).toMatch(productionPasswordLinkPattern);
     expect(sqlite.prepare("SELECT email, name, role, system_admin AS systemAdmin, status FROM user").all()).toEqual([
       {
         email: "admin@dhbw-loerrach.de",
@@ -88,7 +91,7 @@ describe("bootstrapInitialSystemAdmin", () => {
     expect(() => bootstrapInitialSystemAdmin({
       databasePath,
       email: "admin@dhbw-loerrach.de",
-      baseUrl: "https://blockplan.dhbw-loerrach.de",
+      baseUrl: productionOrigin,
       authSecret: "a".repeat(32),
     })).toThrow("Es existiert bereits ein internes Konto");
 
@@ -103,13 +106,13 @@ describe("bootstrapInitialSystemAdmin", () => {
     expect(() => bootstrapInitialSystemAdmin({
       databasePath,
       email: "admin@dhbw-loerrach.de",
-      baseUrl: "https://blockplan.dhbw-loerrach.de",
+      baseUrl: productionOrigin,
       authSecret: "a".repeat(32),
     })).toThrow("Ausstehende Migrationen");
     expect(() => bootstrapInitialSystemAdmin({
       databasePath: createDatabase(),
       email: "admin@dhbw-loerrach.de",
-      baseUrl: "https://blockplan.dhbw-loerrach.de",
+      baseUrl: productionOrigin,
       authSecret: "",
     })).toThrow("BETTER_AUTH_SECRET");
   });
@@ -126,7 +129,7 @@ describe("bootstrapInitialSystemAdmin", () => {
     expect(() => bootstrapInitialSystemAdmin({
       databasePath,
       email: "admin@dhbw-loerrach.de",
-      baseUrl: "https://blockplan.dhbw-loerrach.de",
+      baseUrl: productionOrigin,
       authSecret: "a".repeat(32),
     })).toThrow("Fremdschlüsselintegrität");
   });

@@ -2,7 +2,9 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { AccountMenu } from "@/components/account-menu";
+import { DhbwMark } from "@/components/dhbw-mark";
 import { getActiveAccount } from "@/lib/internal-auth";
+import { productName } from "@/lib/product";
 
 /**
  * The page frame. A section navigation belongs in `nav` rather than in the content, because the skip
@@ -16,7 +18,14 @@ export async function SiteShell({ nav, children }: { nav?: ReactNode; children: 
     <a className="skip-link" href="#inhalt">Zum Inhalt springen</a>
     <header className="site-header">
       <div className="site-header__inner">
-        <Link className="wordmark" href="/"><span>DHBW</span> Lörrach <small>Blockpläne</small></Link>
+        <Link className="wordmark" href="/" aria-label={`${productName} – Startseite`}>
+          <DhbwMark />
+          <span className="wordmark__institution">
+            <span className="wordmark__dhbw"><strong>DH</strong><span>BW</span></span>
+            <span className="wordmark__location">Lörrach</span>
+          </span>
+          <span className="wordmark__product">Plan</span>
+        </Link>
         <div className="site-header__actions">
           <nav aria-label="Hauptnavigation"><Link href="/">Öffentliche Suche</Link><Link href="/intern">Interner Bereich</Link></nav>
           {account ? <AccountMenu account={account} /> : null}
@@ -25,6 +34,6 @@ export async function SiteShell({ nav, children }: { nav?: ReactNode; children: 
     </header>
     {nav}
     <main id="inhalt" className="site-main">{children}</main>
-    <footer className="site-footer"><div><strong>DHBW Lörrach</strong><span>Blockplanverwaltung</span></div><nav aria-label="Rechtliche Informationen"><a href="https://www.dhbw.de/impressum/">Impressum</a><a href="https://www.dhbw.de/datenschutz/">Datenschutz</a><Link href="/barrierefreiheit">Barrierefreiheit</Link></nav></footer>
+    <footer className="site-footer"><div><strong>DHBW Lörrach</strong><span>Plan</span></div><nav aria-label="Rechtliche Informationen"><a href="https://www.dhbw.de/impressum/">Impressum</a><a href="https://www.dhbw.de/datenschutz/">Datenschutz</a><Link href="/barrierefreiheit">Barrierefreiheit</Link></nav></footer>
   </>;
 }

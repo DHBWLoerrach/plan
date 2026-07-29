@@ -10,9 +10,10 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { internalAuthOptions, parseTrustedProxies } from "@/lib/auth-options";
 import { authSchema } from "@/lib/db/auth-schema";
+import { productionOrigin } from "@/lib/product";
 import { applySchema } from "@/test/schema";
 
-const baseUrl = "https://blockplan.dhbw-loerrach.de";
+const baseUrl = productionOrigin;
 const traefikAddress = "10.0.0.7";
 const temporaryDirectories: string[] = [];
 

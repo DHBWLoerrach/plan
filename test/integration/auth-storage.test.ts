@@ -6,7 +6,9 @@ import Database from "better-sqlite3";
 import { hashPassword } from "better-auth/crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const baseUrl = "https://blockplan.dhbw-loerrach.de";
+import { productionOrigin } from "@/lib/product";
+
+const baseUrl = productionOrigin;
 const databases: Database.Database[] = [];
 const temporaryDirectories: string[] = [];
 

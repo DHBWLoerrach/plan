@@ -5,6 +5,7 @@ import { connection } from "next/server";
 
 import { PlanMatrix } from "@/components/plan-matrix";
 import { SiteShell } from "@/components/site-shell";
+import { productName } from "@/lib/product";
 
 import { publicPlanData } from "../data";
 
@@ -16,10 +17,19 @@ export async function generateMetadata({ params }: DynamicProps): Promise<Metada
   const plan = publicPlanData(blockPlanId);
   // Without a published version the page answers with 404; the answer stays the same whether the plan was withdrawn,
   // never published or never existed (MVP-SPEZIFIKATION.md).
-  if (!plan) return { title: "Blockplan nicht gefunden | DHBW Lörrach Blockpläne", robots: { index: false, follow: true } };
+  if (!plan) return { title: "Blockplan nicht gefunden", robots: { index: false, follow: true } };
+  const description = `Veröffentlichter Blockplan ${plan.name} (${plan.area}, Jahrgang ${plan.year}) mit Theorie- und Praxisphasen sowie prüfungsrelevanten Terminen.`;
   return {
-    title: `${plan.name} | DHBW Lörrach Blockpläne`,
-    description: `Veröffentlichter Blockplan ${plan.name} (${plan.area}, Jahrgang ${plan.year}) mit Theorie- und Praxisphasen sowie prüfungsrelevanten Terminen.`,
+    title: plan.name,
+    description,
+    openGraph: {
+      type: "website",
+      locale: "de_DE",
+      url: `/${blockPlanId}`,
+      siteName: productName,
+      title: `${plan.name} | ${productName}`,
+      description,
+    },
   };
 }
 

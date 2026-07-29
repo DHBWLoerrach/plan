@@ -47,9 +47,14 @@ p[role="status"] { margin: 0; color: var(--success); }
 .site-header { background: #fff; border-top: 4px solid var(--red); border-bottom: 1px solid var(--line); }
 .site-header__inner, .site-main, .site-footer, .internal-nav { width: min(1120px, calc(100% - 2rem)); margin: 0 auto; }
 .site-header__inner { min-height: 5rem; display: flex; align-items: center; justify-content: space-between; gap: 2rem; }
-.wordmark { display: flex; align-items: center; gap: .65rem; font-weight: 700; text-decoration: none; }
-.wordmark span { display: inline-flex; align-items: center; padding: .38rem .55rem; background: var(--red); color: #fff; font-size: 1.2rem; font-weight: 800; line-height: 1; letter-spacing: .01em; }
-.wordmark small { padding-left: .65rem; border-left: 1px solid var(--line); color: var(--gray); font-size: .76rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.wordmark { display: flex; align-items: center; gap: .75rem; color: var(--ink); font-weight: 700; text-decoration: none; }
+.wordmark__mark { width: 2.6rem; height: 2.6rem; flex: none; }
+.wordmark__institution { display: inline-flex; align-items: center; gap: .45rem; line-height: 1; white-space: nowrap; }
+.wordmark__dhbw { display: inline-flex; align-items: center; font-size: 1.3rem; line-height: 1; letter-spacing: -.025em; }
+.wordmark__dhbw strong { color: var(--red); font-weight: 700; }
+.wordmark__dhbw span { color: var(--gray); font-weight: 300; }
+.wordmark__location { color: var(--gray); font-size: 1.3rem; font-weight: 300; line-height: 1; }
+.wordmark__product { display: inline-flex; align-items: center; min-height: 2rem; padding-left: .75rem; border-left: 2px solid var(--red); color: var(--gray); font-size: .8rem; font-weight: 700; line-height: 1; letter-spacing: .07em; text-transform: uppercase; }
 .site-header__actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .5rem 1.3rem; }
 .site-header nav, .site-footer nav { display: flex; flex-wrap: wrap; gap: 1.3rem; }
 .site-header nav a { font-size: .95rem; text-decoration: none; }

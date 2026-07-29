@@ -10,9 +10,10 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { internalAuthOptions } from "@/lib/auth-options";
 import { authSchema } from "@/lib/db/auth-schema";
+import { productionOrigin } from "@/lib/product";
 import { applySchema } from "@/test/schema";
 
-const productionOrigin = "https://blockplan.dhbw-loerrach.de";
+const productionHost = new URL(productionOrigin).host;
 const traefikAddress = "10.0.0.7";
 const temporaryDirectories: string[] = [];
 
@@ -36,7 +37,7 @@ function signIn(auth: ReturnType<typeof createAuth>, origin: string, forwardedFo
     headers: {
       "content-type": "application/json",
       origin,
-      "x-forwarded-host": "blockplan.dhbw-loerrach.de",
+      "x-forwarded-host": productionHost,
       "x-forwarded-for": `${forwardedFor}, ${traefikAddress}`,
     },
     body: JSON.stringify({ email: "unbekannt@dhbw-loerrach.de", password: "irgendein-falsches-passwort" }),
@@ -49,7 +50,7 @@ afterEach(() => {
 
 describe("sign-in origin check behind Traefik", () => {
   it("rejects a sign-in sent from a foreign origin", async () => {
-    const response = await signIn(createAuth(), "https://blockplan.dhbw-loerrach.de.example.com", "203.0.113.20");
+    const response = await signIn(createAuth(), `${productionOrigin}.example.com`, "203.0.113.20");
 
     expect(response.status).toBe(403);
   });
@@ -63,8 +64,8 @@ describe("sign-in origin check behind Traefik", () => {
   it("rejects a foreign origin that resembles the production host", async () => {
     const auth = createAuth();
 
-    const subdomain = await signIn(auth, "https://intern.blockplan.dhbw-loerrach.de", "203.0.113.22");
-    const insecure = await signIn(auth, "http://blockplan.dhbw-loerrach.de", "203.0.113.23");
+    const subdomain = await signIn(auth, `https://intern.${productionHost}`, "203.0.113.22");
+    const insecure = await signIn(auth, `http://${productionHost}`, "203.0.113.23");
 
     expect(subdomain.status).toBe(403);
     expect(insecure.status).toBe(403);

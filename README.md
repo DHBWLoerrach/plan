@@ -1,9 +1,13 @@
-# DHBW Management
+# DHBW Lörrach Plan
 
 Webanwendung zur Verwaltung und Veröffentlichung von Blockplänen der DHBW Lörrach:
 Theorie- und Praxisphasen sowie prüfungsrelevante Termine je Kurs und Jahrgang.
 Die Blockplanverwaltung ist der erste Baustein einer breiter angelegten Anwendung
 für den Studienbetrieb.
+
+Die Anwendung trägt den Produktnamen **DHBW Lörrach Plan** und ist für den Betrieb
+unter `https://plan.apps.szi.dhbw-loerrach.de` vorgesehen. Das Repository und
+seine technischen Artefakte behalten den Namen `dhbw-mgmt`.
 
 ## Stand
 

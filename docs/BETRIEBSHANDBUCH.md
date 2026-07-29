@@ -12,7 +12,7 @@ mit `docker exec <container>` gilt dasselbe.
 | Variable | Zweck |
 | --- | --- |
 | `DATABASE_URL` | Pfad der SQLite-Datei auf dem persistenten Volume. |
-| `BETTER_AUTH_URL` | Produktive Basis-URL. Sie ist zugleich die einzige Origin, der Better Auth vertraut — ohne Platzhalter. |
+| `BETTER_AUTH_URL` | Exakt `https://plan.apps.szi.dhbw-loerrach.de`. Die produktive Basis-URL ist zugleich die einzige Origin, der Better Auth vertraut. |
 | `BETTER_AUTH_SECRET` | Mindestens 32 Zeichen. |
 | `TRUSTED_PROXY_IPS` | Nur nötig, wenn Traefik `X-Forwarded-For` anhängt statt überschreibt: kommagetrennte Adressen oder CIDR-Bereiche der Proxys, so eng wie möglich. |
 

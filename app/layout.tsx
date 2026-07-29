@@ -1,9 +1,25 @@
 import type { Metadata } from "next";
+
+import { productDescription, productName, productionOrigin } from "@/lib/product";
+
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "DHBW Lörrach Blockpläne",
-  description: "Veröffentlichte Blockpläne der DHBW Lörrach",
+  metadataBase: new URL(productionOrigin),
+  applicationName: productName,
+  title: {
+    default: productName,
+    template: `%s | ${productName}`,
+  },
+  description: productDescription,
+  openGraph: {
+    type: "website",
+    locale: "de_DE",
+    url: "/",
+    siteName: productName,
+    title: productName,
+    description: productDescription,
+  },
 };
 
 export default function RootLayout({

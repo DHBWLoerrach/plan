@@ -1,10 +1,11 @@
 import { NextRequest } from "next/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { productionOrigin } from "@/lib/product";
 import { proxy } from "@/proxy";
 
 function request(path = "/") {
-  return new NextRequest(`https://blockplan.dhbw-loerrach.de${path}`);
+  return new NextRequest(`${productionOrigin}${path}`);
 }
 
 function nonceOf(policy: string) {

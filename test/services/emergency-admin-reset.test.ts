@@ -7,10 +7,13 @@ import path from "node:path";
 import Database from "better-sqlite3";
 import { afterEach, describe, expect, it } from "vitest";
 
+import { productionOrigin } from "@/lib/product";
 import { resetSystemAdminPassword } from "@/lib/services/emergency-admin-reset.mjs";
 import { applySchema } from "@/test/schema";
 
 const temporaryDirectories: string[] = [];
+// Intentionally literal: this CLI test protects the decided production host instead of mirroring its input.
+const productionPasswordLinkPattern = /^https:\/\/plan\.apps\.szi\.dhbw-loerrach\.de\/intern\/passwort-vergeben#[A-Za-z0-9_-]+\n$/;
 
 type AccountSeed = { email?: string; systemAdmin?: number; status?: string };
 
@@ -33,7 +36,7 @@ function createDatabase({ email = "admin@dhbw-loerrach.de", systemAdmin = 1, sta
   return databasePath;
 }
 
-const validInput = { baseUrl: "https://blockplan.dhbw-loerrach.de", authSecret: "a".repeat(32) };
+const validInput = { baseUrl: productionOrigin, authSecret: "a".repeat(32) };
 
 afterEach(() => {
   for (const directory of temporaryDirectories.splice(0)) rmSync(directory, { force: true, recursive: true });
@@ -45,11 +48,11 @@ describe("resetSystemAdminPassword", () => {
 
     const output = execFileSync(process.execPath, [path.join(process.cwd(), "scripts/reset-admin-password.mjs"), "--email", "admin@dhbw-loerrach.de"], {
       encoding: "utf8",
-      env: { ...process.env, DATABASE_URL: databasePath, BETTER_AUTH_SECRET: "a".repeat(32), BETTER_AUTH_URL: "https://blockplan.dhbw-loerrach.de" },
+      env: { ...process.env, DATABASE_URL: databasePath, BETTER_AUTH_SECRET: "a".repeat(32), BETTER_AUTH_URL: productionOrigin },
     });
 
     expect(output.split("\n").filter(Boolean)).toHaveLength(1);
-    expect(output).toMatch(/^https:\/\/blockplan\.dhbw-loerrach\.de\/intern\/passwort-vergeben#[A-Za-z0-9_-]+\n$/);
+    expect(output).toMatch(productionPasswordLinkPattern);
   });
 
   it("revokes password and sessions of the last active system administration account and issues a hashed link", () => {
