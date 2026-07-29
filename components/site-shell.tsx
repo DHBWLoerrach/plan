@@ -24,6 +24,7 @@ export async function SiteShell({ nav, children }: { nav?: ReactNode; children: 
             <span className="wordmark__dhbw"><strong>DH</strong><span>BW</span></span>
             <span className="wordmark__location">Lörrach</span>
           </span>
+          <span className="wordmark__rule" aria-hidden="true" />
           <span className="wordmark__product">Plan</span>
         </Link>
         <div className="site-header__actions">
