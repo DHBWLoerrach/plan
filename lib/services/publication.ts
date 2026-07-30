@@ -32,7 +32,7 @@ export function readPublicationPreview(sqlite: Database.Database, courseId: stri
 }
 
 function publicationIssuesForDraft(sqlite: Database.Database, course: DraftCourse, phases: DraftPhase[], events: DraftEvent[]): PublicationIssue[] {
-  const issues = validatePublication({ courses: [course], phases, events });
+  const issues = validatePublication({ course, phases, events });
   const collision = sqlite.prepare(`SELECT 1 FROM published_course_search_keys key
     JOIN published_courses published ON published.id = key.published_course_id
     WHERE key.normalized_code = ? AND published.course_id <> ?`).get(normalizeCourseCode(course.code), course.id);

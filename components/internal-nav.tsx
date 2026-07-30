@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { type ActiveAccount, managesAnyArea } from "@/lib/internal-auth";
 
-export type InternalSection = "home" | "blockplaene" | "kurse" | "konten";
+export type InternalSection = "home" | "kurse" | "konten";
 
 /**
  * The internal main navigation: courses for area editing, accounts for system administration. The own

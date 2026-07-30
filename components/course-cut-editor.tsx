@@ -83,9 +83,9 @@ function EventCreateForm({ courses }: { courses: CutCourse[] }) {
 
 function CourseStatus({ course, phases, events }: { course: CutCourse; phases: DraftPhase[]; events: DraftEvent[] }) {
   const issues = validatePublication({
-    courses: [course],
+    course,
     phases: phases.filter((phase) => phase.courseId === course.id),
-    events: events.filter((event) => event.courseIds.includes(course.id)).map((event) => ({ ...event, courseIds: [course.id] })),
+    events: events.filter((event) => event.courseIds.includes(course.id)),
   });
   return <li>
     <p><strong>{course.code}</strong> · Bereich {course.areaName} · {areaAccessLabel(course.editable)}{course.workInProgress ? ` · ${workInProgressLabel}` : ""}</p>

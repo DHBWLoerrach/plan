@@ -170,4 +170,28 @@ describe("redeemPasswordLink", () => {
     expect(sqlite.prepare("SELECT password FROM account WHERE id = 'credential-account'").get()).toEqual({ password: "better-auth:Ein-sehr-langes-Passwort1!" });
     expect(sqlite.prepare("SELECT id FROM session ORDER BY id").all()).toEqual([{ id: "current-session" }]);
   });
+
+  it("keeps the credential and every session when the previous password is wrong", async () => {
+    const { sqlite } = databaseWithPasswordLink({ status: "ACTIVE" });
+    sqlite.prepare("INSERT INTO account (id, accountId, providerId, userId, password, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)").run(
+      "credential-account", "user-1", "credential", "user-1", "old-hash", Date.now(), Date.now(),
+    );
+    for (const sessionId of ["current-session", "other-session"]) {
+      sqlite.prepare("INSERT INTO session (id, token, userId, expiresAt, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)").run(
+        sessionId, `${sessionId}-token`, "user-1", Date.now() + 60_000, Date.now(), Date.now(),
+      );
+    }
+
+    await expect(changeAccountPassword(sqlite, {
+      userId: "user-1",
+      currentSessionId: "current-session",
+      currentPassword: "falsch",
+      newPassword: "Ein-sehr-langes-Passwort1!",
+      hashPassword: async (password) => `better-auth:${password}`,
+      verifyPassword: async () => false,
+    })).rejects.toMatchObject({ field: "currentPassword" });
+
+    expect(sqlite.prepare("SELECT password FROM account WHERE id = 'credential-account'").get()).toEqual({ password: "old-hash" });
+    expect(sqlite.prepare("SELECT id FROM session ORDER BY id").pluck().all()).toEqual(["current-session", "other-session"]);
+  });
 });

@@ -33,12 +33,10 @@ export interface DraftEvent {
 }
 
 /** The editor field an issue points at; `null` when the correction is a missing or excess entry rather than a value. */
-export type PublicationIssueField = "startDate" | "endDate" | "semester" | "courseIds";
+export type PublicationIssueField = "startDate" | "endDate" | "semester";
 
 export interface PublicationIssue {
   code:
-    | "block-plan-without-course"
-    | "course-published-elsewhere"
     | "course-code-published-elsewhere"
     | "coverage-gap"
     | "coverage-overlap"
@@ -47,8 +45,7 @@ export interface PublicationIssue {
     | "semester-not-monotonic"
     | "semester-not-contiguous"
     | "event-outside-study-period"
-    | "event-semester-not-derivable"
-    | "event-without-course";
+    | "event-semester-not-derivable";
   /** The semester whose editor corrects the issue; `null` when it belongs to no single semester. */
   semester: number | null;
   field: PublicationIssueField | null;
@@ -74,156 +71,61 @@ export function deriveEventSemester(phases: DraftPhase[], courseId: string, star
 }
 
 export function validatePublication({
-  courses,
+  course,
   phases,
   events,
 }: {
-  courses: DraftCourse[];
+  course: DraftCourse;
   phases: DraftPhase[];
-  events: DraftEvent[];
+  events: Omit<DraftEvent, "courseIds">[];
 }): PublicationIssue[] {
   const issues: PublicationIssue[] = [];
+  const coursePhases = phases
+    .filter((phase) => phase.courseId === course.id)
+    .toSorted((left, right) => left.startDate.localeCompare(right.startDate));
+  const seenSemesters = new Set<number>();
+  let previous: DraftPhase | undefined;
 
-  for (const course of courses) {
-    const coursePhases = phases
-      .filter((phase) => phase.courseId === course.id)
-      .toSorted((left, right) => left.startDate.localeCompare(right.startDate));
-    const seenSemesters = new Set<number>();
-    let previous: DraftPhase | undefined;
+  for (const phase of coursePhases) {
+    if (phase.semester < 1 || phase.semester > course.semesters) {
+      issues.push({ code: "semester-out-of-range", courseId: course.id, semester: phase.semester, field: "semester", message: `Semester ${phase.semester} von ${course.code} liegt außerhalb der Studiendauer.` });
+    }
+    if (previous) {
+      if (phase.startDate <= previous.endDate) {
+        issues.push({ code: "coverage-overlap", courseId: course.id, semester: phase.semester, field: "startDate", message: `Kursphasen von ${course.code} überlappen sich.` });
+      } else if (phase.startDate !== plusDays(previous.endDate, 1)) {
+        issues.push({ code: "coverage-gap", courseId: course.id, semester: phase.semester, field: "startDate", message: `Der Verlauf von ${course.code} enthält eine Lücke.` });
+      }
+      if (phase.semester < previous.semester) {
+        issues.push({ code: "semester-not-monotonic", courseId: course.id, semester: phase.semester, field: "semester", message: `Die Semester von ${course.code} fallen entlang der Zeitachse.` });
+      }
+      if (phase.semester !== previous.semester && seenSemesters.has(phase.semester)) {
+        issues.push({ code: "semester-not-contiguous", courseId: course.id, semester: phase.semester, field: "semester", message: `Semester ${phase.semester} von ${course.code} ist nicht zusammenhängend.` });
+      }
+    }
+    seenSemesters.add(phase.semester);
+    previous = phase;
+  }
 
-    for (const phase of coursePhases) {
-      if (phase.semester < 1 || phase.semester > course.semesters) {
-        issues.push({
-          code: "semester-out-of-range",
-          courseId: course.id,
-          semester: phase.semester,
-          field: "semester",
-          message: `Semester ${phase.semester} von ${course.code} liegt außerhalb der Studiendauer.`,
-        });
-      }
-      if (previous) {
-        if (phase.startDate <= previous.endDate) {
-          issues.push({
-            code: "coverage-overlap",
-            courseId: course.id,
-            semester: phase.semester,
-            field: "startDate",
-            message: `Kursphasen von ${course.code} überlappen sich.`,
-          });
-        } else if (phase.startDate !== plusDays(previous.endDate, 1)) {
-          issues.push({
-            code: "coverage-gap",
-            courseId: course.id,
-            semester: phase.semester,
-            field: "startDate",
-            message: `Der Verlauf von ${course.code} enthält eine Lücke.`,
-          });
-        }
-        if (phase.semester < previous.semester) {
-          issues.push({
-            code: "semester-not-monotonic",
-            courseId: course.id,
-            semester: phase.semester,
-            field: "semester",
-            message: `Die Semester von ${course.code} fallen entlang der Zeitachse.`,
-          });
-        }
-        if (phase.semester !== previous.semester && seenSemesters.has(phase.semester)) {
-          issues.push({
-            code: "semester-not-contiguous",
-            courseId: course.id,
-            semester: phase.semester,
-            field: "semester",
-            message: `Semester ${phase.semester} von ${course.code} ist nicht zusammenhängend.`,
-          });
-        }
-      }
-      seenSemesters.add(phase.semester);
-      previous = phase;
-    }
-
-    if (coursePhases.length === 0 || coursePhases[0].startDate !== course.studyStart) {
-      issues.push({
-        code: "coverage-gap",
-        courseId: course.id,
-        // The history begins in the first semester that holds a course phase, so that is where the correction belongs.
-        semester: coursePhases[0]?.semester ?? 1,
-        field: "startDate",
-        message: `Der Verlauf von ${course.code} beginnt nicht mit dem Studienbeginn.`,
-      });
-    }
-    if (!previous || previous.endDate !== course.studyEnd) {
-      issues.push({
-        code: "coverage-gap",
-        courseId: course.id,
-        semester: previous?.semester ?? course.semesters,
-        field: "endDate",
-        message: `Der Verlauf von ${course.code} endet nicht mit dem Studienende.`,
-      });
-    }
-    for (let semester = 1; semester <= course.semesters; semester += 1) {
-      if (!seenSemesters.has(semester)) {
-        issues.push({
-          code: "semester-missing",
-          courseId: course.id,
-          semester,
-          // No field to correct: the semester holds no course phase of this course at all.
-          field: null,
-          message: `Semester ${semester} fehlt im Verlauf von ${course.code}.`,
-        });
-      }
+  if (coursePhases.length === 0 || coursePhases[0].startDate !== course.studyStart) {
+    issues.push({ code: "coverage-gap", courseId: course.id, semester: coursePhases[0]?.semester ?? 1, field: "startDate", message: `Der Verlauf von ${course.code} beginnt nicht mit dem Studienbeginn.` });
+  }
+  if (!previous || previous.endDate !== course.studyEnd) {
+    issues.push({ code: "coverage-gap", courseId: course.id, semester: previous?.semester ?? course.semesters, field: "endDate", message: `Der Verlauf von ${course.code} endet nicht mit dem Studienende.` });
+  }
+  for (let semester = 1; semester <= course.semesters; semester += 1) {
+    if (!seenSemesters.has(semester)) {
+      issues.push({ code: "semester-missing", courseId: course.id, semester, field: null, message: `Semester ${semester} fehlt im Verlauf von ${course.code}.` });
     }
   }
 
-  const coursesById = new Map(courses.map((course) => [course.id, course]));
   for (const event of events) {
-    if (event.courseIds.length === 0) {
-      issues.push({
-        code: "event-without-course",
-        eventId: event.id,
-        semester: null,
-        field: "courseIds",
-        message: `Der Termin „${event.title}“ benötigt mindestens einen betroffenen Kurs.`,
-      });
-      continue;
-    }
-    // Study period and derived semester are decided per affected course, so every issue names the course it is
-    // about — with several courses the entries would otherwise read identically (MVP-SPEZIFIKATION.md).
-    for (const courseId of event.courseIds) {
-      const course = coursesById.get(courseId);
-      if (!course) {
-        issues.push({
-          code: "event-without-course",
-          eventId: event.id,
-          courseId,
-          semester: null,
-          field: "courseIds",
-          message: `Der Termin „${event.title}“ betrifft einen Kurs, der nicht mehr zu diesem Blockplan gehört.`,
-        });
-        continue;
-      }
-      const startOutside = event.startDate < course.studyStart || event.startDate > course.studyEnd;
-      const endOutside = Boolean(event.endDate && (event.endDate < course.studyStart || event.endDate > course.studyEnd));
-      if (startOutside || endOutside) {
-        issues.push({
-          code: "event-outside-study-period",
-          eventId: event.id,
-          courseId,
-          // An event carries no semester of its own (FACHLICHE_REGELN.md); its editor section is not semester-wise.
-          semester: null,
-          field: startOutside ? "startDate" : "endDate",
-          message: `Der Termin „${event.title}“ liegt außerhalb des Studienzeitraums von ${course.code}.`,
-        });
-      } else if (deriveEventSemester(phases, courseId, event.startDate) === null) {
-        issues.push({
-          code: "event-semester-not-derivable",
-          eventId: event.id,
-          courseId,
-          semester: null,
-          field: "startDate",
-          message: `Für den Termin „${event.title}“ ist bei ${course.code} kein Semester ableitbar.`,
-        });
-      }
+    const startOutside = event.startDate < course.studyStart || event.startDate > course.studyEnd;
+    const endOutside = Boolean(event.endDate && (event.endDate < course.studyStart || event.endDate > course.studyEnd));
+    if (startOutside || endOutside) {
+      issues.push({ code: "event-outside-study-period", eventId: event.id, courseId: course.id, semester: null, field: startOutside ? "startDate" : "endDate", message: `Der Termin „${event.title}“ liegt außerhalb des Studienzeitraums von ${course.code}.` });
+    } else if (deriveEventSemester(phases, course.id, event.startDate) === null) {
+      issues.push({ code: "event-semester-not-derivable", eventId: event.id, courseId: course.id, semester: null, field: "startDate", message: `Für den Termin „${event.title}“ ist bei ${course.code} kein Semester ableitbar.` });
     }
   }
 

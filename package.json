@@ -9,6 +9,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "migrate:db": "node --env-file-if-exists=.env.local scripts/migrate-db.mjs",
     "backup:db": "node --env-file-if-exists=.env.local scripts/backup-db.mjs",
     "restore:db": "node --env-file-if-exists=.env.local scripts/restore-db.mjs",
@@ -24,6 +25,7 @@
     "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.0",
     "@tailwindcss/postcss": "^4",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20",
