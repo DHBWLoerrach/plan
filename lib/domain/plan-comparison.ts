@@ -52,7 +52,7 @@ export function groupComparableCourses(courses: DraftCourse[], phases: DraftPhas
 }
 
 /** The text rule that compares event titles in the normalized form used when they are saved. */
-export function normalizeEventTitle(title: string): string {
+function normalizeEventTitle(title: string): string {
   return title.trim().replace(/\s+/g, " ");
 }
 

@@ -8,7 +8,6 @@ const abbreviatedWeekdays = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
 const fullWeekdays = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
 
 const dayFormatter = new Intl.DateTimeFormat("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" });
-const timestampFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Berlin" });
 
 function utcDate(day: string): Date {
   return new Date(`${day}T00:00:00Z`);
@@ -24,14 +23,6 @@ export function formatCalendarDay(day: string, options?: { weekday?: boolean }):
   const date = utcDate(day);
   const formatted = dayFormatter.format(date);
   return options?.weekday ? `${abbreviatedWeekdays[date.getUTCDay()]} ${formatted}` : formatted;
-}
-
-/**
- * A stored instant — unlike the timezone-free calendar days above, the moment of the last draft change is a point in
- * time. It is shown in Europe/Berlin, so every internal view names the same moment regardless of the server timezone.
- */
-export function formatTimestamp(instant: string): string {
-  return `${timestampFormatter.format(new Date(instant))} Uhr`;
 }
 
 function weeksAndDays(startDate: string, endDate: string): { weeks: number; days: number } {

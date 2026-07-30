@@ -1,19 +1,13 @@
 import type Database from "better-sqlite3";
 
 import { FieldError } from "@/lib/domain/field-error";
-import { createDraftEvent, deleteDraftEvent, updateDraftEvent, type EventInput } from "@/lib/services/event-admin";
-import { createDraftPhases, deleteDraftPhase, updateDraftPhase, type PhaseDetails, type PhaseInput } from "@/lib/services/phase-admin";
+import { deleteDraftEvent, updateDraftEvent, type EventInput } from "@/lib/services/event-admin";
+import { deleteDraftPhase, updateDraftPhase, type PhaseDetails } from "@/lib/services/phase-admin";
 
-/** Creates equal, but independent, course phases for a Zuschnitt. */
-export function createDraftPhasesForCourses(sqlite: Database.Database, input: { accountId: string; now?: Date } & PhaseInput): string[] {
-  return createDraftPhases(sqlite, input);
-}
-
-/** Creates one independent event for every selected course. */
-export function createDraftEventsForCourses(sqlite: Database.Database, input: { accountId: string; now?: Date } & EventInput): string[] {
-  return createDraftEvent(sqlite, input);
-}
-
+/**
+ * The changes and deletions a Zuschnitt applies to a summarised row at once. Creation needs no counterpart here:
+ * `createDraftPhases` and `createDraftEvent` already take the whole selection of courses.
+ */
 function selectedIds(ids: string[], field: string, message: string): string[] {
   const selected = [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
   if (!selected.length) throw new FieldError(field, message);

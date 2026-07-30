@@ -5,16 +5,9 @@ import { revalidatePath } from "next/cache";
 import { sqlite } from "@/lib/db";
 import { FieldError } from "@/lib/domain/field-error";
 import { getActiveAccount } from "@/lib/internal-auth";
-import {
-  createDraftEventsForCourses,
-  createDraftPhasesForCourses,
-  deleteDraftEvents,
-  deleteDraftPhases,
-  updateDraftEvents,
-  updateDraftPhases,
-} from "@/lib/services/cut-editor";
-import type { EventField, EventInput } from "@/lib/services/event-admin";
-import type { PhaseDetails, PhaseField, PhaseInput } from "@/lib/services/phase-admin";
+import { deleteDraftEvents, deleteDraftPhases, updateDraftEvents, updateDraftPhases } from "@/lib/services/cut-editor";
+import { createDraftEvent, type EventField, type EventInput } from "@/lib/services/event-admin";
+import { createDraftPhases, type PhaseDetails, type PhaseField, type PhaseInput } from "@/lib/services/phase-admin";
 
 export type CutFormState<TField extends string = string, TValues = never> = {
   error?: string;
@@ -56,7 +49,7 @@ function phaseInput(formData: FormData): PhaseInput {
 export async function createCutPhasesAction(_: CutFormState<PhaseField, PhaseInput>, formData: FormData): Promise<CutFormState<PhaseField, PhaseInput>> {
   const input = phaseInput(formData);
   try {
-    const created = createDraftPhasesForCourses(sqlite, { accountId: await requireAccountId(), ...input });
+    const created = createDraftPhases(sqlite, { accountId: await requireAccountId(), ...input });
     revalidateCut();
     return { success: created.length === 1 ? "Die Kursphase wurde gespeichert." : `${created.length} eigenständige Kursphasen wurden gespeichert — je Kurs eine.` };
   } catch (error) {
@@ -109,7 +102,7 @@ function eventInput(formData: FormData): EventInput {
 export async function createCutEventsAction(_: CutFormState<EventField, EventInput>, formData: FormData): Promise<CutFormState<EventField, EventInput>> {
   const input = eventInput(formData);
   try {
-    const created = createDraftEventsForCourses(sqlite, { accountId: await requireAccountId(), ...input });
+    const created = createDraftEvent(sqlite, { accountId: await requireAccountId(), ...input });
     revalidateCut();
     return { success: created.length === 1 ? "Der Termin wurde gespeichert." : `${created.length} eigenständige Termine wurden gespeichert — je Kurs einer.` };
   } catch (error) {

@@ -44,11 +44,3 @@ export function inclusiveDays(from: string, to: string): number {
   const difference = Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`);
   return Math.round(difference / 86_400_000) + 1;
 }
-
-/**
- * The number of days strictly between two calendar days, so directly consecutive days yield zero. Used to name the
- * span a draft leaves unassigned between two course phases.
- */
-export function daysBetween(from: string, to: string): number {
-  return Math.max(0, inclusiveDays(from, to) - 2);
-}

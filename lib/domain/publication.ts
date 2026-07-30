@@ -57,17 +57,6 @@ export interface PublicationIssue {
   message: string;
 }
 
-const issueFieldLabels: Record<PublicationIssueField, string> = {
-  startDate: "Startdatum",
-  endDate: "Enddatum",
-  semester: "Semester",
-  courseIds: "Betroffene Kurse",
-};
-
-export function publicationIssueFieldLabel(field: PublicationIssueField): string {
-  return issueFieldLabels[field];
-}
-
 export interface MatrixRow {
   startDate: string;
   endDate: string;

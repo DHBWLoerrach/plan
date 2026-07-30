@@ -31,7 +31,7 @@ export function readPublicationPreview(sqlite: Database.Database, courseId: stri
   return { course: draft.course, courses: [draft.course], phases: draft.phases, events: draft.events, issues };
 }
 
-export function publicationIssuesForDraft(sqlite: Database.Database, course: DraftCourse, phases: DraftPhase[], events: DraftEvent[]): PublicationIssue[] {
+function publicationIssuesForDraft(sqlite: Database.Database, course: DraftCourse, phases: DraftPhase[], events: DraftEvent[]): PublicationIssue[] {
   const issues = validatePublication({ courses: [course], phases, events });
   const collision = sqlite.prepare(`SELECT 1 FROM published_course_search_keys key
     JOIN published_courses published ON published.id = key.published_course_id

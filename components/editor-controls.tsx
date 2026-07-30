@@ -3,28 +3,6 @@
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 
 /**
- * One saved draft entry with its editing controls, collapsed until the editing is deliberately opened. The button
- * names the entry, so its accessible name stays unambiguous among several editors on the page (BARRIEREFREIHEIT.md).
- */
-export function CollapsibleEditor({ heading, openLabel, closeLabel, children }: {
-  /** Omit when the entry already renders its own heading; the toggle's accessible name still names the entry via `openLabel`/`closeLabel`. */
-  heading?: ReactNode;
-  openLabel: string;
-  closeLabel: string;
-  children: ReactNode;
-}) {
-  const [open, setOpen] = useState(false);
-  const regionId = useId();
-  return <div className="editor-card">
-    {heading ? <h4>{heading}</h4> : null}
-    <button className="button button--ghost" type="button" aria-expanded={open} aria-controls={regionId} onClick={() => setOpen(!open)}>
-      {open ? closeLabel : openLabel}
-    </button>
-    <div id={regionId} hidden={!open}>{children}</div>
-  </div>;
-}
-
-/**
  * A deliberate action behind a confirmation that names action, target and consequence — in the accessible name and
  * the associated description, never as a bare „OK“ (BARRIEREFREIHEIT.md). The confirmation takes focus when it
  * opens; Escape and „Abbrechen“ close it and return focus to the button that opened it. It renders the submit
@@ -63,26 +41,4 @@ export function ConfirmAction({ openLabel, heading, consequence, confirmLabel, p
       <button className="button button--ghost" type="button" onClick={() => setConfirming(false)}>Abbrechen</button>
     </div>
   </>;
-}
-
-/**
- * A deletion behind a confirmation that names action, target and consequences (MVP-SPEZIFIKATION.md). The hidden
- * fields of the concrete form are passed as children, the action as the form action.
- */
-export function ConfirmDeleteForm({ action, error, isPending, openLabel, confirmLabel, heading, consequence, children }: {
-  action: (formData: FormData) => void;
-  error?: string;
-  isPending: boolean;
-  openLabel: string;
-  confirmLabel: string;
-  heading: string;
-  consequence: string;
-  children: ReactNode;
-}) {
-  return <form action={action} className="account-form">
-    {children}
-    {error ? <p role="alert">{error}</p> : null}
-    <ConfirmAction openLabel={openLabel} heading={heading} consequence={consequence} confirmLabel={confirmLabel}
-      pendingLabel="Wird gelöscht …" isPending={isPending} danger />
-  </form>;
 }

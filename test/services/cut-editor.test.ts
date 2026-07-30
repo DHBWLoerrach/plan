@@ -1,7 +1,9 @@
 import Database from "better-sqlite3";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { createDraftEventsForCourses, createDraftPhasesForCourses, deleteDraftEvents, deleteDraftPhases, updateDraftEvents, updateDraftPhases } from "@/lib/services/cut-editor";
+import { deleteDraftEvents, deleteDraftPhases, updateDraftEvents, updateDraftPhases } from "@/lib/services/cut-editor";
+import { createDraftEvent } from "@/lib/services/event-admin";
+import { createDraftPhases } from "@/lib/services/phase-admin";
 import { applySchema } from "@/test/schema";
 
 const databases: Database.Database[] = [];
@@ -19,8 +21,8 @@ afterEach(() => { for (const sqlite of databases.splice(0)) sqlite.close(); });
 describe("course cuts", () => {
   it("creates independent phases and events for each selected course", () => {
     const sqlite = database();
-    const phaseIds = createDraftPhasesForCourses(sqlite, { accountId: "editor", courseIds: ["course-a", "course-b"], semester: "1", type: "THEORY", startDate: "2026-10-01", endDate: "2027-03-31" });
-    const eventIds = createDraftEventsForCourses(sqlite, { accountId: "editor", courseIds: ["course-a", "course-b"], title: "Prüfung", description: "", category: "EXAM", startDate: "2027-03-15", endDate: "", provisional: false });
+    const phaseIds = createDraftPhases(sqlite, { accountId: "editor", courseIds: ["course-a", "course-b"], semester: "1", type: "THEORY", startDate: "2026-10-01", endDate: "2027-03-31" });
+    const eventIds = createDraftEvent(sqlite, { accountId: "editor", courseIds: ["course-a", "course-b"], title: "Prüfung", description: "", category: "EXAM", startDate: "2027-03-15", endDate: "", provisional: false });
     expect(sqlite.prepare("SELECT course_id AS courseId FROM course_phases ORDER BY course_id").all()).toEqual([{ courseId: "course-a" }, { courseId: "course-b" }]);
     expect(sqlite.prepare("SELECT course_id AS courseId FROM course_events ORDER BY course_id").all()).toEqual([{ courseId: "course-a" }, { courseId: "course-b" }]);
     updateDraftPhases(sqlite, { accountId: "editor", phaseIds, semester: "1", type: "PRACTICE", startDate: "2026-10-01", endDate: "2027-03-31" });

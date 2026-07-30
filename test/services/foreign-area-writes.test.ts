@@ -2,7 +2,9 @@ import Database from "better-sqlite3";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { deleteCourse, updateCourse } from "@/lib/services/course-admin";
-import { createDraftEventsForCourses, createDraftPhasesForCourses, deleteDraftEvents, deleteDraftPhases, updateDraftEvents, updateDraftPhases } from "@/lib/services/cut-editor";
+import { deleteDraftEvents, deleteDraftPhases, updateDraftEvents, updateDraftPhases } from "@/lib/services/cut-editor";
+import { createDraftEvent } from "@/lib/services/event-admin";
+import { createDraftPhases } from "@/lib/services/phase-admin";
 import { publishCourse, withdrawCourse } from "@/lib/services/publication";
 import { applySchema } from "@/test/schema";
 
@@ -39,8 +41,8 @@ afterEach(() => {
 describe("course phases of a foreign area", () => {
   it("refuses creation, change and deletion", () => {
     const sqlite = database();
-    expect(() => createDraftPhasesForCourses(sqlite, { accountId: "editor", courseIds: ["course-wwi"], ...phase })).toThrow(refused);
-    const [phaseId] = createDraftPhasesForCourses(sqlite, { accountId: "admin", courseIds: ["course-wwi"], ...phase });
+    expect(() => createDraftPhases(sqlite, { accountId: "editor", courseIds: ["course-wwi"], ...phase })).toThrow(refused);
+    const [phaseId] = createDraftPhases(sqlite, { accountId: "admin", courseIds: ["course-wwi"], ...phase });
     expect(() => updateDraftPhases(sqlite, { accountId: "editor", phaseIds: [phaseId], ...phase, type: "PRACTICE" })).toThrow(refused);
     expect(() => deleteDraftPhases(sqlite, { accountId: "editor", phaseIds: [phaseId] })).toThrow(refused);
     expect(sqlite.prepare("SELECT phase_type AS type FROM course_phases WHERE id = ?").get(phaseId)).toEqual({ type: "THEORY" });
@@ -48,14 +50,14 @@ describe("course phases of a foreign area", () => {
 
   it("refuses a joint creation as a whole and leaves the own course untouched", () => {
     const sqlite = database();
-    expect(() => createDraftPhasesForCourses(sqlite, { accountId: "editor", courseIds: ["course-tif", "course-wwi"], ...phase })).toThrow(refused);
+    expect(() => createDraftPhases(sqlite, { accountId: "editor", courseIds: ["course-tif", "course-wwi"], ...phase })).toThrow(refused);
     expect(sqlite.prepare("SELECT count(*) AS count FROM course_phases").get()).toEqual({ count: 0 });
   });
 
   it("refuses a joint change over a summarised row that reaches into a foreign area", () => {
     const sqlite = database();
-    const [ownPhaseId] = createDraftPhasesForCourses(sqlite, { accountId: "editor", courseIds: ["course-tif"], ...phase });
-    const [foreignPhaseId] = createDraftPhasesForCourses(sqlite, { accountId: "admin", courseIds: ["course-wwi"], ...phase });
+    const [ownPhaseId] = createDraftPhases(sqlite, { accountId: "editor", courseIds: ["course-tif"], ...phase });
+    const [foreignPhaseId] = createDraftPhases(sqlite, { accountId: "admin", courseIds: ["course-wwi"], ...phase });
     expect(() => updateDraftPhases(sqlite, { accountId: "editor", phaseIds: [ownPhaseId, foreignPhaseId], ...phase, type: "PRACTICE" })).toThrow(refused);
     expect(sqlite.prepare("SELECT count(*) AS count FROM course_phases WHERE phase_type = 'PRACTICE'").get()).toEqual({ count: 0 });
   });
@@ -64,8 +66,8 @@ describe("course phases of a foreign area", () => {
 describe("events of a foreign area", () => {
   it("refuses creation, change and deletion", () => {
     const sqlite = database();
-    expect(() => createDraftEventsForCourses(sqlite, { accountId: "editor", courseIds: ["course-wwi"], ...event })).toThrow(refused);
-    const [eventId] = createDraftEventsForCourses(sqlite, { accountId: "admin", courseIds: ["course-wwi"], ...event });
+    expect(() => createDraftEvent(sqlite, { accountId: "editor", courseIds: ["course-wwi"], ...event })).toThrow(refused);
+    const [eventId] = createDraftEvent(sqlite, { accountId: "admin", courseIds: ["course-wwi"], ...event });
     expect(() => updateDraftEvents(sqlite, { accountId: "editor", eventIds: [eventId], ...event, title: "Nachholprüfung" })).toThrow(refused);
     expect(() => deleteDraftEvents(sqlite, { accountId: "editor", eventIds: [eventId] })).toThrow(refused);
     expect(sqlite.prepare("SELECT title FROM course_events WHERE id = ?").get(eventId)).toEqual({ title: "Prüfung" });

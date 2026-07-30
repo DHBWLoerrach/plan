@@ -64,7 +64,7 @@ describe("content security policy", () => {
 
 describe("security headers", () => {
   it("denies content sniffing, referrer leaks and unused browser features", () => {
-    const headers = proxy(request("/intern/blockplaene")).headers;
+    const headers = proxy(request("/intern/kurse")).headers;
 
     expect(headers.get("x-content-type-options")).toBe("nosniff");
     expect(headers.get("referrer-policy")).toBe("same-origin");
