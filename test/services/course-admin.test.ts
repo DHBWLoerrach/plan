@@ -30,6 +30,36 @@ describe("courses", () => {
     expect(() => updateCourse(sqlite, { accountId: "admin", courseId: id, code: "TIF26A", programId: "program-6", studyStart: "2026-10-01", studyEnd: "2029-09-30" })).toThrow("mindestens 7 Semester");
   });
 
+  it("lets a course keep its own code while something else about it changes", () => {
+    const sqlite = database();
+    const id = createCourse(sqlite, { accountId: "admin", code: "TIF26A", programId: "program-6", studyStart: "2026-10-01", studyEnd: "2029-09-30" });
+
+    // The uniqueness check has to exempt the course being saved, or no course could ever be edited twice.
+    updateCourse(sqlite, { accountId: "admin", courseId: id, code: "tif26a", programId: "program-6", studyStart: "2026-10-01", studyEnd: "2029-10-31" });
+
+    expect(sqlite.prepare("SELECT code, study_end AS studyEnd FROM courses WHERE id = ?").get(id)).toEqual({ code: "tif26a", studyEnd: "2029-10-31" });
+  });
+
+  it("refuses a code another course already carries, whatever its spelling", () => {
+    const sqlite = database();
+    createCourse(sqlite, { accountId: "admin", code: "TIF26A", programId: "program-6", studyStart: "2026-10-01", studyEnd: "2029-09-30" });
+    const other = createCourse(sqlite, { accountId: "admin", code: "TIF26B", programId: "program-6", studyStart: "2026-10-01", studyEnd: "2029-09-30" });
+
+    expect(() => updateCourse(sqlite, { accountId: "admin", courseId: other, code: " tif26a ", programId: "program-6", studyStart: "2026-10-01", studyEnd: "2029-09-30" }))
+      .toThrow("bereits vergeben");
+    expect(sqlite.prepare("SELECT code FROM courses WHERE id = ?").get(other)).toEqual({ code: "TIF26B" });
+  });
+
+  it("refuses to delete a course that is publicly visible", () => {
+    const sqlite = database();
+    const id = createCourse(sqlite, { accountId: "admin", code: "TIF26A", programId: "program-6", studyStart: "2026-10-01", studyEnd: "2029-09-30" });
+    sqlite.prepare(`INSERT INTO published_courses (id, course_id, published_at, area_name, program_name, program_abbreviation, code, study_start, study_end, semesters)
+      VALUES ('published', ?, '2026-06-01T00:00:00.000Z', 'Technik', 'Informatik', 'TIF', 'TIF26A', '2026-10-01', '2029-09-30', 6)`).run(id);
+
+    expect(() => deleteCourse(sqlite, { accountId: "admin", courseId: id })).toThrow("zuerst zurück");
+    expect(sqlite.prepare("SELECT count(*) AS count FROM courses WHERE id = ?").get(id)).toEqual({ count: 1 });
+  });
+
   it("deletes dependent planning data when no public version exists", () => {
     const sqlite = database();
     const id = createCourse(sqlite, { accountId: "admin", code: "TIF26A", programId: "program-6", studyStart: "2026-10-01", studyEnd: "2029-09-30" });
