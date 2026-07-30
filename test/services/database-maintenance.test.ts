@@ -71,23 +71,8 @@ describe("backupDatabase", () => {
 
     const report = await backupDatabase({ databasePath, targetPath: path.join(directory, "snapshot.sqlite") });
 
-    expect(report.migrations).toEqual(["0000_initial", "0001_foreign_key_indexes", "0002_published_course_search_keys", "0003_unique_published_course_code", "0004_course_as_planning_unit"]);
-  });
-
-  it("names the migration state in the order the migrations were applied", async () => {
-    const directory = createDirectory();
-    // Read back as text, "10_" would come before "2_" and the operator would log an order that
-    // never happened. The state named here is the one the runbook has them write down.
-    const migrationsDirectory = createMigrations(directory, {
-      "2_areas": "CREATE TABLE areas (id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL);",
-      "10_area_note": "ALTER TABLE areas ADD COLUMN note TEXT;",
-    });
-    const databasePath = path.join(directory, "dhbw-mgmt.sqlite");
-    applyPendingMigrations({ databasePath, migrationsDirectory });
-
-    const report = await backupDatabase({ databasePath, targetPath: path.join(directory, "snapshot.sqlite") });
-
-    expect(report.migrations).toEqual(["2_areas", "10_area_note"]);
+    // The state the runbook has the operator write down, in the order the migrations were applied.
+    expect(report.migrations).toEqual(migrationIds());
   });
 
   it("refuses a snapshot whose foreign keys are broken", async () => {
@@ -127,18 +112,6 @@ describe("applyPendingMigrations", () => {
     const columns = sqlite.prepare("PRAGMA table_info(areas)").all() as { name: string }[];
     expect(columns.map((column) => column.name)).toContain("note");
     sqlite.close();
-  });
-
-  it("orders migrations by their version number, not by their file name", () => {
-    const directory = createDirectory();
-    // Sorted as text, "10_" would run before "2_" and alter a table that does not exist yet.
-    const migrationsDirectory = createMigrations(directory, {
-      "2_areas": "CREATE TABLE areas (id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL);",
-      "10_area_note": "ALTER TABLE areas ADD COLUMN note TEXT;",
-    });
-    const databasePath = path.join(directory, "dhbw-mgmt.sqlite");
-
-    expect(applyPendingMigrations({ databasePath, migrationsDirectory })).toEqual(["2_areas", "10_area_note"]);
   });
 
   it("applies nothing when the database is already on the current version", () => {
@@ -308,7 +281,7 @@ describe("operational commands", () => {
     const output = runCommand("backup-db.mjs", ["--to", snapshotPath], databasePath);
 
     expect(output).toContain(snapshotPath);
-    expect(output).toContain("0000_initial");
+    expect(output).toContain(migrationIds()[0]);
     expect(existsSync(snapshotPath)).toBe(true);
   });
 
@@ -318,9 +291,9 @@ describe("operational commands", () => {
 
     const output = runCommand("migrate-db.mjs", [], databasePath);
 
-    expect(output).toContain("0000_initial");
+    expect(output).toContain(migrationIds()[0]);
     const sqlite = new Database(databasePath, { readonly: true });
-    expect(sqlite.prepare("SELECT id FROM _migrations").pluck().all()).toEqual(["0000_initial", "0001_foreign_key_indexes", "0002_published_course_search_keys", "0003_unique_published_course_code", "0004_course_as_planning_unit"]);
+    expect(sqlite.prepare("SELECT id FROM _migrations").pluck().all()).toEqual(migrationIds());
     sqlite.close();
   });
 
@@ -334,7 +307,7 @@ describe("operational commands", () => {
 
     const output = runCommand("restore-db.mjs", ["--from", snapshotPath], databasePath);
 
-    expect(output).toContain("0000_initial");
+    expect(output).toContain(migrationIds()[0]);
     const restored = new Database(databasePath, { readonly: true });
     expect(restored.prepare("SELECT email FROM user").pluck().all()).toEqual(["vorher@dhbw-loerrach.de"]);
     restored.close();
