@@ -29,6 +29,11 @@ _Avoid_: Klonen, Synchronisieren
 
 **Vorlage**: Der bestehende Kurs, aus dem eine Übernahme kopiert. Zwischen ihm und dem neuen Kurs besteht danach keine Verbindung.
 
+**Erzeugter Kursverlauf**: Der zweite Anlageweg neben der Übernahme: Der Kursverlauf des neuen Kurses entsteht aus Studienzeitraum und Startphase, ohne Vorlage. Er ist vor dem Speichern vollständig sichtbar und änderbar.
+_Avoid_: Automatik, Generator
+
+**Startphase**: Der Phasentyp der ersten Kursphase eines Kurses. Er entscheidet beim erzeugten Kursverlauf über den Wechsel aller folgenden Kursphasen.
+
 ## Verlauf
 
 **Kursverlauf**: Die Gesamtheit der Kursphasen eines Kurses vom Studienbeginn bis zum Studienende.

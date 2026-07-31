@@ -6,6 +6,7 @@ import { normalizeCalendarDay } from "@/lib/domain/calendar-day";
 import { normalizeCourseCode } from "@/lib/domain/course-code";
 import { assertAreaEditPermission, assertCourseEditPermission } from "@/lib/services/authorization";
 import { adoptIntoCourse, type AdoptionInput } from "@/lib/services/course-adoption";
+import { type CoursePlanInput, writeCoursePlan } from "@/lib/services/course-plan";
 import { touchCourse } from "@/lib/services/phase-admin";
 import { assertPublishedCourseValid } from "@/lib/services/publication";
 
@@ -16,11 +17,14 @@ type ProgramRow = { id: string; areaId: string; semesters: number };
 type CourseRow = { id: string; programId: string };
 
 /**
- * Creates a course, empty or as an adoption from a template. The permission is decided on the area of the **new**
- * course; the template is only read and may belong to any area (FACHLICHE_REGELN.md). Creation and adoption share
- * this one transaction.
+ * Creates a course: as an adoption from a template, or with a generated course progression of its own. The permission
+ * is decided on the area of the **new** course; the template is only read and may belong to any area
+ * (FACHLICHE_REGELN.md). Creation and progression share this one transaction.
+ *
+ * The two ways are exclusive, as they are in the interface: a course is created either from a template or smartly.
  */
-export function createCourse(sqlite: Database.Database, input: { accountId: string; adoption?: AdoptionInput; now?: Date } & CourseInput): string {
+export function createCourse(sqlite: Database.Database, input: { accountId: string; adoption?: AdoptionInput; plan?: CoursePlanInput[]; now?: Date } & CourseInput): string {
+  if (input.adoption && input.plan) throw new Error("Ein Kurs wird entweder aus einer Vorlage oder mit einem erzeugten Studienplan angelegt.");
   const normalized = normalizeCourseInput(input);
   const now = input.now ?? new Date();
   return sqlite.transaction(() => {
@@ -32,9 +36,9 @@ export function createCourse(sqlite: Database.Database, input: { accountId: stri
       (id, program_id, code, normalized_code, study_start, study_end, published_at, updated_at, updated_by_account_id)
       VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?)`)
       .run(id, normalized.programId, normalized.code, normalized.normalizedCode, normalized.studyStart, normalized.studyEnd, now.toISOString(), input.accountId);
-    if (input.adoption) {
-      adoptIntoCourse(sqlite, { courseId: id, studyStart: normalized.studyStart, studyEnd: normalized.studyEnd, semesters: program.semesters, adoption: input.adoption });
-    }
+    const period = { studyStart: normalized.studyStart, studyEnd: normalized.studyEnd, semesters: program.semesters };
+    if (input.adoption) adoptIntoCourse(sqlite, { courseId: id, ...period, adoption: input.adoption });
+    if (input.plan) writeCoursePlan(sqlite, { courseId: id, ...period, phases: input.plan });
     return id;
   })();
 }

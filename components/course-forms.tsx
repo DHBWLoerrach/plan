@@ -34,15 +34,6 @@ function CourseFields({ programs, course, period }: { programs: Program[]; cours
   </>;
 }
 
-export function CreateCourseForm({ programs }: { programs: Program[] }) {
-  const [state, formAction, isPending] = useActionState<CourseFormState, FormData>(createCourseAction, {});
-  return <form action={formAction} className="account-form">
-    <CourseFields programs={programs} />
-    {state.error ? <p role="alert">{state.error}</p> : null}
-    <button className="button" type="submit" disabled={isPending}>{isPending ? "Kurs wird angelegt …" : "Kurs anlegen"}</button>
-  </form>;
-}
-
 /** How the preview names the shift: whole weeks, in the direction the new study start lies (FACHLICHE_REGELN.md). */
 function shiftSentence(weeks: number): string {
   if (weeks === 0) return "Die Verschiebung ist null: Vorlage und neuer Kurs beginnen in derselben Woche.";

@@ -88,7 +88,11 @@ Nach der Anmeldung zeigt die Startseite die zugeordneten Bereiche, zuletzt bearb
 
 Alle internen Listen verwenden URL-basierte Filter und reproduzierbare Sortierung, aber im MVP keine Paginierung. Die Kursliste filtert nach Bereich, Studiengang, Jahrgang, Kurskennung und Veröffentlichungszustand und unterscheidet sichtbar zwischen Kursen der eigenen und fremder Bereiche, weil nur erstere bearbeitbar sind. Aus ihr heraus wird ein Zuschnitt gebildet, in dem mehrere Kurse gemeinsam bearbeitet werden; er ist wie öffentlich an genau einen Jahrgang gebunden, weil der semesterweise Editor dieselbe gemeinsame Zeitachse voraussetzt.
 
-Ein Kurs wird leer oder als Übernahme aus einer Vorlage angelegt. Bei der Übernahme werden die Vorlage, die zu übernehmenden Teile — Kursverlauf, Termine oder beides — und die Angaben des neuen Kurses erfasst; die Oberfläche nennt die errechnete Verschiebung in Wochen sowie die Kursphasen, die dabei auf den Studienzeitraum gekürzt werden, vor dem Speichern. Anlage und Übernahme bilden dieselbe Transaktion.
+Ein Kurs wird auf genau einem von zwei Wegen angelegt, die vor der Erfassung gewählt und nicht vermischt werden: als Übernahme aus einer Vorlage oder mit einem erzeugten Kursverlauf.
+
+Bei der Übernahme werden die Vorlage, die zu übernehmenden Teile — Kursverlauf, Termine oder beides — und die Angaben des neuen Kurses erfasst; die Oberfläche nennt die errechnete Verschiebung in Wochen sowie die Kursphasen, die dabei auf den Studienzeitraum gekürzt werden, vor dem Speichern.
+
+Beim erzeugten Kursverlauf belegt die Oberfläche den Studienzeitraum aus dem Jahrgang vor und erzeugt aus der gewählten Startphase einen lückenlosen Kursverlauf mit zwei alternierenden Kursphasen je Semester. Der Vorschlag ist vollständig sichtbar, bevor er gespeichert wird, und in Zeitraum, Startphase und einzelnen Kursphasen änderbar. Anlage und Kursverlauf bilden in beiden Fällen dieselbe Transaktion.
 
 Die Kontoliste unterscheidet und filtert die Zustände „Passwortvergabe ausstehend“, „Aktiv“ und „Gesperrt“. Eine Kontolöschung gibt es im MVP nicht; das Sperren ist die weitestgehende Kontoaktion.
 

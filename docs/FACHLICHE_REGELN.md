@@ -81,6 +81,10 @@ Ein Kurs ist jederzeit in allen vier Angaben änderbar, auch nach einer Veröffe
 - Ohne die Sperre könnte öffentlich Sichtbares durch eine Stammdatenlöschung verschwinden. Zurücknehmen bleibt der einzige und stets ausdrückliche Weg, eine Veröffentlichung zu beenden.
 - Nach der Löschung ist die Kurskennung wieder frei.
 
+### Anlagewege
+
+Ein Kurs entsteht auf genau einem von zwei Wegen: als Übernahme aus einer Vorlage oder mit einem erzeugten Kursverlauf. Der Weg wird vor der Erfassung gewählt; die beiden Wege werden nicht vermischt und teilen keine Angaben. Ein Kurs ohne Kursverlauf entsteht auf keinem der beiden Wege — der Kursverlauf ist danach wie jede andere Angabe einzeln bearbeitbar und löschbar.
+
 ### Anlage aus einer Vorlage
 
 Ein Kurs kann als Übernahme aus einer Vorlage angelegt werden. Vorlage darf jeder bestehende Kurs sein, unabhängig von Bereich und Studiengang.
@@ -95,6 +99,26 @@ Ein Kurs kann als Übernahme aus einer Vorlage angelegt werden. Vorlage darf jed
 - Der neue Kurs ist danach vollständig eigenständig. Zwischen ihm und der Vorlage besteht keine Verbindung, kein Abgleich und keine gemeinsame Änderung.
 
 Die Übernahme gibt es ausschließlich bei der Anlage. Übernehmen in einen bestehenden Kurs ist nicht vorgesehen.
+
+### Anlage mit erzeugtem Kursverlauf
+
+Ein Kurs kann stattdessen mit einem erzeugten Kursverlauf angelegt werden. Erfasst werden Kurskennung, Studiengang, Studienzeitraum und die Startphase; alles Weitere errechnet sich daraus.
+
+**Vorbelegung des Studienzeitraums.** Beide Angaben sind Vorschläge und bleiben änderbar.
+
+- Der Studienbeginn ist der 1. Oktober des Jahrgangs, den die Kurskennung nennt, sonst der nächste 1. Oktober ab dem heutigen Kalendertag. Eine vierstellige Jahreszahl in der Kurskennung gilt unmittelbar; eine zweistellige gilt als Jahr des laufenden Jahrhunderts, solange sie höchstens zehn Jahre vom laufenden Jahr entfernt liegt.
+- Das Studienende ist sechs Monate je Semester nach dem Studienbeginn, endend am Vortag: bei 6 Semestern der 30. September drei Jahre später, bei 7 Semestern der 31. März dreieinhalb Jahre später.
+
+**Erzeugter Kursverlauf.** Er umfasst zwei Kursphasen je Semester; Theorie und Praxis wechseln ab der gewählten Startphase mit jeder Kursphase.
+
+- Die Kursphasen decken den Studienzeitraum lückenlos und überschneidungsfrei ab. Grundlage sind Quartale ab dem Studienbeginn; passt der Studienzeitraum nicht ins Quartalsraster, wird er gleichmäßig auf die Kursphasen aufgeteilt.
+- Jede Phasengrenze innerhalb des Studienzeitraums fällt auf einen Sonntag, die folgende Kursphase beginnt am Montag. Studienbeginn und Studienende bleiben unverändert, weil der Studienzeitraum datumsverankert ist.
+- Am Jahreswechsel entscheidet der Kalender statt des Quartals: eine Theoriephase endet am Sonntag vor dem 24. Dezember, eine Praxisphase endet am Sonntag am oder nach dem 6. Januar. Die Weihnachtstage liegen damit stets in einer Praxisphase.
+- Ist der Studienzeitraum zu kurz für zwei Kursphasen je Semester, entsteht kein Kursverlauf und der Kurs wird nicht angelegt.
+
+**Anpassung vor dem Speichern.** Die erzeugten Kursphasen sind einzeln in Phasentyp, Semester und Grenzen änderbar. Eine verschobene Grenze verschiebt die angrenzende Kursphase mit, damit der Kursverlauf lückenlos bleibt; eine Grenze, die eine benachbarte Kursphase vollständig verdrängen würde, wird abgelehnt. Studienbeginn und Studienende gehören zum Studienzeitraum und werden dort geändert. Jede Änderung an Studienzeitraum, Studiengang oder Startphase erzeugt den Kursverlauf neu und verwirft eigene Anpassungen.
+
+**Prüfung beim Speichern.** Der gespeicherte Kursverlauf beginnt am Studienbeginn, endet am Studienende, schließt lückenlos und überschneidungsfrei an, hält die Semester entlang der Zeitachse monoton nicht fallend und verwendet ausschließlich Semester von 1 bis zur Anzahl Semester des Studiengangs. Anlage und Kursverlauf bilden dieselbe Transaktion.
 
 ### Veröffentlichungszustand
 

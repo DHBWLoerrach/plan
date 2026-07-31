@@ -33,6 +33,23 @@ function adoptionInput(formData: FormData) {
   return { templateCourseId, withPhases: formData.get("withPhases") !== null, withEvents: formData.get("withEvents") !== null };
 }
 
+/**
+ * The generated course progression of a smart creation. The form serializes what it previewed — including any boundary
+ * corrected by hand — as one field; the service checks it against the study period before writing it.
+ */
+function planInput(formData: FormData) {
+  const raw = String(formData.get("plan") ?? "").trim();
+  if (!raw) return undefined;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error("Der erzeugte Studienplan konnte nicht gelesen werden. Berechnen Sie ihn neu.");
+  }
+  if (!Array.isArray(parsed)) throw new Error("Der erzeugte Studienplan konnte nicht gelesen werden. Berechnen Sie ihn neu.");
+  return parsed as { semester: unknown; type: unknown; startDate: unknown; endDate: unknown }[];
+}
+
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Die Aktion konnte nicht ausgeführt werden.";
 }
@@ -50,10 +67,23 @@ function revalidateCourseViews(courseId: string) {
   revalidatePath("/intern/kurse/zuschnitt");
 }
 
+/** Creating a course as an adoption from a template — one of the two ways into a new course, never combined with the other. */
 export async function createCourseAction(_: CourseFormState, formData: FormData): Promise<CourseFormState> {
   let courseId: string;
   try {
     courseId = createCourse(sqlite, { accountId: await requireAccountId(), ...courseInput(formData), adoption: adoptionInput(formData) });
+  } catch (error) {
+    return { error: errorMessage(error) };
+  }
+  revalidateCourseViews(courseId);
+  redirect(`/intern/kurse/${courseId}?angelegt=1`);
+}
+
+/** Creating a course with a generated course progression — the other way, and the one that leaves a complete plan behind. */
+export async function createSmartCourseAction(_: CourseFormState, formData: FormData): Promise<CourseFormState> {
+  let courseId: string;
+  try {
+    courseId = createCourse(sqlite, { accountId: await requireAccountId(), ...courseInput(formData), plan: planInput(formData) });
   } catch (error) {
     return { error: errorMessage(error) };
   }

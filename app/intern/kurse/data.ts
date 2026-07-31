@@ -18,6 +18,8 @@ export type CourseListData = { areas: AreaOption[]; programs: LabeledOption[]; y
 export type InternalCourse = CourseMarking & { id: string; code: string; programId: string; program: string; areaId: string; areaName: string; studyStart: string; studyEnd: string; publishedAt: string | null };
 /** An entry of a select: the value it submits and the text it shows. */
 export type LabeledOption = { id: string; label: string };
+/** A study program to choose from. It carries its number of semesters, from which a smart creation derives study end and phase count. */
+export type ProgramOption = LabeledOption & { semesters: number };
 export type CutCourse = CoursePlan & CourseMarking & { areaId: string; areaName: string };
 /** A course on the overview. It carries no `editable`: the overview reads the own areas only, so all of them are. */
 export type OverviewCourse = CourseStatus & CourseStanding & { id: string; code: string };
@@ -143,11 +145,11 @@ export function findInternalCourse(sqlite: Database.Database, courseId: string, 
  * account. `semesters` narrows it further for an adoption, which requires template and target to agree on the number
  * of semesters — offering the others would only lead into a refusal.
  */
-export function programOptions(sqlite: Database.Database, account: AccountScope, semesters?: number): LabeledOption[] {
-  const rows = sqlite.prepare(`SELECT program.id, program.name, program.abbreviation, area.name AS areaName FROM programs program JOIN areas area ON area.id = program.area_id
+export function programOptions(sqlite: Database.Database, account: AccountScope, semesters?: number): ProgramOption[] {
+  const rows = sqlite.prepare(`SELECT program.id, program.name, program.abbreviation, program.semesters, area.name AS areaName FROM programs program JOIN areas area ON area.id = program.area_id
     WHERE (? = 1 OR program.area_id IN (SELECT area_id FROM area_assignments WHERE user_id = ?)) AND (? IS NULL OR program.semesters = ?)
-    ORDER BY area.name COLLATE NOCASE, program.name COLLATE NOCASE`).all(account.systemAdmin ? 1 : 0, account.id, semesters ?? null, semesters ?? null) as { id: string; name: string; abbreviation: string; areaName: string }[];
-  return rows.map((program) => ({ id: program.id, label: `${programLabel(program)} (${program.areaName})` }));
+    ORDER BY area.name COLLATE NOCASE, program.name COLLATE NOCASE`).all(account.systemAdmin ? 1 : 0, account.id, semesters ?? null, semesters ?? null) as { id: string; name: string; abbreviation: string; semesters: number; areaName: string }[];
+  return rows.map((program) => ({ id: program.id, label: `${programLabel(program)} (${program.areaName})`, semesters: program.semesters }));
 }
 
 type CutCourseRow = MarkingColumns & CoursePlan & { areaName: string };

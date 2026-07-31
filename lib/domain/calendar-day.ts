@@ -48,6 +48,26 @@ export function plusDays(day: string, days: number): string {
   return date.toISOString().slice(0, 10);
 }
 
+/**
+ * The calendar day the given number of months after the given one; a negative count steps backwards. A day the target
+ * month is too short for falls back to its last day, so 31 August plus six months is 28 or 29 February rather than
+ * spilling into March.
+ */
+export function plusMonths(day: string, months: number): string {
+  const date = new Date(`${day}T00:00:00Z`);
+  const dayOfMonth = date.getUTCDate();
+  date.setUTCDate(1);
+  date.setUTCMonth(date.getUTCMonth() + months);
+  const daysInTargetMonth = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0)).getUTCDate();
+  date.setUTCDate(Math.min(dayOfMonth, daysInTargetMonth));
+  return date.toISOString().slice(0, 10);
+}
+
+/** The weekday of a calendar day as a number, Sunday being 0 — the unit the phase boundaries are aligned in. */
+export function weekdayIndex(day: string): number {
+  return new Date(`${day}T00:00:00Z`).getUTCDay();
+}
+
 /** The number of days a period covers with both of its days included, so a single day counts as one. */
 export function inclusiveDays(from: string, to: string): number {
   const difference = Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`);
