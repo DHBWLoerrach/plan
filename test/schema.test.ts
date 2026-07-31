@@ -1,6 +1,8 @@
 import Database from "better-sqlite3";
+import { getTableColumns, getTableName } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 
+import { authSchema } from "@/lib/db/auth-schema";
 import { applySchema, applySchemaThrough } from "@/test/schema";
 
 /** Whether the database carries a schema object of that kind under that name. */
@@ -56,6 +58,23 @@ describe("applySchemaThrough", () => {
     // A build that silently fell back to everything would leave a usable schema behind, and the test
     // that meant to observe the old state would pass against the new one.
     expect(hasSchemaObject(sqlite, "table", "courses")).toBe(false);
+  });
+});
+
+/**
+ * The tables Better Auth writes are stated twice: as SQL in the migrations, which build them, and as a Drizzle model
+ * in `lib/db/auth-schema.ts`, which the adapter reads them through. Nothing makes the two agree — a column added to
+ * one alone would surface as a failing sign-in at runtime. `test/integration/auth-storage.test.ts` covers how the
+ * timestamps of those columns are represented; this covers that the columns exist at all.
+ */
+describe("Better Auth table model", () => {
+  it("names the columns the migrated tables carry", () => {
+    const sqlite = new Database(":memory:");
+    applySchema(sqlite);
+
+    const modelled = Object.values(authSchema).map((table) => [getTableName(table), Object.values(getTableColumns(table)).map((column) => column.name).sort()]);
+    const stored = modelled.map(([table]) => [table, columnNames(sqlite, table as string).sort()]);
+    expect(modelled).toEqual(stored);
   });
 });
 
