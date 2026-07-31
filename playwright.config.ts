@@ -4,6 +4,8 @@ export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false,
   workers: 1,
+  /* Room for one waited-out sign-in: the suite signs in more often than Better Auth counts per address and window. */
+  timeout: 45_000,
   reporter: "list",
   use: {
     baseURL: "http://127.0.0.1:3100",
