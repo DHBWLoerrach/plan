@@ -14,12 +14,14 @@ Vor dem Prompt müssen die folgenden technischen Zielwerte gesetzt werden. Sie k
 
 ```yaml
 ziel:
-  # Zuordnung aus dem bestehenden System: Studiengangskürzel -> ID und Anzahl Semester
+  # Studiengangskürzel -> ID und Anzahl Semester. Die ID lautet stets `program-` plus
+  # das kleingeschriebene Kürzel; die Anzahl Semester steht in `SEED-DATEN.md`.
   programs:
-    TIF: { id: "program-01", semesters: 6 }
-    WWI: { id: "program-02", semesters: 6 }
-  # Erforderlich: das interne Konto, das als zuletzt ändernd hinterlegt wird.
-  updated_by_account_id: "user-01"
+    TIF: { id: "program-tif", semesters: 6 }
+    WWI: { id: "program-wwi", semesters: 6 }
+  # Erforderlich: die Kennung des internen Kontos, das als zuletzt ändernd hinterlegt wird.
+  # Sie ist eine UUID und muss aus der Datenbank abgelesen werden.
+  updated_by_account_id: "6f5b2e0c-1d3a-4f7b-9c8e-2a4d6b8f0c13"
   updated_at: "2026-07-29T10:00:00.000Z"
   # Eindeutiger, nur für diesen Import verwendeter Präfix.
   id_prefix: "import-2026-10-szi-01"
@@ -60,12 +62,12 @@ Stammdaten existieren bereits und dürfen nicht verändert werden:
 
 ```sql
 areas(
-  id TEXT PRIMARY KEY,
+  id TEXT PRIMARY KEY NOT NULL,
   name TEXT NOT NULL CHECK (length(trim(name)) BETWEEN 1 AND 120),
   normalized_name TEXT NOT NULL UNIQUE CHECK (length(trim(normalized_name)) > 0)
 )
 programs(
-  id TEXT PRIMARY KEY,
+  id TEXT PRIMARY KEY NOT NULL,
   area_id TEXT NOT NULL REFERENCES areas(id),
   name TEXT NOT NULL CHECK (length(trim(name)) BETWEEN 1 AND 160),
   abbreviation TEXT NOT NULL COLLATE NOCASE UNIQUE CHECK (length(trim(abbreviation)) BETWEEN 1 AND 20),
@@ -73,11 +75,13 @@ programs(
 )
 ```
 
+Dasselbe gilt für `users`, die Tabelle der internen Konten. Aus ihr wird nur `id` gebraucht, und zwar als der eine Wert `ziel.updated_by_account_id`. Die Fremdschlüssel sind beim Einspielen aktiv, deshalb muss dieses Konto bereits bestehen.
+
 Folgende Tabellen dürfen befüllt werden:
 
 ```sql
 courses(
-  id TEXT PRIMARY KEY,
+  id TEXT PRIMARY KEY NOT NULL,
   program_id TEXT NOT NULL REFERENCES programs(id),
   code TEXT NOT NULL CHECK (length(trim(code)) BETWEEN 1 AND 32),
   normalized_code TEXT NOT NULL UNIQUE CHECK (length(trim(normalized_code)) > 0),
@@ -90,7 +94,7 @@ courses(
 )
 
 course_phases(
-  id TEXT PRIMARY KEY,
+  id TEXT PRIMARY KEY NOT NULL,
   course_id TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
   semester INTEGER NOT NULL CHECK (typeof(semester) = 'integer' AND semester BETWEEN 1 AND 7),
   phase_type TEXT NOT NULL CHECK (phase_type IN ('THEORY', 'PRACTICE')),
@@ -100,7 +104,7 @@ course_phases(
 )
 
 course_events(
-  id TEXT PRIMARY KEY,
+  id TEXT PRIMARY KEY NOT NULL,
   course_id TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
   title TEXT NOT NULL CHECK (length(trim(title)) >= 1 AND length(title) <= 160),
   description TEXT CHECK (description IS NULL OR (length(trim(description)) >= 1 AND length(description) <= 2000)),
@@ -125,11 +129,13 @@ Jede Kursphase und jeder Termin gehört genau einem Kurs. Es gibt keine Tabelle,
 - Ein Termin gehört genau einem Kurs. Nennt das PDF einen Termin für mehrere Kurse, lege ihn je betroffenem Kurs als eigene Zeile mit gleichen Angaben an; zwischen diesen Zeilen besteht danach keine Verbindung.
 - Jeder Termin muss vollständig innerhalb des Studienzeitraums seines Kurses liegen.
 - Ein Termin trägt kein eigenes Semester. Es wird aus der Kursphase abgeleitet, die sein Startdatum abdeckt.
+- `end_date` bleibt `NULL`, wenn der Termin genau einen Kalendertag umfasst; nur ein mehrtägiger Termin trägt ein Enddatum. Wiederhole niemals das Startdatum als Enddatum.
 - Ordne Kategorien zwingend wie folgt zu: Anmeldung → `REGISTRATION`, Abgabe → `SUBMISSION`, Präsentation/Kolloquium → `PRESENTATION`, Prüfung/Klausur → `EXAM`, sonstige prüfungsrelevante Termine → `OTHER`.
 - `provisional` ist `1` nur, wenn der Termin im PDF ausdrücklich als vorläufig markiert ist, andernfalls `0`.
 - Verwende keine erfundenen Daten, Termine, Beschreibungen, Kurse oder Kursphasen. Lass `description` als `NULL`, wenn keine sinnvolle Beschreibung vorliegt.
 - Setze `published_at` immer auf `NULL`.
 - Setze `updated_at` und `updated_by_account_id` bei jedem Kurs auf die Werte aus `ziel`.
+- Übernimm Kurskennung und Termintitel getrimmt und ohne die Zeilenumbrüche und Mehrfach-Leerzeichen, die die Textentnahme aus einem PDF mitbringt: Folgen von Leerraum werden zu genau einem Leerzeichen. Dasselbe gilt für eine Beschreibung, sofern sie einzeilig ist.
 - Setze `normalized_code` auf die getrimmte, kleingeschriebene Kurskennung. Sie ist systemweit eindeutig.
 - Vergib nachvollziehbare, eindeutige Text-IDs ausschließlich aus `ziel.id_prefix`, zum Beispiel `{{ID_PREFIX}}-course-tif26a`, `{{ID_PREFIX}}-phase-tif26a-01` und `{{ID_PREFIX}}-event-tif26a-01`.
 
