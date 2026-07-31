@@ -59,6 +59,7 @@ Themen später ohne Bruch an ihm andocken können.
 
 ```bash
 npm install
+cp env.example .env.local
 npm run dev    # http://localhost:3000
 npm run build
 npm run lint
