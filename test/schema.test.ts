@@ -84,6 +84,17 @@ describe("course planning schema", () => {
     }
   });
 
+  /* SQLite creates no index for a foreign key. These are the ones nothing else covers: the account tables are read by
+     user on every sign-in, password change and lock, and the cascading delete of an account or an area walks them. */
+  it("indexes the foreign keys of the account-owned tables", () => {
+    const sqlite = new Database(":memory:");
+    applySchema(sqlite);
+
+    for (const index of ["accounts_by_user", "sessions_by_user", "area_assignments_by_area"]) {
+      expect(hasSchemaObject(sqlite, "index", index)).toBe(true);
+    }
+  });
+
   it("restricts every stored boolean to zero or one", () => {
     const sqlite = databaseWithCourse();
 
