@@ -9,7 +9,7 @@ export function databaseWithMasterData() {
   applySchema(sqlite);
   sqlite.exec(`INSERT INTO areas VALUES ('area-1', 'Technik', 'technik'); INSERT INTO areas VALUES ('area-2', 'Wirtschaft', 'wirtschaft');
     INSERT INTO programs VALUES ('program-1', 'area-1', 'Informatik', 'TIF', 6); INSERT INTO programs VALUES ('program-2', 'area-2', 'BWL', 'WWI', 6);
-    INSERT INTO user VALUES ('seed', 'Seed', 'seed@test', 0, NULL, 'NONE', 1, 'ACTIVE', 0, 0);`);
+    INSERT INTO users VALUES ('seed', 'Seed', 'seed@test', 0, NULL, 'NONE', 1, 'ACTIVE', 0, 0);`);
   return sqlite;
 }
 

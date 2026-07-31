@@ -23,13 +23,13 @@ function createDatabase({ email = "admin@dhbw-loerrach.de", systemAdmin = 1, sta
   const databasePath = path.join(directory, "database.sqlite");
   const sqlite = new Database(databasePath);
   applySchema(sqlite);
-  sqlite.prepare("INSERT INTO user (id, name, email, email_verified, role, system_admin, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
+  sqlite.prepare("INSERT INTO users (id, name, email, email_verified, role, system_admin, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
     "admin-1", email, email, 0, "NONE", systemAdmin, status, 1000, 1000,
   );
-  sqlite.prepare("INSERT INTO account (id, account_id, provider_id, user_id, password, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)").run(
+  sqlite.prepare("INSERT INTO accounts (id, account_id, provider_id, user_id, password, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)").run(
     "account-1", "admin-1", "credential", "admin-1", "scrypt-hash", 1000, 1000,
   );
-  sqlite.prepare("INSERT INTO session (id, token, user_id, expires_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)").run(
+  sqlite.prepare("INSERT INTO sessions (id, token, user_id, expires_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)").run(
     "session-1", "token-1", "admin-1", Date.now() + 1000, 1000, 1000,
   );
   sqlite.close();
@@ -62,9 +62,9 @@ describe("resetSystemAdminPassword", () => {
 
     const token = new URL(passwordLink).hash.slice(1);
     const sqlite = new Database(databasePath, { readonly: true });
-    expect(sqlite.prepare("SELECT status, system_admin AS systemAdmin FROM user WHERE id = 'admin-1'").get()).toEqual({ status: "PASSWORD_PENDING", systemAdmin: 1 });
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM account WHERE user_id = 'admin-1'").get()).toEqual({ count: 0 });
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM session WHERE user_id = 'admin-1'").get()).toEqual({ count: 0 });
+    expect(sqlite.prepare("SELECT status, system_admin AS systemAdmin FROM users WHERE id = 'admin-1'").get()).toEqual({ status: "PASSWORD_PENDING", systemAdmin: 1 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM accounts WHERE user_id = 'admin-1'").get()).toEqual({ count: 0 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM sessions WHERE user_id = 'admin-1'").get()).toEqual({ count: 0 });
     expect(sqlite.prepare("SELECT token_hash AS tokenHash FROM password_links WHERE user_id = 'admin-1'").get()).toEqual({
       tokenHash: createHash("sha256").update(token).digest("hex"),
     });
@@ -103,9 +103,9 @@ describe("resetSystemAdminPassword", () => {
     expect(() => resetSystemAdminPassword({ ...validInput, databasePath, email: "admin@dhbw-loerrach.de" })).toThrow();
 
     const sqlite = new Database(databasePath, { readonly: true });
-    expect(sqlite.prepare("SELECT status FROM user WHERE id = 'admin-1'").get()).toEqual({ status: "ACTIVE" });
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM account WHERE user_id = 'admin-1'").get()).toEqual({ count: 1 });
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM session WHERE user_id = 'admin-1'").get()).toEqual({ count: 1 });
+    expect(sqlite.prepare("SELECT status FROM users WHERE id = 'admin-1'").get()).toEqual({ status: "ACTIVE" });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM accounts WHERE user_id = 'admin-1'").get()).toEqual({ count: 1 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM sessions WHERE user_id = 'admin-1'").get()).toEqual({ count: 1 });
     sqlite.close();
   });
 

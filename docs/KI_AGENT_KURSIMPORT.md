@@ -85,7 +85,7 @@ courses(
   study_end TEXT NOT NULL CHECK (date(study_end) IS NOT NULL AND date(study_end) = study_end),
   published_at TEXT,
   updated_at TEXT NOT NULL,
-  updated_by_account_id TEXT NOT NULL REFERENCES user(id),
+  updated_by_account_id TEXT NOT NULL REFERENCES users(id),
   CHECK (study_start < study_end)
 )
 

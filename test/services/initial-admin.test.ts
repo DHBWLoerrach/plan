@@ -65,7 +65,7 @@ describe("bootstrapInitialSystemAdmin", () => {
     const token = new URL(passwordLink).hash.slice(1);
     const sqlite = new Database(databasePath, { readonly: true });
     expect(`${passwordLink}\n`).toMatch(productionPasswordLinkPattern);
-    expect(sqlite.prepare("SELECT email, name, role, system_admin AS systemAdmin, status FROM user").all()).toEqual([
+    expect(sqlite.prepare("SELECT email, name, role, system_admin AS systemAdmin, status FROM users").all()).toEqual([
       {
         email: "admin@dhbw-loerrach.de",
         name: "admin@dhbw-loerrach.de",
@@ -83,7 +83,7 @@ describe("bootstrapInitialSystemAdmin", () => {
   it("rejects a second bootstrap attempt without changing the existing account", () => {
     const databasePath = createDatabase();
     const sqlite = new Database(databasePath);
-    sqlite.prepare("INSERT INTO user (id, name, email, email_verified, role, system_admin, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
+    sqlite.prepare("INSERT INTO users (id, name, email, email_verified, role, system_admin, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
       "existing-user", "existing@example.test", "existing@example.test", 0, "NONE", 1, "PASSWORD_PENDING", Date.now(), Date.now(),
     );
     sqlite.close();
@@ -96,7 +96,7 @@ describe("bootstrapInitialSystemAdmin", () => {
     })).toThrow("Es existiert bereits ein internes Konto");
 
     const verificationDatabase = new Database(databasePath, { readonly: true });
-    expect(verificationDatabase.prepare("SELECT COUNT(*) AS count FROM user").get()).toEqual({ count: 1 });
+    expect(verificationDatabase.prepare("SELECT COUNT(*) AS count FROM users").get()).toEqual({ count: 1 });
     verificationDatabase.close();
   });
 
@@ -121,7 +121,7 @@ describe("bootstrapInitialSystemAdmin", () => {
     const databasePath = createDatabase();
     const sqlite = new Database(databasePath);
     sqlite.pragma("foreign_keys = OFF");
-    sqlite.prepare("INSERT INTO account (id, account_id, provider_id, user_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)").run(
+    sqlite.prepare("INSERT INTO accounts (id, account_id, provider_id, user_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)").run(
       "orphan-account", "orphan-account", "credential", "missing-user", Date.now(), Date.now(),
     );
     sqlite.close();

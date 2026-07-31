@@ -24,7 +24,7 @@ export function createInternalAccount(sqlite: Database.Database, input: CreateIn
     assertAreasExist(sqlite, areaIds);
     const userId = randomUUID();
     sqlite.prepare(`
-      INSERT INTO user (id, name, email, email_verified, role, system_admin, status, created_at, updated_at)
+      INSERT INTO users (id, name, email, email_verified, role, system_admin, status, created_at, updated_at)
       VALUES (?, ?, ?, 0, ?, ?, 'PASSWORD_PENDING', ?, ?)
     `).run(userId, email, email, input.role, input.systemAdmin ? 1 : 0, now.getTime(), now.getTime());
     assignAreas(sqlite, userId, areaIds);
@@ -38,7 +38,7 @@ export function updateAccountEmail(sqlite: Database.Database, input: { userId: s
   sqlite.transaction(() => {
     requireUser(sqlite, input.userId);
     assertEmailAvailable(sqlite, email, input.userId);
-    sqlite.prepare("UPDATE user SET email = ?, name = ?, updated_at = ? WHERE id = ?").run(email, email, now.getTime(), input.userId);
+    sqlite.prepare("UPDATE users SET email = ?, name = ?, updated_at = ? WHERE id = ?").run(email, email, now.getTime(), input.userId);
   })();
 }
 
@@ -52,7 +52,7 @@ export function updateAccountPermissions(sqlite: Database.Database, input: { use
     if (removesSystemAdmin && user.status === "ACTIVE" && activeSystemAdminCount(sqlite) <= 1) {
       throw new Error(lastActiveSystemAdminMessage);
     }
-    sqlite.prepare("UPDATE user SET role = ?, system_admin = ?, updated_at = ? WHERE id = ?").run(input.role, input.systemAdmin ? 1 : 0, now.getTime(), input.userId);
+    sqlite.prepare("UPDATE users SET role = ?, system_admin = ?, updated_at = ? WHERE id = ?").run(input.role, input.systemAdmin ? 1 : 0, now.getTime(), input.userId);
     sqlite.prepare("DELETE FROM area_assignments WHERE user_id = ?").run(input.userId);
     assignAreas(sqlite, input.userId, areaIds);
   })();
@@ -85,7 +85,7 @@ export function unlockInternalAccount(sqlite: Database.Database, userId: string,
 type UserRow = { id: string; systemAdmin: number; status: string };
 
 function requireUser(sqlite: Database.Database, userId: string): UserRow {
-  const user = sqlite.prepare("SELECT id, system_admin AS systemAdmin, status FROM user WHERE id = ?").get(userId) as UserRow | undefined;
+  const user = sqlite.prepare("SELECT id, system_admin AS systemAdmin, status FROM users WHERE id = ?").get(userId) as UserRow | undefined;
   if (!user) throw new Error(notFoundMessage);
   return user;
 }
@@ -97,7 +97,7 @@ function assertNotLastActiveSystemAdmin(sqlite: Database.Database, user: UserRow
 }
 
 function activeSystemAdminCount(sqlite: Database.Database): number {
-  return (sqlite.prepare("SELECT COUNT(*) AS count FROM user WHERE system_admin = 1 AND status = 'ACTIVE'").get() as { count: number }).count;
+  return (sqlite.prepare("SELECT COUNT(*) AS count FROM users WHERE system_admin = 1 AND status = 'ACTIVE'").get() as { count: number }).count;
 }
 
 function validatePermissions(input: Permissions): string[] {
@@ -126,6 +126,6 @@ function assertAreasExist(sqlite: Database.Database, areaIds: string[]): void {
 }
 
 function assertEmailAvailable(sqlite: Database.Database, email: string, exceptUserId: string | null): void {
-  const existing = sqlite.prepare("SELECT id FROM user WHERE email = ?").get(email) as { id: string } | undefined;
+  const existing = sqlite.prepare("SELECT id FROM users WHERE email = ?").get(email) as { id: string } | undefined;
   if (existing && existing.id !== exceptUserId) throw new Error("Diese E-Mail-Adresse ist bereits vergeben.");
 }

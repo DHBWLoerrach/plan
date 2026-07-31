@@ -44,7 +44,7 @@ describe("Better Auth storage", () => {
     const password = "ein-sicheres-passwort";
     const now = Date.now();
     const userId = "auth-storage-user";
-    sqlite.prepare(`INSERT INTO user
+    sqlite.prepare(`INSERT INTO users
       (id, name, email, email_verified, role, system_admin, status, created_at, updated_at)
       VALUES (?, ?, ?, 0, 'NONE', 1, 'ACTIVE', ?, ?)`).run(
       userId,
@@ -53,7 +53,7 @@ describe("Better Auth storage", () => {
       now,
       now,
     );
-    sqlite.prepare(`INSERT INTO account
+    sqlite.prepare(`INSERT INTO accounts
       (id, account_id, provider_id, user_id, password, created_at, updated_at)
       VALUES (?, ?, 'credential', ?, ?, ?, ?)`).run(
       "auth-storage-account",
@@ -82,9 +82,9 @@ describe("Better Auth storage", () => {
       typeof(session.expires_at) AS sessionExpiresAt,
       typeof(session.created_at) AS sessionCreatedAt,
       typeof(session.updated_at) AS sessionUpdatedAt
-      FROM user
-      JOIN account ON account.user_id = user.id
-      JOIN session ON session.user_id = user.id
+      FROM users user
+      JOIN accounts account ON account.user_id = user.id
+      JOIN sessions session ON session.user_id = user.id
       WHERE user.id = ?`).get(userId)).toEqual({
       userCreatedAt: "integer",
       userUpdatedAt: "integer",

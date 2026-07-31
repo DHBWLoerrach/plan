@@ -35,7 +35,7 @@ export function listAccounts(sqlite: Database.Database, account: AccountScope, s
   return sqlite.prepare(`SELECT user.id, user.email, user.role, user.system_admin AS systemAdmin, user.status,
       (SELECT GROUP_CONCAT(area.name, ', ') FROM area_assignments assignment
         JOIN areas area ON area.id = assignment.area_id WHERE assignment.user_id = user.id) AS areas
-    FROM user WHERE (? IS NULL OR user.status = ?)
+    FROM users user WHERE (? IS NULL OR user.status = ?)
     ORDER BY user.email COLLATE NOCASE`).all(status ?? null, status ?? null) as AccountListRow[];
 }
 
@@ -48,7 +48,7 @@ export function accountAreaOptions(sqlite: Database.Database, account: AccountSc
 /** Account and permission data required by the administration form. */
 export function findManagedAccount(sqlite: Database.Database, account: AccountScope, userId: string): ManagedAccountDetails | undefined {
   requireSystemAdmin(account);
-  const managedAccount = sqlite.prepare("SELECT id, email, role, system_admin AS systemAdmin, status FROM user WHERE id = ?")
+  const managedAccount = sqlite.prepare("SELECT id, email, role, system_admin AS systemAdmin, status FROM users WHERE id = ?")
     .get(userId) as ManagedAccount | undefined;
   if (!managedAccount) return undefined;
   const areaIds = (sqlite.prepare("SELECT area_id AS areaId FROM area_assignments WHERE user_id = ?")

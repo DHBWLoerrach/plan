@@ -17,7 +17,7 @@ function createDatabase() {
   const addProgram = sqlite.prepare("INSERT INTO programs (id, area_id, name, abbreviation, semesters) VALUES (?, ?, ?, ?, ?)");
   addProgram.run("prog-tif", "area-technik", "Informatik", "TIF", 6);
   addProgram.run("prog-wwi", "area-wirtschaft", "Wirtschaftsinformatik", "WWI", 6);
-  sqlite.prepare("INSERT INTO user VALUES ('seed', 'Seed', 'seed@test', 0, NULL, 'NONE', 1, 'ACTIVE', 0, 0)").run();
+  sqlite.prepare("INSERT INTO users VALUES ('seed', 'Seed', 'seed@test', 0, NULL, 'NONE', 1, 'ACTIVE', 0, 0)").run();
   const addCourse = sqlite.prepare("INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, published_at, updated_at, updated_by_account_id) VALUES (?, ?, ?, ?, ?, ?, NULL, '2026-01-01T00:00:00.000Z', 'seed')");
   addCourse.run("course-tif", "prog-tif", "TIF26A", "tif26a", "2026-10-01", "2029-09-30");
   addCourse.run("course-wwi", "prog-wwi", "WWI26A", "wwi26a", "2026-10-01", "2029-09-30");
@@ -25,7 +25,7 @@ function createDatabase() {
 }
 
 function insertAccount(sqlite: Database.Database, id: string, account: { role: string; systemAdmin: number; status: string; areaIds?: string[] }) {
-  sqlite.prepare(`INSERT INTO user (id, name, email, email_verified, role, system_admin, status, created_at, updated_at)
+  sqlite.prepare(`INSERT INTO users (id, name, email, email_verified, role, system_admin, status, created_at, updated_at)
     VALUES (?, ?, ?, 0, ?, ?, ?, ?, ?)`).run(id, id, `${id}@example.test`, account.role, account.systemAdmin, account.status, Date.now(), Date.now());
   for (const areaId of account.areaIds ?? []) sqlite.prepare("INSERT INTO area_assignments (user_id, area_id) VALUES (?, ?)").run(id, areaId);
 }

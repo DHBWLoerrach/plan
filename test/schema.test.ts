@@ -16,7 +16,7 @@ function databaseWithCourse() {
   const sqlite = new Database(":memory:");
   applySchema(sqlite);
   sqlite.exec(`
-    INSERT INTO user (id, name, email, email_verified, role, system_admin, status, created_at, updated_at)
+    INSERT INTO users (id, name, email, email_verified, role, system_admin, status, created_at, updated_at)
       VALUES ('editor', 'Editor', 'editor@test.invalid', 0, 'AREA_EDITOR', 0, 'ACTIVE', 0, 0);
     INSERT INTO areas VALUES ('area', 'Technik', 'technik');
     INSERT INTO programs VALUES ('program', 'area', 'Informatik', 'TIF', 6);
@@ -64,7 +64,7 @@ describe("course planning schema", () => {
     const sqlite = new Database(":memory:");
     applySchema(sqlite);
 
-    for (const table of ["user", "account", "session", "verification", "areas", "programs", "area_assignments", "password_links", "courses", "course_phases", "course_events"]) {
+    for (const table of ["users", "accounts", "sessions", "verifications", "areas", "programs", "area_assignments", "password_links", "courses", "course_phases", "course_events"]) {
       expect(columnNames(sqlite, table).every((name) => /^[a-z][a-z0-9_]*$/u.test(name))).toBe(true);
     }
   });
@@ -87,8 +87,8 @@ describe("course planning schema", () => {
   it("restricts every stored boolean to zero or one", () => {
     const sqlite = databaseWithCourse();
 
-    expectCheckFailure(() => sqlite.prepare("UPDATE user SET email_verified = 2 WHERE id = 'editor'").run());
-    expectCheckFailure(() => sqlite.prepare("UPDATE user SET system_admin = -1 WHERE id = 'editor'").run());
+    expectCheckFailure(() => sqlite.prepare("UPDATE users SET email_verified = 2 WHERE id = 'editor'").run());
+    expectCheckFailure(() => sqlite.prepare("UPDATE users SET system_admin = -1 WHERE id = 'editor'").run());
     expectCheckFailure(() => sqlite.prepare(`INSERT INTO course_events
       (id, course_id, title, description, category, start_date, end_date, provisional)
       VALUES ('event', 'course', 'Prüfung', NULL, 'EXAM', '2027-01-01', NULL, 2)`).run());
@@ -121,8 +121,8 @@ describe("course planning schema", () => {
   it("enforces required domain texts and their documented maximum lengths", () => {
     const sqlite = databaseWithCourse();
 
-    expectCheckFailure(() => sqlite.prepare("UPDATE user SET email = ? WHERE id = 'editor'").run(" "));
-    expectCheckFailure(() => sqlite.prepare("UPDATE user SET email = ? WHERE id = 'editor'").run(`${"a".repeat(243)}@example.invalid`));
+    expectCheckFailure(() => sqlite.prepare("UPDATE users SET email = ? WHERE id = 'editor'").run(" "));
+    expectCheckFailure(() => sqlite.prepare("UPDATE users SET email = ? WHERE id = 'editor'").run(`${"a".repeat(243)}@example.invalid`));
     expectCheckFailure(() => sqlite.prepare("UPDATE areas SET name = ? WHERE id = 'area'").run(" "));
     expectCheckFailure(() => sqlite.prepare("UPDATE areas SET name = ? WHERE id = 'area'").run("a".repeat(121)));
     expectCheckFailure(() => sqlite.prepare("UPDATE areas SET normalized_name = ' ' WHERE id = 'area'").run());
@@ -145,11 +145,11 @@ describe("course planning schema", () => {
 
   it("keeps login addresses, program abbreviations and password-link hashes unambiguous", () => {
     const sqlite = databaseWithCourse();
-    sqlite.prepare(`INSERT INTO user
+    sqlite.prepare(`INSERT INTO users
       (id, name, email, email_verified, role, system_admin, status, created_at, updated_at)
       VALUES ('other', 'Other', 'other@test.invalid', 0, 'NONE', 1, 'ACTIVE', 0, 0)`).run();
 
-    expectUniqueFailure(() => sqlite.prepare(`INSERT INTO user
+    expectUniqueFailure(() => sqlite.prepare(`INSERT INTO users
       (id, name, email, email_verified, role, system_admin, status, created_at, updated_at)
       VALUES ('same-email', 'Same', 'EDITOR@test.invalid', 0, 'NONE', 1, 'ACTIVE', 0, 0)`).run());
     expectUniqueFailure(() => sqlite.prepare(`INSERT INTO programs

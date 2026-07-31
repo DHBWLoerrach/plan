@@ -1,6 +1,6 @@
 PRAGMA foreign_keys = ON;
 
-CREATE TABLE IF NOT EXISTS user (
+CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY NOT NULL,
   name TEXT NOT NULL,
   email TEXT NOT NULL COLLATE NOCASE UNIQUE CHECK (length(trim(email)) BETWEEN 1 AND 254),
@@ -12,11 +12,11 @@ CREATE TABLE IF NOT EXISTS user (
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
-CREATE TABLE IF NOT EXISTS account (
+CREATE TABLE IF NOT EXISTS accounts (
   id TEXT PRIMARY KEY NOT NULL,
   account_id TEXT NOT NULL,
   provider_id TEXT NOT NULL,
-  user_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   access_token TEXT,
   refresh_token TEXT,
   id_token TEXT,
@@ -28,17 +28,17 @@ CREATE TABLE IF NOT EXISTS account (
   updated_at INTEGER NOT NULL,
   UNIQUE(provider_id, account_id)
 );
-CREATE TABLE IF NOT EXISTS session (
+CREATE TABLE IF NOT EXISTS sessions (
   id TEXT PRIMARY KEY NOT NULL,
   token TEXT NOT NULL UNIQUE,
-  user_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   expires_at INTEGER NOT NULL,
   ip_address TEXT,
   user_agent TEXT,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
-CREATE TABLE IF NOT EXISTS verification (
+CREATE TABLE IF NOT EXISTS verifications (
   id TEXT PRIMARY KEY NOT NULL,
   identifier TEXT NOT NULL,
   value TEXT NOT NULL,
@@ -59,13 +59,13 @@ CREATE TABLE IF NOT EXISTS programs (
   semesters INTEGER NOT NULL CHECK (semesters IN (6, 7))
 );
 CREATE TABLE IF NOT EXISTS area_assignments (
-  user_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   area_id TEXT NOT NULL REFERENCES areas(id) ON DELETE CASCADE,
   PRIMARY KEY(user_id, area_id)
 );
 CREATE TABLE IF NOT EXISTS password_links (
   id TEXT PRIMARY KEY NOT NULL,
-  user_id TEXT NOT NULL UNIQUE REFERENCES user(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
   token_hash TEXT NOT NULL UNIQUE,
   expires_at TEXT NOT NULL,
   created_at TEXT NOT NULL
@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS courses (
   study_end TEXT NOT NULL CHECK (date(study_end) IS NOT NULL AND date(study_end) = study_end),
   published_at TEXT,
   updated_at TEXT NOT NULL,
-  updated_by_account_id TEXT NOT NULL REFERENCES user(id),
+  updated_by_account_id TEXT NOT NULL REFERENCES users(id),
   CHECK (study_start < study_end)
 );
 CREATE TABLE IF NOT EXISTS course_phases (

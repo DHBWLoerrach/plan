@@ -20,7 +20,7 @@ export function managesAnyArea(account: ActiveAccount): boolean {
 export const getActiveAccount = cache(async (): Promise<ActiveAccount | null> => {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return null;
-  const account = sqlite.prepare("SELECT id, email, role, system_admin AS systemAdmin, status FROM user WHERE id = ?").get(session.user.id) as
+  const account = sqlite.prepare("SELECT id, email, role, system_admin AS systemAdmin, status FROM users WHERE id = ?").get(session.user.id) as
     | { id: string; email: string; role: "NONE" | "AREA_EDITOR"; systemAdmin: number; status: string }
     | undefined;
   if (!account || account.status !== "ACTIVE") return null;

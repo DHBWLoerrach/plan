@@ -14,7 +14,7 @@ function database() {
   sqlite.exec(`
     INSERT INTO areas VALUES ('area', 'Technik', 'technik');
     INSERT INTO programs VALUES ('program', 'area', 'Informatik', 'TIF', 6);
-    INSERT INTO user VALUES ('editor', 'Editor', 'editor@test', 0, NULL, 'AREA_EDITOR', 0, 'ACTIVE', 0, 0);
+    INSERT INTO users VALUES ('editor', 'Editor', 'editor@test', 0, NULL, 'AREA_EDITOR', 0, 'ACTIVE', 0, 0);
     INSERT INTO area_assignments VALUES ('editor', 'area');
     INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, published_at, updated_at, updated_by_account_id) VALUES
       ('course', 'program', 'TIF26A', 'tif26a', '2026-10-01', '2029-09-30', NULL, '2026-01-01T00:00:00.000Z', 'editor');`);

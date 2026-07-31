@@ -9,7 +9,7 @@ const databases: Database.Database[] = [];
 function database() {
   const sqlite = new Database(":memory:"); databases.push(sqlite); applySchema(sqlite);
   sqlite.exec(`INSERT INTO areas VALUES ('area', 'Technik', 'technik'); INSERT INTO programs VALUES ('program-6', 'area', 'Informatik', 'TIF', 6); INSERT INTO programs VALUES ('program-7', 'area', 'Informatik sieben', 'TIF7', 7);
-    INSERT INTO user VALUES ('admin', 'admin', 'admin@test', 0, NULL, 'NONE', 1, 'ACTIVE', 0, 0);`);
+    INSERT INTO users VALUES ('admin', 'admin', 'admin@test', 0, NULL, 'NONE', 1, 'ACTIVE', 0, 0);`);
   return sqlite;
 }
 afterEach(() => { for (const sqlite of databases.splice(0)) sqlite.close(); });

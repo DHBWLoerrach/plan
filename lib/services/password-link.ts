@@ -35,17 +35,17 @@ export async function redeemPasswordLink(sqlite: Database.Database, input: Redee
     const currentLink = findPasswordLink(sqlite, tokenHash);
     if (!currentLink || !isUsableLink(sqlite, currentLink, transactionNow)) throw new Error(invalidPasswordLinkMessage);
 
-    const account = sqlite.prepare("SELECT id FROM account WHERE user_id = ? AND provider_id = 'credential'").get(currentLink.userId) as { id: string } | undefined;
+    const account = sqlite.prepare("SELECT id FROM accounts WHERE user_id = ? AND provider_id = 'credential'").get(currentLink.userId) as { id: string } | undefined;
     if (account) {
-      sqlite.prepare("UPDATE account SET password = ?, updated_at = ? WHERE id = ?").run(passwordHash, transactionNow.getTime(), account.id);
+      sqlite.prepare("UPDATE accounts SET password = ?, updated_at = ? WHERE id = ?").run(passwordHash, transactionNow.getTime(), account.id);
     } else {
       sqlite.prepare(`
-        INSERT INTO account (id, account_id, provider_id, user_id, password, created_at, updated_at)
+        INSERT INTO accounts (id, account_id, provider_id, user_id, password, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?)
       `).run(randomUUID(), currentLink.userId, "credential", currentLink.userId, passwordHash, transactionNow.getTime(), transactionNow.getTime());
     }
-    sqlite.prepare("DELETE FROM session WHERE user_id = ?").run(currentLink.userId);
-    sqlite.prepare("UPDATE user SET status = 'ACTIVE', updated_at = ? WHERE id = ?").run(transactionNow.getTime(), currentLink.userId);
+    sqlite.prepare("DELETE FROM sessions WHERE user_id = ?").run(currentLink.userId);
+    sqlite.prepare("UPDATE users SET status = 'ACTIVE', updated_at = ? WHERE id = ?").run(transactionNow.getTime(), currentLink.userId);
     sqlite.prepare("DELETE FROM password_links WHERE user_id = ?").run(currentLink.userId);
   })();
 }
@@ -67,8 +67,8 @@ export async function changeAccountPassword(sqlite: Database.Database, input: {
   sqlite.transaction(() => {
     const currentAccount = findCredentialAccount(sqlite, input.userId);
     if (!currentAccount) throw new FieldError("currentPassword", "Das bisherige Passwort ist nicht korrekt.");
-    sqlite.prepare("UPDATE account SET password = ?, updated_at = ? WHERE id = ?").run(passwordHash, Date.now(), currentAccount.id);
-    sqlite.prepare("DELETE FROM session WHERE user_id = ? AND id <> ?").run(input.userId, input.currentSessionId);
+    sqlite.prepare("UPDATE accounts SET password = ?, updated_at = ? WHERE id = ?").run(passwordHash, Date.now(), currentAccount.id);
+    sqlite.prepare("DELETE FROM sessions WHERE user_id = ? AND id <> ?").run(input.userId, input.currentSessionId);
   })();
 }
 
@@ -88,10 +88,10 @@ export function lockAccount(sqlite: Database.Database, userId: string, now = new
   sqlite.transaction(() => {
     const user = findUser(sqlite, userId);
     if (!user || user.status === "LOCKED") throw new Error("Das interne Konto kann nicht gesperrt werden.");
-    sqlite.prepare("DELETE FROM account WHERE user_id = ? AND provider_id = 'credential'").run(userId);
-    sqlite.prepare("DELETE FROM session WHERE user_id = ?").run(userId);
+    sqlite.prepare("DELETE FROM accounts WHERE user_id = ? AND provider_id = 'credential'").run(userId);
+    sqlite.prepare("DELETE FROM sessions WHERE user_id = ?").run(userId);
     sqlite.prepare("DELETE FROM password_links WHERE user_id = ?").run(userId);
-    sqlite.prepare("UPDATE user SET status = 'LOCKED', updated_at = ? WHERE id = ?").run(now.getTime(), userId);
+    sqlite.prepare("UPDATE users SET status = 'LOCKED', updated_at = ? WHERE id = ?").run(now.getTime(), userId);
   })();
 }
 
@@ -113,19 +113,19 @@ function transitionToPasswordPending(sqlite: Database.Database, userId: string, 
   return sqlite.transaction(() => {
     const user = findUser(sqlite, userId);
     if (!user || !allowedStatuses.includes(user.status as AccountStatus)) throw new Error("Das interne Konto kann keinen Passwortlink erhalten.");
-    sqlite.prepare("DELETE FROM account WHERE user_id = ? AND provider_id = 'credential'").run(userId);
-    sqlite.prepare("DELETE FROM session WHERE user_id = ?").run(userId);
-    sqlite.prepare("UPDATE user SET status = 'PASSWORD_PENDING', updated_at = ? WHERE id = ?").run(now.getTime(), userId);
+    sqlite.prepare("DELETE FROM accounts WHERE user_id = ? AND provider_id = 'credential'").run(userId);
+    sqlite.prepare("DELETE FROM sessions WHERE user_id = ?").run(userId);
+    sqlite.prepare("UPDATE users SET status = 'PASSWORD_PENDING', updated_at = ? WHERE id = ?").run(now.getTime(), userId);
     return issuePasswordLinkToken(sqlite, userId, now);
   })();
 }
 
 function findUser(sqlite: Database.Database, userId: string) {
-  return sqlite.prepare("SELECT status FROM user WHERE id = ?").get(userId) as { status: string } | undefined;
+  return sqlite.prepare("SELECT status FROM users WHERE id = ?").get(userId) as { status: string } | undefined;
 }
 
 function findCredentialAccount(sqlite: Database.Database, userId: string) {
-  return sqlite.prepare("SELECT id, password FROM account WHERE user_id = ? AND provider_id = 'credential'").get(userId) as { id: string; password: string | null } | undefined;
+  return sqlite.prepare("SELECT id, password FROM accounts WHERE user_id = ? AND provider_id = 'credential'").get(userId) as { id: string; password: string | null } | undefined;
 }
 
 function isUsableLink(sqlite: Database.Database, link: PasswordLink, now: Date) {

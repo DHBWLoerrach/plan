@@ -27,7 +27,7 @@ function createRunningDatabase(directory: string, email = "admin@dhbw-loerrach.d
   applySchema(sqlite);
   const record = sqlite.prepare("INSERT INTO _migrations (id, applied_at) VALUES (?, ?)");
   for (const migrationId of migrationIds()) record.run(migrationId, new Date().toISOString());
-  sqlite.prepare("INSERT INTO user (id, name, email, created_at, updated_at) VALUES (?, ?, ?, ?, ?)").run("account-1", email, email, 1, 1);
+  sqlite.prepare("INSERT INTO users (id, name, email, created_at, updated_at) VALUES (?, ?, ?, ?, ?)").run("account-1", email, email, 1, 1);
   return { databasePath, sqlite };
 }
 
@@ -61,7 +61,7 @@ describe("backupDatabase", () => {
     await backupDatabase({ databasePath, targetPath: snapshotPath });
 
     const snapshot = new Database(snapshotPath, { readonly: true });
-    expect(snapshot.prepare("SELECT email FROM user").pluck().all()).toEqual(["admin@dhbw-loerrach.de"]);
+    expect(snapshot.prepare("SELECT email FROM users").pluck().all()).toEqual(["admin@dhbw-loerrach.de"]);
     snapshot.close();
   });
 
@@ -149,16 +149,16 @@ describe("restoreDatabase", () => {
     const { databasePath, sqlite } = createRunningDatabase(directory, "vorher@dhbw-loerrach.de");
     const snapshotPath = path.join(directory, "snapshot.sqlite");
     await backupDatabase({ databasePath, targetPath: snapshotPath });
-    sqlite.prepare("UPDATE user SET email = ? WHERE id = ?").run("nachher@dhbw-loerrach.de", "account-1");
+    sqlite.prepare("UPDATE users SET email = ? WHERE id = ?").run("nachher@dhbw-loerrach.de", "account-1");
     sqlite.close();
 
     const report = restoreDatabase({ snapshotPath, databasePath, migrationsDirectory: path.join(process.cwd(), "migrations") });
 
     const restored = new Database(databasePath, { readonly: true });
-    expect(restored.prepare("SELECT email FROM user").pluck().all()).toEqual(["vorher@dhbw-loerrach.de"]);
+    expect(restored.prepare("SELECT email FROM users").pluck().all()).toEqual(["vorher@dhbw-loerrach.de"]);
     restored.close();
     const replaced = openReplacedDatabase(report.replacedPath);
-    expect(replaced.prepare("SELECT email FROM user").pluck().all()).toEqual(["nachher@dhbw-loerrach.de"]);
+    expect(replaced.prepare("SELECT email FROM users").pluck().all()).toEqual(["nachher@dhbw-loerrach.de"]);
     replaced.close();
   });
 
@@ -194,7 +194,7 @@ describe("restoreDatabase", () => {
     expect(() => restoreDatabase({ snapshotPath, databasePath, migrationsDirectory: path.join(process.cwd(), "migrations") })).toThrow();
 
     const untouched = new Database(databasePath, { readonly: true });
-    expect(untouched.prepare("SELECT email FROM user").pluck().all()).toEqual(["vorher@dhbw-loerrach.de"]);
+    expect(untouched.prepare("SELECT email FROM users").pluck().all()).toEqual(["vorher@dhbw-loerrach.de"]);
     untouched.close();
     expect(readFileSync(`${databasePath}-wal`, "utf8")).toBe("Journalinhalt");
     expect(existsSync(replacedPath)).toBe(false);
@@ -221,12 +221,12 @@ describe("restoreDatabase", () => {
     await backupDatabase({ databasePath, targetPath: snapshotPath });
     // The connection stays open, so this write lives in the write-ahead log and not yet in the
     // database file itself — exactly the state a running application is replaced in.
-    sqlite.prepare("UPDATE user SET email = ? WHERE id = ?").run("nachher@dhbw-loerrach.de", "account-1");
+    sqlite.prepare("UPDATE users SET email = ? WHERE id = ?").run("nachher@dhbw-loerrach.de", "account-1");
 
     const report = restoreDatabase({ snapshotPath, databasePath, migrationsDirectory: path.join(process.cwd(), "migrations") });
 
     const replaced = openReplacedDatabase(report.replacedPath);
-    expect(replaced.prepare("SELECT email FROM user").pluck().all()).toEqual(["nachher@dhbw-loerrach.de"]);
+    expect(replaced.prepare("SELECT email FROM users").pluck().all()).toEqual(["nachher@dhbw-loerrach.de"]);
     replaced.close();
     sqlite.close();
   });
@@ -259,7 +259,7 @@ describe("restoreDatabase", () => {
       .toThrow(/Fremdschlüssel/u);
 
     const untouched = new Database(databasePath, { readonly: true });
-    expect(untouched.prepare("SELECT email FROM user").pluck().all()).toEqual(["vorher@dhbw-loerrach.de"]);
+    expect(untouched.prepare("SELECT email FROM users").pluck().all()).toEqual(["vorher@dhbw-loerrach.de"]);
     untouched.close();
   });
 });
@@ -309,7 +309,7 @@ describe("operational commands", () => {
 
     expect(output).toContain(migrationIds()[0]);
     const restored = new Database(databasePath, { readonly: true });
-    expect(restored.prepare("SELECT email FROM user").pluck().all()).toEqual(["vorher@dhbw-loerrach.de"]);
+    expect(restored.prepare("SELECT email FROM users").pluck().all()).toEqual(["vorher@dhbw-loerrach.de"]);
     restored.close();
   });
 

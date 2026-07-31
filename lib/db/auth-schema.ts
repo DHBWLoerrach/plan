@@ -1,7 +1,7 @@
 import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 // Keep the Drizzle adapter and all auth date columns in timestamp_ms mode: direct application SQL writes epoch milliseconds, while Better Auth's raw SQLite/Kysely adapter would store ISO date strings in the same columns.
-const user = sqliteTable("user", {
+const user = sqliteTable("users", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
@@ -14,7 +14,7 @@ const user = sqliteTable("user", {
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
 });
 
-const account = sqliteTable("account", {
+const account = sqliteTable("accounts", {
   id: text("id").primaryKey(),
   accountId: text("account_id").notNull(),
   providerId: text("provider_id").notNull(),
@@ -27,14 +27,14 @@ const account = sqliteTable("account", {
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
 }, (table) => [uniqueIndex("account_provider_account_unique").on(table.providerId, table.accountId)]);
 
-const session = sqliteTable("session", {
+const session = sqliteTable("sessions", {
   id: text("id").primaryKey(), token: text("token").notNull().unique(),
   userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
   expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(), ipAddress: text("ip_address"), userAgent: text("user_agent"),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(), updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
 });
 
-const verification = sqliteTable("verification", {
+const verification = sqliteTable("verifications", {
   id: text("id").primaryKey(), identifier: text("identifier").notNull(), value: text("value").notNull(),
   expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(), createdAt: integer("created_at", { mode: "timestamp_ms" }), updatedAt: integer("updated_at", { mode: "timestamp_ms" }),
 });
