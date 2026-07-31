@@ -32,6 +32,15 @@ export function normalizeCalendarDayField<TField extends string>(value: string, 
   }
 }
 
+/**
+ * The reference day every view reckons „today“ from: the current calendar day in Europe/Berlin, determined on the
+ * server and independent of the server or browser time zone (MVP-SPEZIFIKATION.md). The public search groups its
+ * results by it, the internal overview reads where a course stands from it.
+ */
+export function berlinCalendarDay(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+}
+
 /** The calendar day the given number of days after the given one; a negative count steps backwards. */
 export function plusDays(day: string, days: number): string {
   const date = new Date(`${day}T00:00:00Z`);

@@ -5,8 +5,8 @@ import type Database from "better-sqlite3";
 export type AreaOption = { id: string; name: string };
 
 /**
- * The areas the account may manage: every area for system administration, otherwise exactly the assigned ones. Both
- * the internal lists and the start page derive what they show from this scope (FACHLICHE_REGELN.md).
+ * The areas the account may manage: every area for system administration, otherwise exactly the assigned ones. It is
+ * the scope every internal view decides what may be written against (FACHLICHE_REGELN.md).
  */
 export function manageableAreas(sqlite: Database.Database, account: { id: string; systemAdmin: boolean }): AreaOption[] {
   return sqlite.prepare(`SELECT id, name FROM areas

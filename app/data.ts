@@ -4,7 +4,6 @@ import { cache } from "react";
 
 import { sqlite } from "@/lib/db";
 import {
-  berlinCalendarDay,
   readPublicCut,
   readPublicFilterOptions,
   searchPublicPlans,
@@ -12,6 +11,7 @@ import {
   type PublicFilters,
   type PublicSearchResult,
 } from "@/lib/services/public-search";
+import { berlinCalendarDay } from "@/lib/domain/calendar-day";
 import type { PublicCut } from "@/lib/domain/public-cut";
 
 export type { PublicCutDetail, PublicFilters, PublicSearchResult };

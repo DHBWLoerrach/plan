@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { areaCut, programCut, yearCut } from "@/lib/domain/public-cut";
 import {
-  berlinCalendarDay,
   plansPerPage,
   readPublicCut,
   readPublicFilterOptions,
@@ -19,13 +18,6 @@ function courses(result: ReturnType<typeof searchPublicPlans>) {
 function courseCodes(result: ReturnType<typeof searchPublicPlans>) {
   return courses(result).map((course) => course.code);
 }
-
-describe("berlinCalendarDay", () => {
-  it("uses the Berlin calendar day, not the UTC one", () => {
-    expect(berlinCalendarDay(new Date("2026-07-25T23:30:00.000Z"))).toBe("2026-07-26");
-    expect(berlinCalendarDay(new Date("2025-12-31T23:30:00.000Z"))).toBe("2026-01-01");
-  });
-});
 
 describe("readPublicFilterOptions", () => {
   it("forms every option from published snapshots, not current master data", () => {

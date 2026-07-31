@@ -54,14 +54,6 @@ const groupLabels: Record<PublicPlanGroupKey, string> = {
 /** The groups in the order the public search shows them (MVP-SPEZIFIKATION.md). */
 const groupOrder: PublicPlanGroupKey[] = ["current", "future", "past"];
 
-/**
- * The reference day of every public view: the current calendar day in Europe/Berlin, determined on the server and
- * independent of the server or browser time zone (MVP-SPEZIFIKATION.md).
- */
-export function berlinCalendarDay(now: Date = new Date()): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
-}
-
 /** The filter options are all and only values carried by still-published snapshots. */
 export function readPublicFilterOptions(sqlite: Database.Database) {
   const areas = sqlite

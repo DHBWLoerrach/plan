@@ -3,7 +3,8 @@ import "server-only";
 import type Database from "better-sqlite3";
 
 import { matchesCodePrefix, normalizeCodePrefix } from "@/lib/domain/course-code";
-import { courseStatus, type PublicationState } from "@/lib/domain/course-status";
+import { courseStanding, type CourseStanding, type StandingPhase } from "@/lib/domain/course-progress";
+import { courseStatus, type CourseStatus, type PublicationState } from "@/lib/domain/course-status";
 import { type DraftCourse, type DraftEvent, type DraftPhase } from "@/lib/domain/publication";
 
 import { type AreaOption, allAreas, manageableAreas } from "../data";
@@ -18,6 +19,10 @@ export type InternalCourse = CourseMarking & { id: string; code: string; program
 /** An entry of a select: the value it submits and the text it shows. */
 export type LabeledOption = { id: string; label: string };
 export type CutCourse = DraftCourse & CourseMarking & { areaId: string; areaName: string };
+/** A course on the overview. It carries no `editable`: the overview reads the own areas only, so all of them are. */
+export type OverviewCourse = CourseStatus & CourseStanding & { id: string; code: string };
+export type OverviewYear = { year: string; courses: OverviewCourse[] };
+export type OverviewProgram = { id: string; name: string; abbreviation: string; areaName: string; years: OverviewYear[] };
 export type CourseCutData = { year: string; courses: CutCourse[]; phases: (DraftPhase & { id: string })[]; events: (DraftEvent & { affectedCourseCodes: string[] })[] };
 export type CourseSort = "code" | "year";
 export const courseSortLabels: Record<CourseSort, string> = { code: "Kurskennung", year: "Jahrgang, dann Kurskennung" };
@@ -69,6 +74,63 @@ export function courseListData(sqlite: Database.Database, account: AccountScope,
     .map((row) => markCourse(row, editableAreas))
     .filter((course) => !filters.state || course.state === filters.state);
   return { areas, programs, years, courses };
+}
+
+type OverviewRow = Omit<MarkingColumns, "areaId"> & { id: string; code: string; studyStart: string; studyEnd: string; programId: string; programName: string; abbreviation: string; areaName: string };
+
+/**
+ * The courses of the areas this account may write in, grouped the way the overview shows them: by study program, and
+ * within it by year ascending. Unlike the course list this stays inside the own areas — the overview is the way into
+ * one's own work, while reading across every area is what the list is for (ADR 0011).
+ *
+ * The grouping walks the rows in the order the query returns them, so the sorting lives in the `ORDER BY` alone. The
+ * study program is grouped by its id rather than by its designation, because the same name may occur in more than one
+ * area; the id is therefore also what settles the order within an area.
+ */
+export function overviewPrograms(sqlite: Database.Database, account: AccountScope, today: string): OverviewProgram[] {
+  const rows = sqlite.prepare(`SELECT course.id, course.code, course.study_start AS studyStart, course.study_end AS studyEnd,
+      program.id AS programId, program.name AS programName, program.abbreviation, area.name AS areaName,
+      course.has_ever_been_published AS hasEverBeenPublished, course.draft_updated_at AS draftUpdatedAt, published.published_at AS publishedAt
+    FROM courses course JOIN programs program ON program.id = course.program_id JOIN areas area ON area.id = program.area_id
+    LEFT JOIN published_courses published ON published.course_id = course.id
+    WHERE ? = 1 OR program.area_id IN (SELECT area_id FROM area_assignments WHERE user_id = ?)
+    ORDER BY area.name COLLATE NOCASE, program.abbreviation COLLATE NOCASE, program.id,
+      substr(course.study_start, 1, 4), course.code COLLATE NOCASE`)
+    .all(account.systemAdmin ? 1 : 0, account.id) as OverviewRow[];
+
+  /* The phases of all those courses at once: one query per course would repeat the area predicate for every tile. */
+  const phaseRows = sqlite.prepare(`SELECT phase.course_id AS courseId, phase.semester, phase.phase_type AS type,
+      phase.start_date AS startDate, phase.end_date AS endDate
+    FROM course_phases phase JOIN courses course ON course.id = phase.course_id JOIN programs program ON program.id = course.program_id
+    WHERE ? = 1 OR program.area_id IN (SELECT area_id FROM area_assignments WHERE user_id = ?)
+    ORDER BY phase.start_date`).all(account.systemAdmin ? 1 : 0, account.id) as (StandingPhase & { courseId: string })[];
+  const phasesByCourse = new Map<string, StandingPhase[]>();
+  for (const { courseId, ...phase } of phaseRows) {
+    const phases = phasesByCourse.get(courseId);
+    if (phases) phases.push(phase);
+    else phasesByCourse.set(courseId, [phase]);
+  }
+
+  const programs: OverviewProgram[] = [];
+  for (const row of rows) {
+    let program = programs.at(-1);
+    if (program?.id !== row.programId) {
+      program = { id: row.programId, name: row.programName, abbreviation: row.abbreviation, areaName: row.areaName, years: [] };
+      programs.push(program);
+    }
+    const startYear = row.studyStart.slice(0, 4);
+    let year = program.years.at(-1);
+    if (year?.year !== startYear) {
+      year = { year: startYear, courses: [] };
+      program.years.push(year);
+    }
+    year.courses.push({
+      id: row.id, code: row.code,
+      ...courseStanding(row, phasesByCourse.get(row.id) ?? [], today),
+      ...courseStatus({ hasEverBeenPublished: Boolean(row.hasEverBeenPublished), publishedAt: row.publishedAt, draftUpdatedAt: row.draftUpdatedAt }),
+    });
+  }
+  return programs;
 }
 
 export function findInternalCourse(sqlite: Database.Database, courseId: string, account: AccountScope): InternalCourse | undefined {

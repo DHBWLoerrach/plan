@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
@@ -5,53 +6,58 @@ import { connection } from "next/server";
 import { InternalNav } from "@/components/internal-nav";
 import { SiteShell } from "@/components/site-shell";
 import { sqlite } from "@/lib/db";
-import { type ActiveAccount, getActiveAccount, managesAnyArea } from "@/lib/internal-auth";
+import { berlinCalendarDay } from "@/lib/domain/calendar-day";
+import { publicationStateLabels, workInProgressLabel } from "@/lib/domain/course-status";
+import { getActiveAccount, managesAnyArea } from "@/lib/internal-auth";
 
-import { courseListData } from "./kurse/data";
-import { manageableAreas } from "./data";
+import { overviewPrograms } from "./kurse/data";
 
-function permissionSummary(account: ActiveAccount): string {
-  const permissions: string[] = [];
-  if (account.role === "AREA_EDITOR") permissions.push("Bereichsbearbeitung");
-  if (account.systemAdmin) permissions.push("Systemadministration");
-  return permissions.join(" · ") || "Keine Berechtigung";
-}
+/** The page carries no visible title, so the tab is where it states which of the internal pages is open. */
+export const metadata: Metadata = { title: "Übersicht" };
 
 export default async function InternalHome() {
   await connection();
   const account = await getActiveAccount();
   if (!account) redirect("/intern/anmelden");
   const manages = managesAnyArea(account);
-  const areas = manages ? manageableAreas(sqlite, account) : [];
-  const courses = manages
-    ? courseListData(sqlite, account, { area: null, program: null, year: null, code: null, state: null }, "year").courses
-    : [];
+  const programs = manages ? overviewPrograms(sqlite, account, berlinCalendarDay()) : [];
+  /* The area is named once the grouping spans more than one of them, because the same study program name may then
+     occur twice. With a single area it would repeat that name above every group and distinguish nothing. */
+  const namesAreas = new Set(programs.map((program) => program.areaName)).size > 1;
 
-  return <SiteShell nav={<InternalNav account={account} current="home" />}><section className="search-panel" aria-labelledby="internal-heading">
-    <p className="eyebrow">Interner Bereich</p>
-    <h1 id="internal-heading">Übersicht</h1>
-    <p>Angemeldet als {account.email} — {permissionSummary(account)}. Änderungen bleiben im Planungsstand, bis Sie sie bewusst veröffentlichen.</p>
-
-    <h2>Ihre Bereiche</h2>
-    {areas.length
-      ? <>
-        <p>{account.systemAdmin
-          ? `Als Systemadministration bearbeiten Sie die Kurse aller ${areas.length} Bereiche.`
-          : "Sie bearbeiten die Kurse dieser Bereiche:"}</p>
-        {areas.length
-          ? <ul className="internal-list">{areas.map((area) => <li key={area.id}>
-            <Link href={`/intern/kurse?area=${area.id}`}>{area.name}</Link>
-            <span>{courses.filter((course) => course.areaId === area.id).length === 1 ? "1 Kurs" : `${courses.filter((course) => course.areaId === area.id).length} Kurse`}</span>
-          </li>)}</ul>
-          : <p className="empty-note">Ihnen ist kein Bereich zugeordnet.</p>}
-      </>
-      : <p className="empty-note">Ihnen ist noch kein Bereich zugeordnet. Bis dahin können Sie keine Kurse bearbeiten; die Systemadministration ordnet Ihnen Bereiche zu.</p>}
-
+  return <SiteShell nav={<InternalNav account={account} current="home" />}><div className="internal-overview">
+    {/* The header names the account, the section navigation marks this page and the tab title states it, so a visible
+        title line would say a fourth time where one is. It stays for assistive technology, which reads the document
+        rather than the marked navigation entry, and it keeps the study programs below it at a heading level of their
+        own instead of opening the outline in the middle. */}
+    <h1 className="sr-only">Übersicht</h1>
     {manages ? <>
-      <h2>Kurse bearbeiten</h2>
-      <p>Wählen Sie in der Kursliste zuerst einen Jahrgang und bilden Sie daraus einen Zuschnitt. Die Gegenüberstellung zeigt die ausgewählten Kurse nebeneinander; der Zuschnitt wird nicht gespeichert.</p>
-      <p>Die Kursliste zeigt die Kurse aller Bereiche. Kurse fremder Bereiche können Sie lesen, aber nicht bearbeiten.</p>
-      <p><Link className="button" href="/intern/kurse">Zur Kursliste</Link></p>
-    </> : null}
-  </section></SiteShell>;
+      {programs.length
+        ? programs.map((program) => <section className="program-group" key={program.id}>
+          {/* The spaces are written out, because they belong to the accessible name of the heading just as much as
+              to its typography — set by margins alone the three parts would be read as one word. */}
+          <h2 className="program-group__name">
+            <span className="program-group__abbreviation">{program.abbreviation}</span> {program.name}
+            {namesAreas ? <span className="program-group__area"> {program.areaName}</span> : null}
+          </h2>
+          {program.years.map((year) => <div className="year-row" key={year.year}>
+            <h3 className="year-row__year">{year.year}</h3>
+            <ul className="course-tiles">{year.courses.map((course) => <li className="course-tile" key={course.id}>
+              <Link href={`/intern/kurse/${course.id}`}>{course.code}</Link>
+              <span className="course-tile__standing">{course.currentPhase}</span>
+              {/* A course past its last phase has nothing to announce, so the line goes rather than stating that. */}
+              {course.nextPhase ? <span>{course.nextPhase}</span> : null}
+              {/* The publication state is named in words in every internal list, „in Arbeit“ beside it in the same
+                  line as in the course list; the tone only repeats what the word already says (BARRIEREFREIHEIT.md). */}
+              <span>{publicationStateLabels[course.state]}
+                {course.workInProgress ? <> · <span className="course-tile__wip">{workInProgressLabel}</span></> : null}</span>
+            </li>)}</ul>
+          </div>)}
+        </section>)
+        /* The only way on this page ever offers: with courses shown, the section navigation leads to the list and the
+           list carries the same button, so it would stand here a third time. */
+        : <><p className="empty-note">In Ihren Bereichen gibt es noch keine Kurse.</p>
+          <p className="internal-overview__actions"><Link className="button" href="/intern/kurse/neu">Kurs anlegen</Link></p></>}
+    </> : <p className="empty-note">Ihnen ist noch kein Bereich zugeordnet. Bis dahin können Sie keine Kurse bearbeiten; die Systemadministration ordnet Ihnen Bereiche zu.</p>}
+  </div></SiteShell>;
 }

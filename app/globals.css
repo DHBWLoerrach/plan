@@ -333,10 +333,48 @@ p[role="status"] { margin: 0; color: var(--success); }
 .internal-nav a:hover { color: var(--red); text-decoration: underline; text-underline-offset: .3rem; }
 .internal-nav a[aria-current="page"] { padding-bottom: .2rem; border-bottom: .2rem solid var(--red); color: var(--red); }
 
-.internal-list { display: grid; gap: .75rem; margin: 2rem 0 0; padding: 0; list-style: none; }
-.internal-list li { display: flex; justify-content: space-between; gap: 1rem; padding: 1rem; background: #fff; border: 1px solid var(--line); }
-.internal-list li a { color: var(--red); font-weight: 700; }
-.internal-list li span { color: var(--gray); font-size: .9rem; }
+/* The overview opens without a panel, without a title and without a line about the account: header, navigation and
+   tab already say where one is and who one is, so the page starts with what it is actually for — where the own
+   courses stand. It holds no surface of its own either; the tiles are the only thing raised off the page. */
+.internal-overview__actions { display: flex; flex-wrap: wrap; gap: .75rem; margin: 1.5rem 0 0; }
+
+.program-group + .program-group { margin-top: 1.9rem; }
+/* The three parts run as one line of text rather than as flex items: a study program name is a German compound and
+   under strong text enlargement it outgrows the column, where a flex item would push the page sideways instead of
+   breaking. As text it hyphenates, and breaks the word where the language has no rule for it. */
+.program-group__name { margin: 0 0 .7rem; font-size: 1.05rem; font-weight: 700; hyphens: auto; overflow-wrap: break-word; }
+/* Abbreviation and course code are technical designations and are set as such, as they are in matrix and cut. */
+.program-group__abbreviation, .course-tile a { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.program-group__area { margin-left: .35rem; color: var(--gray); font-size: .85rem; font-weight: 400; }
+
+/* The year stands beside its courses rather than above them: a study program spans several years, and a line of its
+   own would cost each of them as much room as the tiles it labels. Below the width where a tile still fits next to
+   it, the year moves back above its row. */
+.year-row { display: grid; grid-template-columns: 3.5rem minmax(0, 1fr); gap: .5rem; }
+.year-row + .year-row { margin-top: .5rem; }
+.year-row__year { margin: 0; padding-top: .7rem; color: var(--gray); font-size: .9rem; font-weight: 700; }
+@media (max-width: 26rem) {
+  .year-row { grid-template-columns: minmax(0, 1fr); gap: .3rem; }
+  .year-row__year { padding-top: 0; }
+}
+
+/* The tiles wrap as a row of boxes instead of filling grid tracks: a track wide enough to hold the longest line in
+   every font the DHBW stack may resolve to would leave most tiles swimming in the space it reserved, and one narrow
+   enough to avoid that would break the line in the others. Each tile therefore measures its own longest line — the
+   phase to come, „ab 28.09.2026 Theorie im 10. Semester“ — and keeps it whole, whatever font it is set in. Breaking
+   it would part an ordinal from its noun, which German typography does not do.
+   `max-width` hands the ability to wrap back where the row is narrower than the line: under strong text enlargement
+   it has to break rather than push the page sideways (BARRIEREFREIHEIT.md). */
+.course-tiles { display: flex; flex-wrap: wrap; gap: .5rem; margin: 0; padding: 0; list-style: none; }
+.course-tile { display: grid; align-content: start; width: max-content; max-width: 100%; gap: .1rem; padding: .6rem .75rem; background: #fff; border: 1px solid var(--line); }
+.course-tile a { color: var(--red); font-weight: 700; text-decoration: none; }
+.course-tile a:hover { text-decoration: underline; text-underline-offset: .25rem; }
+.course-tile span { color: var(--gray); font-size: .82rem; }
+/* Where the course stands today is what the tile is read for, so it holds body colour and a little air below it; the
+   phase to come and the publication state follow as the quieter lines. */
+.course-tile .course-tile__standing { margin-bottom: .15rem; color: var(--ink); font-size: .92rem; }
+/* „In Arbeit“ is named in words like every other marking, in a tone that only repeats what the word already says. */
+.course-tile .course-tile__wip { color: var(--warning); }
 
 /* The selection sits in the head of the matrix card and is the only thing acting there, so it may take the left edge
    of the card: label and options on one line, the hint on the next, all three starting at that edge. Every option is a

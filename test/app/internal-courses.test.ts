@@ -1,7 +1,7 @@
 import Database from "better-sqlite3";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { courseCutData, courseListData, findInternalCourse, programOptions, type CourseListFilters } from "@/app/intern/kurse/data";
+import { courseCutData, courseListData, findInternalCourse, overviewPrograms, programOptions, type CourseListFilters } from "@/app/intern/kurse/data";
 import { applySchema } from "@/test/schema";
 
 const databases: Database.Database[] = [];
@@ -112,6 +112,71 @@ describe("programOptions", () => {
     sqlite.prepare("INSERT INTO programs VALUES ('prog-tif7', 'area-technik', 'Informatik sieben', 'TIF7', 7)").run();
     expect(programOptions(sqlite, admin, 7).map((program) => program.id)).toEqual(["prog-tif7"]);
     expect(programOptions(sqlite, admin, 6).map((program) => program.id)).toEqual(["prog-tif", "prog-wwi"]);
+  });
+});
+
+describe("overviewPrograms", () => {
+  /** A day inside the first semester of the seeded 2026 course. */
+  const today = "2026-11-15";
+
+  /** A second course in the study program of the editor, in a year before the seeded one. */
+  function addEarlierCourse(sqlite: Database.Database) {
+    sqlite.prepare(`INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, has_ever_been_published, draft_updated_at, draft_updated_by_account_id)
+      VALUES ('course-tif25', 'prog-tif', 'TIF25A', 'tif25a', '2025-10-01', '2028-09-30', 0, '2026-01-01T00:00:00.000Z', 'editor')`).run();
+  }
+
+  it("keeps the overview inside the own areas, unlike the course list", () => {
+    const sqlite = database();
+    expect(overviewPrograms(sqlite, editor, today).map((program) => program.id)).toEqual(["prog-tif"]);
+    expect(overviewPrograms(sqlite, admin, today).map((program) => program.id)).toEqual(["prog-tif", "prog-wwi"]);
+  });
+
+  it("groups the courses of a study program by year, ascending", () => {
+    const sqlite = database();
+    addEarlierCourse(sqlite);
+    sqlite.prepare(`INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, has_ever_been_published, draft_updated_at, draft_updated_by_account_id)
+      VALUES ('course-tif26b', 'prog-tif', 'TIF26B', 'tif26b', '2026-10-01', '2029-09-30', 0, '2026-01-01T00:00:00.000Z', 'editor')`).run();
+    const [program] = overviewPrograms(sqlite, editor, today);
+    expect(program.years.map((year) => [year.year, year.courses.map((course) => course.code)]))
+      .toEqual([["2025", ["TIF25A"]], ["2026", ["TIF26A", "TIF26B"]]]);
+  });
+
+  it("orders the study programs by area and names both, since the same name may occur in two areas", () => {
+    const sqlite = database();
+    sqlite.prepare("INSERT INTO programs VALUES ('prog-wti', 'area-wirtschaft', 'Informatik', 'WTI', 6)").run();
+    sqlite.prepare(`INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, has_ever_been_published, draft_updated_at, draft_updated_by_account_id)
+      VALUES ('course-wti', 'prog-wti', 'WTI26A', 'wti26a', '2026-10-01', '2029-09-30', 0, '2026-01-01T00:00:00.000Z', 'admin')`).run();
+    expect(overviewPrograms(sqlite, admin, today).map((program) => [program.id, program.abbreviation, program.name, program.areaName]))
+      .toEqual([["prog-tif", "TIF", "Informatik", "Technik"], ["prog-wti", "WTI", "Informatik", "Wirtschaft"], ["prog-wwi", "WWI", "Wirtschaftsinformatik", "Wirtschaft"]]);
+  });
+
+  it("marks every course with its publication state and whether it is in progress", () => {
+    const sqlite = database();
+    addEarlierCourse(sqlite);
+    publish(sqlite, "course-tif25", "2026-06-01T00:00:00.000Z");
+    const [program] = overviewPrograms(sqlite, editor, today);
+    expect(program.years.flatMap((year) => year.courses).map((course) => [course.code, course.state, course.workInProgress]))
+      .toEqual([["TIF25A", "PUBLISHED", false], ["TIF26A", "NEVER_PUBLISHED", true]]);
+  });
+
+  it("reads the standing of every course from its own phases, not from those of the course beside it", () => {
+    const sqlite = database();
+    addEarlierCourse(sqlite);
+    sqlite.prepare(`INSERT INTO course_phases (id, course_id, semester, phase_type, start_date, end_date) VALUES
+      ('phase-tif26-1', 'course-tif', 1, 'THEORY', '2026-10-01', '2027-03-31'),
+      ('phase-tif26-2', 'course-tif', 2, 'PRACTICE', '2027-04-01', '2027-09-30'),
+      ('phase-tif25-3', 'course-tif25', 3, 'PRACTICE', '2026-10-01', '2027-03-31')`).run();
+    const [program] = overviewPrograms(sqlite, editor, today);
+    expect(program.years.flatMap((year) => year.courses).map((course) => [course.code, course.currentPhase, course.nextPhase])).toEqual([
+      ["TIF25A", "Praxis im 3. Semester", null],
+      ["TIF26A", "Theorie im 1. Semester", "ab 01.04.2027 Praxis im 2. Semester"],
+    ]);
+  });
+
+  it("stays empty for an account without an assigned area", () => {
+    const sqlite = database();
+    sqlite.prepare("DELETE FROM area_assignments WHERE user_id = 'editor'").run();
+    expect(overviewPrograms(sqlite, editor, today)).toEqual([]);
   });
 });
 

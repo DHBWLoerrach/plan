@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { inclusiveDays, isCalendarDay, plusDays } from "@/lib/domain/calendar-day";
+import { berlinCalendarDay, inclusiveDays, isCalendarDay, plusDays } from "@/lib/domain/calendar-day";
 
 describe("isCalendarDay", () => {
   it("accepts a valid Gregorian day and refuses anything a half-typed field may hold", () => {
@@ -40,5 +40,12 @@ describe("plusDays", () => {
 
   it("handles a leap day", () => {
     expect(plusDays("2028-02-28", 1)).toBe("2028-02-29");
+  });
+});
+
+describe("berlinCalendarDay", () => {
+  it("uses the Berlin calendar day, not the UTC one", () => {
+    expect(berlinCalendarDay(new Date("2026-07-25T23:30:00.000Z"))).toBe("2026-07-26");
+    expect(berlinCalendarDay(new Date("2025-12-31T23:30:00.000Z"))).toBe("2026-01-01");
   });
 });
