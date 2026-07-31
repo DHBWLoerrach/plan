@@ -9,15 +9,14 @@ import { applySchema } from "@/test/schema";
  * depend on where an entry stands in its list: the shipped master data grows and gets corrected over time, and a
  * database that silently kept the old state would differ from a fresh installation without anything failing.
  */
-const own: MasterDataRow = ["Studienbereich Technik", "Informatik", "TIF", 6];
-const second: MasterDataRow = ["Studienbereich Technik", "Maschinenbau", "TMB", 6];
-const third: MasterDataRow = ["Wirtschaft", "Handelsmanagement", "WHD", 6];
+const own: MasterDataRow = ["technik", "Studienbereich Technik", "Informatik", "TIF", 6];
+const second: MasterDataRow = ["technik", "Studienbereich Technik", "Maschinenbau", "TMB", 6];
+const third: MasterDataRow = ["wirtschaft", "Wirtschaft", "Handelsmanagement", "WHD", 6];
 
 function seededDatabase(rows?: readonly MasterDataRow[]) {
   const sqlite = new Database(":memory:");
   applySchema(sqlite);
-  if (rows) seedMasterData(sqlite, rows);
-  else seedMasterData(sqlite);
+  seedMasterData(sqlite, rows);
   return sqlite;
 }
 
@@ -44,7 +43,7 @@ describe("seedMasterData", () => {
     const areaId = sqlite.prepare("SELECT id FROM areas").pluck().get() as string;
     const programId = sqlite.prepare("SELECT id FROM programs").pluck().get() as string;
 
-    seedMasterData(sqlite, [["Studienbereich Technik", "Angewandte Informatik", "TIF", 6]]);
+    seedMasterData(sqlite, [["technik", "Studienbereich Technik", "Angewandte Informatik", "TIF", 6]]);
 
     expect(programs(sqlite)).toEqual([{ abbreviation: "TIF", name: "Angewandte Informatik", areaName: "Studienbereich Technik" }]);
     // The identifiers are what courses and area assignments point at, so a correction must not mint new ones.
@@ -55,7 +54,7 @@ describe("seedMasterData", () => {
   it("moves a study program that changed its area, keeping one row for it", () => {
     const sqlite = seededDatabase([own]);
 
-    seedMasterData(sqlite, [["Wirtschaft", "Informatik", "TIF", 6]]);
+    seedMasterData(sqlite, [["wirtschaft", "Wirtschaft", "Informatik", "TIF", 6]]);
 
     expect(programs(sqlite)).toEqual([{ abbreviation: "TIF", name: "Informatik", areaName: "Wirtschaft" }]);
   });
@@ -65,9 +64,25 @@ describe("seedMasterData", () => {
   it("leaves a changed number of semesters to a migration", () => {
     const sqlite = seededDatabase([own]);
 
-    seedMasterData(sqlite, [["Studienbereich Technik", "Informatik", "TIF", 7]]);
+    seedMasterData(sqlite, [["technik", "Studienbereich Technik", "Informatik", "TIF", 7]]);
 
     expect(sqlite.prepare("SELECT semesters FROM programs").pluck().get()).toBe(6);
+  });
+
+  it("names the row in its identifier", () => {
+    const sqlite = seededDatabase([own, third]);
+
+    expect(sqlite.prepare("SELECT id FROM areas ORDER BY id").pluck().all()).toEqual(["area-technik", "area-wirtschaft"]);
+    expect(sqlite.prepare("SELECT id FROM programs").pluck().all()).toEqual(["program-tif", "program-whd"]);
+  });
+
+  /* The identifier of an area is the only place where the seed decides a key itself, and a key used twice would
+     violate the primary key rather than the conflict target the upsert names — so it has to fail here, loudly. */
+  it("refuses a key that two different areas claim", () => {
+    const sqlite = seededDatabase([own]);
+
+    expect(() => seedMasterData(sqlite, [["technik", "Technik und Informatik", "Informatik", "TIF", 6]])).toThrow();
+    expect(sqlite.prepare("SELECT name FROM areas").pluck().all()).toEqual(["Studienbereich Technik"]);
   });
 
   it("leaves the shipped master data unchanged when the application starts again", () => {
