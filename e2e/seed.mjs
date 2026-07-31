@@ -22,7 +22,9 @@ try {
   sqlite.pragma("foreign_keys = ON");
   sqlite.exec(`
     INSERT INTO areas VALUES ('area-own', 'Eigener Bereich', 'eigener bereich'), ('area-foreign', 'Fremder Bereich', 'fremder bereich');
-    INSERT INTO programs VALUES ('program-own', 'area-own', 'Testinformatik', 'TIF', 6), ('program-foreign', 'area-foreign', 'Fremdinformatik', 'FRM', 6);
+    -- Abbreviations outside the shipped master data of lib/db/seed.ts: that seed addresses a study program by its
+    -- abbreviation and would otherwise adopt one of these fixtures as its own row on the first application start.
+    INSERT INTO programs VALUES ('program-own', 'area-own', 'Testinformatik', 'E2E', 6), ('program-foreign', 'area-foreign', 'Fremdinformatik', 'FRM', 6);
   `);
   const addUser = sqlite.prepare(`INSERT INTO users
     (id, name, email, email_verified, role, system_admin, status, created_at, updated_at)

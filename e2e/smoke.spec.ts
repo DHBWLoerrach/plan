@@ -40,7 +40,7 @@ test("edits, publishes and publicly reads a course", async ({ page }) => {
    shows it — the own areas and nothing beyond them — is the same boundary its remaining steps read from the other end. */
 test("opens on the own areas and keeps foreign courses read-only, confirming with the keyboard", async ({ page }) => {
   await signIn(page, "editor@test.invalid");
-  await expect(page.getByRole("heading", { name: "TIF Testinformatik" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "E2E Testinformatik" })).toBeVisible();
   /* The publishing test renames the course, so only the part of the code that survives it is matched. */
   await expect(page.getByRole("link", { name: /^TIF26/u })).toBeVisible();
   await expect(page.getByText("Fremdinformatik")).toHaveCount(0);
