@@ -22,12 +22,13 @@ ziel:
   # Erforderlich: die Kennung des internen Kontos, das als zuletzt ändernd hinterlegt wird.
   # Sie ist eine UUID und muss aus der Datenbank abgelesen werden.
   updated_by_account_id: "6f5b2e0c-1d3a-4f7b-9c8e-2a4d6b8f0c13"
-  updated_at: "2026-07-29T10:00:00.000Z"
   # Eindeutiger, nur für diesen Import verwendeter Präfix.
   id_prefix: "import-2026-10-szi-01"
 ```
 
 Der Bereich wird nicht gesondert angegeben: Er ergibt sich aus dem Studiengang des Kurses.
+
+Der Änderungszeitpunkt wird ebenfalls nicht angegeben: Ihn berechnet die Datenbank beim Einspielen selbst. Das ist der genauere Wert, denn er benennt den Zeitpunkt des Imports und nicht den, zu dem der Agent das Skript geschrieben hat.
 
 Die PDFs selbst sind die Quelle für Kurse, Daten, Theorie- und Praxisphasen und prüfungsrelevante Termine. Fehlt eine der nötigen Angaben oder ist sie mehrdeutig, darf der Agent keine Annahme treffen.
 
@@ -45,7 +46,6 @@ ziel:
   programs:
     "{{STUDIENGANGSKUERZEL_1}}": { id: "{{PROGRAM_ID_1}}", semesters: {{6_ODER_7}} }
   updated_by_account_id: "{{ACCOUNT_ID}}"
-  updated_at: "{{ISO_8601_UTC_TIMESTAMP}}"
   id_prefix: "{{EINDEUTIGER_IMPORT_PREFIX}}"
 ```
 
@@ -134,7 +134,8 @@ Jede Kursphase und jeder Termin gehört genau einem Kurs. Es gibt keine Tabelle,
 - `provisional` ist `1` nur, wenn der Termin im PDF ausdrücklich als vorläufig markiert ist, andernfalls `0`.
 - Verwende keine erfundenen Daten, Termine, Beschreibungen, Kurse oder Kursphasen. Lass `description` als `NULL`, wenn keine sinnvolle Beschreibung vorliegt.
 - Setze `published_at` immer auf `NULL`.
-- Setze `updated_at` und `updated_by_account_id` bei jedem Kurs auf die Werte aus `ziel`.
+- Setze `updated_by_account_id` bei jedem Kurs auf den Wert aus `ziel`.
+- Setze `updated_at` bei jedem Kurs auf den unveränderten Ausdruck `strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`, niemals auf eine ausgeschriebene Zeichenkette. Die Datenbank setzt damit beim Einspielen den aktuellen UTC-Zeitpunkt ein; das ist die einzige Stelle, an der das Skript einen Wert berechnet statt ihn zu nennen.
 - Übernimm Kurskennung und Termintitel getrimmt und ohne die Zeilenumbrüche und Mehrfach-Leerzeichen, die die Textentnahme aus einem PDF mitbringt: Folgen von Leerraum werden zu genau einem Leerzeichen. Dasselbe gilt für eine Beschreibung, sofern sie einzeilig ist.
 - Setze `normalized_code` auf die getrimmte, kleingeschriebene Kurskennung. Sie ist systemweit eindeutig.
 - Vergib nachvollziehbare, eindeutige Text-IDs ausschließlich aus `ziel.id_prefix`, zum Beispiel `{{ID_PREFIX}}-course-tif26a`, `{{ID_PREFIX}}-phase-tif26a-01` und `{{ID_PREFIX}}-event-tif26a-01`.
@@ -154,7 +155,7 @@ INSERT INTO course_events (...) VALUES (...), (...);
 COMMIT;
 ```
 
-Verwende immer explizite Spaltenlisten. Schreibe SQL-Zeichenketten mit einfachen Anführungszeichen und maskiere enthaltene Apostrophe durch Verdopplung. Verwende keine `INSERT OR IGNORE`, keine `UPDATE`, kein `DELETE`, keine DDL-Anweisungen und keine Platzhalter.
+Verwende immer explizite Spaltenlisten. Schreibe SQL-Zeichenketten mit einfachen Anführungszeichen und maskiere enthaltene Apostrophe durch Verdopplung. Verwende keine `INSERT OR IGNORE`, keine `UPDATE`, kein `DELETE`, keine DDL-Anweisungen und keine Platzhalter. Einziger nicht wörtlicher Wert ist `strftime('%Y-%m-%dT%H:%M:%fZ', 'now')` in der Spalte `updated_at`; jeder andere Wert steht als Literal im Skript.
 
 ## Ausgabeformat
 
