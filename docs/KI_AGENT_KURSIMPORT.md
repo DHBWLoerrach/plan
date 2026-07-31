@@ -4,7 +4,7 @@ Dieses Dokument ist ein Auftragstext, kein Bestandteil der Anwendung. Der Import
 
 Er ist absichtlich eigenständig und wiederholt deshalb die fachlichen Regeln, statt zu verweisen: Er kann zusammen mit einem oder mehreren Blockplan-PDFs an einen KI-Agenten gegeben werden, der weder dieses Projekt noch dessen Quellcode kennt. Maßgeblich bleiben [`FACHLICHE_REGELN.md`](FACHLICHE_REGELN.md) und [`../CONTEXT.md`](../CONTEXT.md); ändern sich die Regeln dort, ist der Auftragstext nachzuziehen.
 
-Der Agent erzeugt ausschließlich Kurse mit ihrem **Planungsstand** — Kursverlauf und prüfungsrelevante Termine. Er darf keine veröffentlichte Fassung erzeugen und keine Tabellen oder Stammdaten verändern.
+Der Agent erzeugt ausschließlich nicht veröffentlichte Kurse mit ihrem **Planungsstand** — Kursverlauf und prüfungsrelevante Termine. Er darf keinen Veröffentlichungszeitpunkt setzen und keine Tabellen oder Stammdaten verändern.
 
 „Vorlage“ meint in diesem Repository stets den bestehenden Kurs, aus dem eine [Übernahme](../CONTEXT.md) kopiert. Dieses Dokument verwendet den Begriff deshalb nicht für sich selbst.
 
@@ -19,8 +19,8 @@ ziel:
     TIF: { id: "program-01", semesters: 6 }
     WWI: { id: "program-02", semesters: 6 }
   # Erforderlich: das interne Konto, das als zuletzt ändernd hinterlegt wird.
-  draft_updated_by_account_id: "user-01"
-  draft_updated_at: "2026-07-29T10:00:00.000Z"
+  updated_by_account_id: "user-01"
+  updated_at: "2026-07-29T10:00:00.000Z"
   # Eindeutiger, nur für diesen Import verwendeter Präfix.
   id_prefix: "import-2026-10-szi-01"
 ```
@@ -42,8 +42,8 @@ Du bist ein Datenimport-Agent. Erzeuge aus den angehängten Blockplan-PDFs ein S
 ziel:
   programs:
     "{{STUDIENGANGSKUERZEL_1}}": { id: "{{PROGRAM_ID_1}}", semesters: {{6_ODER_7}} }
-  draft_updated_by_account_id: "{{ACCOUNT_ID}}"
-  draft_updated_at: "{{ISO_8601_UTC_TIMESTAMP}}"
+  updated_by_account_id: "{{ACCOUNT_ID}}"
+  updated_at: "{{ISO_8601_UTC_TIMESTAMP}}"
   id_prefix: "{{EINDEUTIGER_IMPORT_PREFIX}}"
 ```
 
@@ -51,7 +51,7 @@ ziel:
 
 1. Lies alle angehängten PDFs vollständig.
 2. Extrahiere je Kurs die Kurskennung, das Studiengangskürzel, Studienbeginn und Studienende, jede Theorie- und Praxisphase sowie jeden prüfungsrelevanten Termin.
-3. Erzeuge ausschließlich Daten für den **Planungsstand**. Es dürfen keine Zeilen in `published_courses`, `published_phases`, `published_events` oder `published_course_search_keys` entstehen.
+3. Erzeuge ausschließlich nicht veröffentlichte Kurse. `published_at` muss `NULL` sein.
 4. Antworte nur mit den zwei unten beschriebenen Abschnitten: zuerst dem SQL-Skript, danach dem Prüfbericht. Erkläre nichts außerhalb dieser Abschnitte.
 
 ## Verbindliches Zieldatenmodell (SQLite)
@@ -59,12 +59,16 @@ ziel:
 Stammdaten existieren bereits und dürfen nicht verändert werden:
 
 ```sql
-areas(id TEXT PRIMARY KEY, name TEXT NOT NULL, normalized_name TEXT NOT NULL UNIQUE)
+areas(
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL CHECK (length(trim(name)) BETWEEN 1 AND 120),
+  normalized_name TEXT NOT NULL UNIQUE CHECK (length(trim(normalized_name)) > 0)
+)
 programs(
   id TEXT PRIMARY KEY,
   area_id TEXT NOT NULL REFERENCES areas(id),
-  name TEXT NOT NULL,
-  abbreviation TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL CHECK (length(trim(name)) BETWEEN 1 AND 160),
+  abbreviation TEXT NOT NULL COLLATE NOCASE UNIQUE CHECK (length(trim(abbreviation)) BETWEEN 1 AND 20),
   semesters INTEGER NOT NULL CHECK (semesters IN (6, 7))
 )
 ```
@@ -75,35 +79,35 @@ Folgende Tabellen dürfen befüllt werden:
 courses(
   id TEXT PRIMARY KEY,
   program_id TEXT NOT NULL REFERENCES programs(id),
-  code TEXT NOT NULL,
-  normalized_code TEXT NOT NULL UNIQUE,
-  study_start TEXT NOT NULL,
-  study_end TEXT NOT NULL,
-  has_ever_been_published INTEGER NOT NULL DEFAULT 0,
-  draft_updated_at TEXT NOT NULL,
-  draft_updated_by_account_id TEXT NOT NULL REFERENCES user(id),
+  code TEXT NOT NULL CHECK (length(trim(code)) BETWEEN 1 AND 32),
+  normalized_code TEXT NOT NULL UNIQUE CHECK (length(trim(normalized_code)) > 0),
+  study_start TEXT NOT NULL CHECK (date(study_start) IS NOT NULL AND date(study_start) = study_start),
+  study_end TEXT NOT NULL CHECK (date(study_end) IS NOT NULL AND date(study_end) = study_end),
+  published_at TEXT,
+  updated_at TEXT NOT NULL,
+  updated_by_account_id TEXT NOT NULL REFERENCES user(id),
   CHECK (study_start < study_end)
 )
 
 course_phases(
   id TEXT PRIMARY KEY,
   course_id TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
-  semester INTEGER NOT NULL,
+  semester INTEGER NOT NULL CHECK (typeof(semester) = 'integer' AND semester BETWEEN 1 AND 7),
   phase_type TEXT NOT NULL CHECK (phase_type IN ('THEORY', 'PRACTICE')),
-  start_date TEXT NOT NULL,
-  end_date TEXT NOT NULL,
+  start_date TEXT NOT NULL CHECK (date(start_date) IS NOT NULL AND date(start_date) = start_date),
+  end_date TEXT NOT NULL CHECK (date(end_date) IS NOT NULL AND date(end_date) = end_date),
   CHECK (start_date <= end_date)
 )
 
 course_events(
   id TEXT PRIMARY KEY,
   course_id TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
-  title TEXT NOT NULL,
-  description TEXT,
+  title TEXT NOT NULL CHECK (length(trim(title)) >= 1 AND length(title) <= 160),
+  description TEXT CHECK (description IS NULL OR (length(trim(description)) >= 1 AND length(description) <= 2000)),
   category TEXT NOT NULL CHECK (category IN ('REGISTRATION', 'SUBMISSION', 'PRESENTATION', 'EXAM', 'OTHER')),
-  start_date TEXT NOT NULL,
-  end_date TEXT,
-  provisional INTEGER NOT NULL DEFAULT 0,
+  start_date TEXT NOT NULL CHECK (date(start_date) IS NOT NULL AND date(start_date) = start_date),
+  end_date TEXT CHECK (end_date IS NULL OR (date(end_date) IS NOT NULL AND date(end_date) = end_date)),
+  provisional INTEGER NOT NULL DEFAULT 0 CHECK (provisional IN (0, 1)),
   CHECK (end_date IS NULL OR start_date <= end_date)
 )
 ```
@@ -124,8 +128,8 @@ Jede Kursphase und jeder Termin gehört genau einem Kurs. Es gibt keine Tabelle,
 - Ordne Kategorien zwingend wie folgt zu: Anmeldung → `REGISTRATION`, Abgabe → `SUBMISSION`, Präsentation/Kolloquium → `PRESENTATION`, Prüfung/Klausur → `EXAM`, sonstige prüfungsrelevante Termine → `OTHER`.
 - `provisional` ist `1` nur, wenn der Termin im PDF ausdrücklich als vorläufig markiert ist, andernfalls `0`.
 - Verwende keine erfundenen Daten, Termine, Beschreibungen, Kurse oder Kursphasen. Lass `description` als `NULL`, wenn keine sinnvolle Beschreibung vorliegt.
-- Setze `has_ever_been_published` immer auf `0`. Füge keine Zeilen in Veröffentlichungstabellen ein.
-- Setze `draft_updated_at` und `draft_updated_by_account_id` bei jedem Kurs auf die Werte aus `ziel`.
+- Setze `published_at` immer auf `NULL`.
+- Setze `updated_at` und `updated_by_account_id` bei jedem Kurs auf die Werte aus `ziel`.
 - Setze `normalized_code` auf die getrimmte, kleingeschriebene Kurskennung. Sie ist systemweit eindeutig.
 - Vergib nachvollziehbare, eindeutige Text-IDs ausschließlich aus `ziel.id_prefix`, zum Beispiel `{{ID_PREFIX}}-course-tif26a`, `{{ID_PREFIX}}-phase-tif26a-01` und `{{ID_PREFIX}}-event-tif26a-01`.
 

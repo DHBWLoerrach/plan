@@ -12,7 +12,7 @@ import { publicCutData } from "./data";
 
 const missingMetadata: Metadata = { title: "Blockplan nicht gefunden", robots: { index: false, follow: true } };
 
-/** Metadata and the page read the same snapshots, so a withdrawn cut cannot leave a stale indexed title behind. */
+/** Metadata and the page read the same current published courses, so a withdrawal cannot leave a stale title behind. */
 export async function publicCutMetadata(cut: PublicCut | null): Promise<Metadata> {
   await connection();
   if (!cut) return missingMetadata;
@@ -36,7 +36,7 @@ export async function publicCutMetadata(cut: PublicCut | null): Promise<Metadata
   };
 }
 
-/** Renders every public address from the same snapshot-only cut so all variants share the same 404 behaviour. */
+/** Renders every public address from the same current published cut so all variants share the same 404 behaviour. */
 export async function PublicCutPage({ cut }: { cut: PublicCut | null }) {
   await connection();
   if (!cut) notFound();

@@ -2,9 +2,9 @@ import Database from "better-sqlite3";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { deleteCourse, updateCourse } from "@/lib/services/course-admin";
-import { deleteDraftEvents, deleteDraftPhases, updateDraftEvents, updateDraftPhases } from "@/lib/services/cut-editor";
-import { createDraftEvent } from "@/lib/services/event-admin";
-import { createDraftPhases } from "@/lib/services/phase-admin";
+import { deleteCourseEvents, deleteCoursePhases, updateCourseEvents, updateCoursePhases } from "@/lib/services/cut-editor";
+import { createCourseEvent } from "@/lib/services/event-admin";
+import { createCoursePhases } from "@/lib/services/phase-admin";
 import { publishCourse, withdrawCourse } from "@/lib/services/publication";
 import { applySchema } from "@/test/schema";
 
@@ -25,9 +25,9 @@ function database() {
     INSERT INTO user VALUES ('editor', 'Editor', 'editor@test', 0, NULL, 'AREA_EDITOR', 0, 'ACTIVE', 0, 0);
     INSERT INTO user VALUES ('admin', 'Admin', 'admin@test', 0, NULL, 'NONE', 1, 'ACTIVE', 0, 0);
     INSERT INTO area_assignments VALUES ('editor', 'area-technik');
-    INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, has_ever_been_published, draft_updated_at, draft_updated_by_account_id) VALUES
-      ('course-tif', 'prog-tif', 'TIF26A', 'tif26a', '2026-10-01', '2029-09-30', 0, '2026-01-01T00:00:00.000Z', 'admin'),
-      ('course-wwi', 'prog-wwi', 'WWI26A', 'wwi26a', '2026-10-01', '2029-09-30', 0, '2026-01-01T00:00:00.000Z', 'admin');`);
+    INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, published_at, updated_at, updated_by_account_id) VALUES
+      ('course-tif', 'prog-tif', 'TIF26A', 'tif26a', '2026-10-01', '2029-09-30', NULL, '2026-01-01T00:00:00.000Z', 'admin'),
+      ('course-wwi', 'prog-wwi', 'WWI26A', 'wwi26a', '2026-10-01', '2029-09-30', NULL, '2026-01-01T00:00:00.000Z', 'admin');`);
   return sqlite;
 }
 
@@ -41,24 +41,24 @@ afterEach(() => {
 describe("course phases of a foreign area", () => {
   it("refuses creation, change and deletion", () => {
     const sqlite = database();
-    expect(() => createDraftPhases(sqlite, { accountId: "editor", courseIds: ["course-wwi"], ...phase })).toThrow(refused);
-    const [phaseId] = createDraftPhases(sqlite, { accountId: "admin", courseIds: ["course-wwi"], ...phase });
-    expect(() => updateDraftPhases(sqlite, { accountId: "editor", phaseIds: [phaseId], ...phase, type: "PRACTICE" })).toThrow(refused);
-    expect(() => deleteDraftPhases(sqlite, { accountId: "editor", phaseIds: [phaseId] })).toThrow(refused);
+    expect(() => createCoursePhases(sqlite, { accountId: "editor", courseIds: ["course-wwi"], ...phase })).toThrow(refused);
+    const [phaseId] = createCoursePhases(sqlite, { accountId: "admin", courseIds: ["course-wwi"], ...phase });
+    expect(() => updateCoursePhases(sqlite, { accountId: "editor", phaseIds: [phaseId], ...phase, type: "PRACTICE" })).toThrow(refused);
+    expect(() => deleteCoursePhases(sqlite, { accountId: "editor", phaseIds: [phaseId] })).toThrow(refused);
     expect(sqlite.prepare("SELECT phase_type AS type FROM course_phases WHERE id = ?").get(phaseId)).toEqual({ type: "THEORY" });
   });
 
   it("refuses a joint creation as a whole and leaves the own course untouched", () => {
     const sqlite = database();
-    expect(() => createDraftPhases(sqlite, { accountId: "editor", courseIds: ["course-tif", "course-wwi"], ...phase })).toThrow(refused);
+    expect(() => createCoursePhases(sqlite, { accountId: "editor", courseIds: ["course-tif", "course-wwi"], ...phase })).toThrow(refused);
     expect(sqlite.prepare("SELECT count(*) AS count FROM course_phases").get()).toEqual({ count: 0 });
   });
 
   it("refuses a joint change over a summarised row that reaches into a foreign area", () => {
     const sqlite = database();
-    const [ownPhaseId] = createDraftPhases(sqlite, { accountId: "editor", courseIds: ["course-tif"], ...phase });
-    const [foreignPhaseId] = createDraftPhases(sqlite, { accountId: "admin", courseIds: ["course-wwi"], ...phase });
-    expect(() => updateDraftPhases(sqlite, { accountId: "editor", phaseIds: [ownPhaseId, foreignPhaseId], ...phase, type: "PRACTICE" })).toThrow(refused);
+    const [ownPhaseId] = createCoursePhases(sqlite, { accountId: "editor", courseIds: ["course-tif"], ...phase });
+    const [foreignPhaseId] = createCoursePhases(sqlite, { accountId: "admin", courseIds: ["course-wwi"], ...phase });
+    expect(() => updateCoursePhases(sqlite, { accountId: "editor", phaseIds: [ownPhaseId, foreignPhaseId], ...phase, type: "PRACTICE" })).toThrow(refused);
     expect(sqlite.prepare("SELECT count(*) AS count FROM course_phases WHERE phase_type = 'PRACTICE'").get()).toEqual({ count: 0 });
   });
 });
@@ -66,10 +66,10 @@ describe("course phases of a foreign area", () => {
 describe("events of a foreign area", () => {
   it("refuses creation, change and deletion", () => {
     const sqlite = database();
-    expect(() => createDraftEvent(sqlite, { accountId: "editor", courseIds: ["course-wwi"], ...event })).toThrow(refused);
-    const [eventId] = createDraftEvent(sqlite, { accountId: "admin", courseIds: ["course-wwi"], ...event });
-    expect(() => updateDraftEvents(sqlite, { accountId: "editor", eventIds: [eventId], ...event, title: "Nachholprüfung" })).toThrow(refused);
-    expect(() => deleteDraftEvents(sqlite, { accountId: "editor", eventIds: [eventId] })).toThrow(refused);
+    expect(() => createCourseEvent(sqlite, { accountId: "editor", courseIds: ["course-wwi"], ...event })).toThrow(refused);
+    const [eventId] = createCourseEvent(sqlite, { accountId: "admin", courseIds: ["course-wwi"], ...event });
+    expect(() => updateCourseEvents(sqlite, { accountId: "editor", eventIds: [eventId], ...event, title: "Nachholprüfung" })).toThrow(refused);
+    expect(() => deleteCourseEvents(sqlite, { accountId: "editor", eventIds: [eventId] })).toThrow(refused);
     expect(sqlite.prepare("SELECT title FROM course_events WHERE id = ?").get(eventId)).toEqual({ title: "Prüfung" });
   });
 });
@@ -93,8 +93,8 @@ describe("course administration of a foreign area", () => {
 describe("publication of a foreign area", () => {
   it("refuses publishing and withdrawing before it even looks at the planning state", () => {
     const sqlite = database();
-    expect(() => publishCourse(sqlite, { accountId: "editor", courseId: "course-wwi", seenDraftUpdatedAt: "2026-01-01T00:00:00.000Z", seenPublishedCourseId: null })).toThrow(refused);
-    expect(() => withdrawCourse(sqlite, { accountId: "editor", courseId: "course-wwi", seenPublishedCourseId: "irgendeine" })).toThrow(refused);
-    expect(sqlite.prepare("SELECT count(*) AS count FROM published_courses").get()).toEqual({ count: 0 });
+    expect(() => publishCourse(sqlite, { accountId: "editor", courseId: "course-wwi", seenUpdatedAt: "2026-01-01T00:00:00.000Z", seenPublishedAt: null })).toThrow(refused);
+    expect(() => withdrawCourse(sqlite, { accountId: "editor", courseId: "course-wwi", seenPublishedAt: "irgendeine" })).toThrow(refused);
+    expect(sqlite.prepare("SELECT published_at FROM courses WHERE id = 'course-wwi'").pluck().get()).toBeNull();
   });
 });

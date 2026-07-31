@@ -7,6 +7,7 @@ import { type EventCategory, isEventCategory } from "@/lib/domain/event-category
 import { FieldError } from "@/lib/domain/field-error";
 import { assertCourseEditPermission, assertCoursesEditPermission } from "@/lib/services/authorization";
 import { touchCourse } from "@/lib/services/phase-admin";
+import { assertPublishedCourseValid } from "@/lib/services/publication";
 
 export type EventField = "title" | "description" | "category" | "startDate" | "endDate" | "courseIds";
 export type EventInput = { title: string; description: string; category: string; startDate: string; endDate: string; provisional: boolean; courseIds: string[] };
@@ -15,7 +16,7 @@ const maximumTitleLength = 160;
 const maximumDescriptionLength = 2000;
 
 /** Stores one independent event for every selected course. */
-export function createDraftEvent(sqlite: Database.Database, input: { accountId: string; now?: Date } & EventInput): string[] {
+export function createCourseEvent(sqlite: Database.Database, input: { accountId: string; now?: Date } & EventInput): string[] {
   const event = normalizeEventInput(input);
   const now = input.now ?? new Date();
   return sqlite.transaction(() => {
@@ -27,12 +28,13 @@ export function createDraftEvent(sqlite: Database.Database, input: { accountId: 
       const id = randomUUID();
       add.run(id, courseId, event.title, event.description, event.category, event.startDate, event.endDate, event.provisional ? 1 : 0);
       touchCourse(sqlite, courseId, input.accountId, now);
+      assertPublishedCourseValid(sqlite, courseId);
       return id;
     });
   })();
 }
 
-export function updateDraftEvent(sqlite: Database.Database, input: { accountId: string; eventId: string; now?: Date } & Omit<EventInput, "courseIds">): void {
+export function updateCourseEvent(sqlite: Database.Database, input: { accountId: string; eventId: string; now?: Date } & Omit<EventInput, "courseIds">): void {
   const event = normalizeEventInput(input);
   const now = input.now ?? new Date();
   sqlite.transaction(() => {
@@ -41,16 +43,18 @@ export function updateDraftEvent(sqlite: Database.Database, input: { accountId: 
     sqlite.prepare("UPDATE course_events SET title = ?, description = ?, category = ?, start_date = ?, end_date = ?, provisional = ? WHERE id = ?")
       .run(event.title, event.description, event.category, event.startDate, event.endDate, event.provisional ? 1 : 0, input.eventId);
     touchCourse(sqlite, courseId, input.accountId, now);
+    assertPublishedCourseValid(sqlite, courseId);
   })();
 }
 
-export function deleteDraftEvent(sqlite: Database.Database, input: { accountId: string; eventId: string; now?: Date }): void {
+export function deleteCourseEvent(sqlite: Database.Database, input: { accountId: string; eventId: string; now?: Date }): void {
   const now = input.now ?? new Date();
   sqlite.transaction(() => {
     const courseId = requireCourseOfEvent(sqlite, input.eventId);
     assertCourseEditPermission(sqlite, input.accountId, courseId);
     sqlite.prepare("DELETE FROM course_events WHERE id = ?").run(input.eventId);
     touchCourse(sqlite, courseId, input.accountId, now);
+    assertPublishedCourseValid(sqlite, courseId);
   })();
 }
 

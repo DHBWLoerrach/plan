@@ -16,17 +16,13 @@ _Avoid_: Kohorte
 
 **Studienzeitraum**: Der einschließlich beider Grenztage geltende Zeitraum vom Studienbeginn bis zum Studienende eines Kurses.
 
-**Planungsstand**: Die intern bearbeitbaren Planangaben eines Kurses, also sein Kursverlauf und seine prüfungsrelevanten Termine.
-_Avoid_: Entwurf, Arbeitsstand
+**Planungsstand**: Die aktuellen Planangaben eines Kurses, also sein Kursverlauf und seine prüfungsrelevanten Termine. Bei einem veröffentlichten Kurs sind sie zugleich der öffentlich sichtbare Stand.
+_Avoid_: Entwurf, Arbeitsstand, veröffentlichte Fassung
 
-**Veröffentlichte Fassung**: Die bewusst freigegebene Kopie des Planungsstands eines Kurses, die externe Nutzende sehen.
+**Öffentlich sichtbarer Kurs**: Ein Kurs mit gesetztem Veröffentlichungszeitpunkt. Externe Nutzende sehen seine aktuellen Angaben, Kursphasen und Termine.
 
-**Öffentlich sichtbarer Kurs**: Ein Kurs, für den eine veröffentlichte Fassung besteht.
-
-**Kurs in Arbeit**: Ein Kurs ohne veröffentlichte Fassung oder mit einem Planungsstand, der nach der Veröffentlichung geändert wurde. Er ist in allen internen Ansichten textlich als „in Arbeit“ gekennzeichnet, damit ein unfertiger Stand nicht für abgestimmt gehalten wird.
+**Kurs in Arbeit**: Ein nicht veröffentlichter Kurs. Er darf unvollständig sein und ist in allen internen Ansichten textlich als „in Arbeit“ gekennzeichnet.
 _Avoid_: Entwurfszustand
-
-**Zurückgenommene Veröffentlichung**: Der Zustand eines zuvor veröffentlichten Kurses, dessen veröffentlichte Fassung entfernt wurde. Sein Planungsstand bleibt bestehen und kann erneut veröffentlicht werden.
 
 **Übernahme**: Die Anlage eines Kurses, dessen Kursverlauf und Termine aus einer Vorlage kopiert und dabei um ganze Wochen verschoben werden.
 _Avoid_: Klonen, Synchronisieren
@@ -64,7 +60,7 @@ _Avoid_: Abgleich, Konfliktprüfung, Synchronisationswarnung
 
 **Strukturregel**: Eine Invariante, die bei jedem Schreibvorgang gilt.
 
-**Veröffentlichungsregel**: Eine zusätzliche Invariante für die Freigabe des Planungsstands eines Kurses als veröffentlichte Fassung.
+**Veröffentlichungsregel**: Eine zusätzliche Invariante, die beim Veröffentlichen und nach jeder Änderung eines veröffentlichten Kurses gelten muss.
 
 ## Nutzende und Berechtigungen
 
@@ -84,4 +80,4 @@ _Avoid_: Deaktiviertes Konto, anonymisiertes Konto
 
 **Systemadministration**: Die globale Berechtigung für fachliche Superuser-Aufgaben und die Verwaltung interner Konten.
 
-**Externe Nutzende**: Nicht angemeldete oder nicht intern berechtigte Personen, die ausschließlich veröffentlichte Fassungen lesen.
+**Externe Nutzende**: Nicht angemeldete oder nicht intern berechtigte Personen, die ausschließlich veröffentlichte Kurse lesen.

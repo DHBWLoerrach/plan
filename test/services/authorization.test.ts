@@ -18,7 +18,7 @@ function createDatabase() {
   addProgram.run("prog-tif", "area-technik", "Informatik", "TIF", 6);
   addProgram.run("prog-wwi", "area-wirtschaft", "Wirtschaftsinformatik", "WWI", 6);
   sqlite.prepare("INSERT INTO user VALUES ('seed', 'Seed', 'seed@test', 0, NULL, 'NONE', 1, 'ACTIVE', 0, 0)").run();
-  const addCourse = sqlite.prepare("INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, has_ever_been_published, draft_updated_at, draft_updated_by_account_id) VALUES (?, ?, ?, ?, ?, ?, 0, '2026-01-01T00:00:00.000Z', 'seed')");
+  const addCourse = sqlite.prepare("INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, published_at, updated_at, updated_by_account_id) VALUES (?, ?, ?, ?, ?, ?, NULL, '2026-01-01T00:00:00.000Z', 'seed')");
   addCourse.run("course-tif", "prog-tif", "TIF26A", "tif26a", "2026-10-01", "2029-09-30");
   addCourse.run("course-wwi", "prog-wwi", "WWI26A", "wwi26a", "2026-10-01", "2029-09-30");
   return sqlite;

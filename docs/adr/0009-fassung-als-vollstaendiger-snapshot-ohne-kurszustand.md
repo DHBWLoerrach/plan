@@ -1,5 +1,5 @@
 ---
-status: amended by ADR-0010
+status: superseded by ADR-0012
 ---
 
 # Veröffentlichte Fassung als vollständiger Snapshot, Kurse ohne Veröffentlichungszustand

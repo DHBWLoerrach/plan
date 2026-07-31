@@ -1,7 +1,7 @@
 import { inclusiveDays } from "@/lib/domain/calendar-day";
 import { groupComparableCourses } from "@/lib/domain/plan-comparison";
 import type { PhaseType } from "@/lib/domain/phase-type";
-import type { DraftCourse, DraftPhase } from "@/lib/domain/publication";
+import type { CoursePlan, CoursePhase } from "@/lib/domain/publication";
 
 /** A period placed on the shared axis of the diagram, as a percentage of the axis length. */
 export interface TimelineSpan {
@@ -99,11 +99,11 @@ function round(value: number): number {
  * The diagram is an addition, never the record. Its bars carry the phase type through fill alone and a short one has
  * no room for a label at all, so the matrix below remains the full and the accessible reading (BARRIEREFREIHEIT.md).
  */
-export function buildPlanTimeline(courses: DraftCourse[], phases: DraftPhase[]): PlanTimeline | null {
+export function buildPlanTimeline(courses: CoursePlan[], phases: CoursePhase[]): PlanTimeline | null {
   if (!courses.length) return null;
   const courseIds = new Set(courses.map((course) => course.id));
   const shownPhases = phases.filter((phase) => courseIds.has(phase.courseId));
-  // A draft under review may hold a phase reaching past the study period of its course, and the axis has to contain
+  // An incomplete unpublished course may hold a phase reaching past its study period, and the axis has to contain
   // whatever it draws, or that bar would land outside the diagram.
   const days = [
     ...courses.flatMap((course) => [course.studyStart, course.studyEnd]),
@@ -157,7 +157,7 @@ function sharedSemesters(lanes: TimelineLane[]): TimelineSemester[] | null {
  * the same semester may cover different periods in different courses (FACHLICHE_REGELN.md); one band across all lanes
  * would claim a shared schedule that the block plan does not guarantee.
  */
-function laneSemesters(phases: DraftPhase[], span: (from: string, to: string) => TimelineSpan): TimelineSemester[] {
+function laneSemesters(phases: CoursePhase[], span: (from: string, to: string) => TimelineSpan): TimelineSemester[] {
   const bounds = new Map<number, { startDate: string; endDate: string }>();
   for (const phase of phases) {
     const known = bounds.get(phase.semester);

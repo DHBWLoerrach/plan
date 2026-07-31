@@ -4,11 +4,11 @@ import {
   buildSemesterMatrix,
   deriveEventSemester,
   validatePublication,
-  type DraftCourse,
-  type DraftPhase,
+  type CoursePlan,
+  type CoursePhase,
 } from "@/lib/domain/publication";
 
-const courses: DraftCourse[] = [
+const courses: CoursePlan[] = [
   {
     id: "course-a",
     code: "TIF26A",
@@ -25,7 +25,7 @@ const courses: DraftCourse[] = [
   },
 ];
 
-const completePhases: DraftPhase[] = [
+const completePhases: CoursePhase[] = [
   { courseId: "course-a", semester: 1, type: "THEORY", startDate: "2026-10-01", endDate: "2026-12-31" },
   { courseId: "course-a", semester: 2, type: "PRACTICE", startDate: "2027-01-01", endDate: "2027-03-31" },
   { courseId: "course-b", semester: 1, type: "PRACTICE", startDate: "2026-10-01", endDate: "2026-11-30" },
@@ -99,7 +99,7 @@ describe("validatePublication", () => {
   });
 
   it("rejects a semester that is split by a later semester", () => {
-    const phases: DraftPhase[] = [
+    const phases: CoursePhase[] = [
       { courseId: "course-a", semester: 1, type: "THEORY", startDate: "2026-10-01", endDate: "2026-10-31" },
       { courseId: "course-a", semester: 2, type: "PRACTICE", startDate: "2026-11-01", endDate: "2026-11-30" },
       { courseId: "course-a", semester: 1, type: "THEORY", startDate: "2026-12-01", endDate: "2027-03-31" },
@@ -140,7 +140,7 @@ describe("buildSemesterMatrix", () => {
   });
 
   it("merges adjacent intervals into the maximal period in which no cell changes", () => {
-    const split: DraftPhase[] = [
+    const split: CoursePhase[] = [
       { courseId: "course-a", semester: 1, type: "THEORY", startDate: "2026-10-01", endDate: "2026-11-30" },
       { courseId: "course-a", semester: 1, type: "THEORY", startDate: "2026-12-01", endDate: "2026-12-31" },
       { courseId: "course-b", semester: 1, type: "THEORY", startDate: "2026-10-01", endDate: "2026-12-31" },
@@ -152,7 +152,7 @@ describe("buildSemesterMatrix", () => {
   });
 
   it("names a period lying outside the semester of a course textually", () => {
-    const staggered: DraftPhase[] = [
+    const staggered: CoursePhase[] = [
       { courseId: "course-a", semester: 1, type: "THEORY", startDate: "2026-10-01", endDate: "2026-12-31" },
       { courseId: "course-b", semester: 1, type: "PRACTICE", startDate: "2026-10-01", endDate: "2026-11-30" },
       { courseId: "course-b", semester: 2, type: "THEORY", startDate: "2026-12-01", endDate: "2027-03-31" },
@@ -184,7 +184,7 @@ describe("deriveEventSemester", () => {
     expect(deriveEventSemester(completePhases, "course-a", "2026-12-28")).toBe(1);
   });
 
-  it("reports no semester while the draft has no phase covering the start day", () => {
+  it("reports no semester while an incomplete course has no phase covering the start day", () => {
     expect(deriveEventSemester(completePhases, "course-a", "2027-12-01")).toBeNull();
     expect(deriveEventSemester([], "course-a", "2026-10-05")).toBeNull();
   });

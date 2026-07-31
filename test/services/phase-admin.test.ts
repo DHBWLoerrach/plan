@@ -2,7 +2,7 @@ import Database from "better-sqlite3";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { FieldError } from "@/lib/domain/field-error";
-import { createDraftPhases, deleteDraftPhase, updateDraftPhase } from "@/lib/services/phase-admin";
+import { createCoursePhases, deleteCoursePhase, updateCoursePhase } from "@/lib/services/phase-admin";
 import { applySchema } from "@/test/schema";
 
 const databases: Database.Database[] = [];
@@ -17,15 +17,15 @@ function database() {
     INSERT INTO programs VALUES ('program', 'area', 'Informatik', 'TIF', 6);
     INSERT INTO user VALUES ('editor', 'Editor', 'editor@test', 0, NULL, 'AREA_EDITOR', 0, 'ACTIVE', 0, 0);
     INSERT INTO area_assignments VALUES ('editor', 'area');
-    INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, has_ever_been_published, draft_updated_at, draft_updated_by_account_id) VALUES
-      ('course', 'program', 'TIF26A', 'tif26a', '2026-10-01', '2029-09-30', 0, '2026-01-01T00:00:00.000Z', 'editor');`);
+    INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, published_at, updated_at, updated_by_account_id) VALUES
+      ('course', 'program', 'TIF26A', 'tif26a', '2026-10-01', '2029-09-30', NULL, '2026-01-01T00:00:00.000Z', 'editor');`);
   return sqlite;
 }
 
 const valid = { semester: "1", type: "THEORY", startDate: "2026-10-01", endDate: "2026-12-31" };
 
 function create(sqlite: Database.Database, details: Partial<typeof valid> = {}, courseIds = ["course"]) {
-  return createDraftPhases(sqlite, { accountId: "editor", courseIds, ...valid, ...details });
+  return createCoursePhases(sqlite, { accountId: "editor", courseIds, ...valid, ...details });
 }
 
 /** The field a rejected value names, so the editor can point the message at the input it came from. */
@@ -42,7 +42,18 @@ afterEach(() => {
   for (const sqlite of databases.splice(0)) sqlite.close();
 });
 
-describe("createDraftPhases", () => {
+function publishCompleteCourse(sqlite: Database.Database) {
+  sqlite.exec(`DELETE FROM course_phases; INSERT INTO course_phases VALUES
+    ('phase-1', 'course', 1, 'THEORY', '2026-10-01', '2027-03-31'),
+    ('phase-2', 'course', 2, 'PRACTICE', '2027-04-01', '2027-09-30'),
+    ('phase-3', 'course', 3, 'THEORY', '2027-10-01', '2028-03-31'),
+    ('phase-4', 'course', 4, 'PRACTICE', '2028-04-01', '2028-09-30'),
+    ('phase-5', 'course', 5, 'THEORY', '2028-10-01', '2029-03-31'),
+    ('phase-6', 'course', 6, 'PRACTICE', '2029-04-01', '2029-09-30');
+    UPDATE courses SET published_at = '2026-07-01T00:00:00.000Z' WHERE id = 'course';`);
+}
+
+describe("createCoursePhases", () => {
   it("stores the phase and stamps the course with who changed it when", () => {
     const sqlite = database();
 
@@ -55,9 +66,9 @@ describe("createDraftPhases", () => {
   it("records the moment of the change on the course", () => {
     const sqlite = database();
 
-    createDraftPhases(sqlite, { accountId: "editor", courseIds: ["course"], ...valid, now: new Date("2026-07-30T09:00:00.000Z") });
+    createCoursePhases(sqlite, { accountId: "editor", courseIds: ["course"], ...valid, now: new Date("2026-07-30T09:00:00.000Z") });
 
-    expect(sqlite.prepare("SELECT draft_updated_at AS at, draft_updated_by_account_id AS by FROM courses").get())
+    expect(sqlite.prepare("SELECT updated_at AS at, updated_by_account_id AS by FROM courses").get())
       .toEqual({ at: "2026-07-30T09:00:00.000Z", by: "editor" });
   });
 
@@ -112,8 +123,8 @@ describe("createDraftPhases", () => {
 
   it("stores nothing at all when one course of the selection is refused", () => {
     const sqlite = database();
-    sqlite.exec(`INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, has_ever_been_published, draft_updated_at, draft_updated_by_account_id) VALUES
-      ('kurz', 'program', 'TIF26B', 'tif26b', '2026-10-01', '2026-11-30', 0, '2026-01-01T00:00:00.000Z', 'editor');`);
+    sqlite.exec(`INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, published_at, updated_at, updated_by_account_id) VALUES
+      ('kurz', 'program', 'TIF26B', 'tif26b', '2026-10-01', '2026-11-30', NULL, '2026-01-01T00:00:00.000Z', 'editor');`);
 
     // The period fits the first course but reaches past the study end of the second one.
     expect(() => create(sqlite, {}, ["course", "kurz"])).toThrow("Studienzeitraums von TIF26B");
@@ -121,13 +132,13 @@ describe("createDraftPhases", () => {
   });
 });
 
-describe("updateDraftPhase", () => {
+describe("updateCoursePhase", () => {
   it("checks the changed values against the course the phase belongs to", () => {
     const sqlite = database();
     const [phaseId] = create(sqlite);
 
-    expect(rejectedField(() => updateDraftPhase(sqlite, { accountId: "editor", phaseId, ...valid, semester: "7" }))).toBe("semester");
-    expect(rejectedField(() => updateDraftPhase(sqlite, { accountId: "editor", phaseId, ...valid, endDate: "2029-10-01" }))).toBe("endDate");
+    expect(rejectedField(() => updateCoursePhase(sqlite, { accountId: "editor", phaseId, ...valid, semester: "7" }))).toBe("semester");
+    expect(rejectedField(() => updateCoursePhase(sqlite, { accountId: "editor", phaseId, ...valid, endDate: "2029-10-01" }))).toBe("endDate");
     expect(sqlite.prepare("SELECT semester, end_date AS endDate FROM course_phases WHERE id = ?").get(phaseId))
       .toEqual({ semester: 1, endDate: "2026-12-31" });
   });
@@ -135,24 +146,50 @@ describe("updateDraftPhase", () => {
   it("reports a phase it cannot find rather than changing nothing quietly", () => {
     const sqlite = database();
 
-    expect(() => updateDraftPhase(sqlite, { accountId: "editor", phaseId: "phase-unbekannt", ...valid })).toThrow("nicht gefunden");
+    expect(() => updateCoursePhase(sqlite, { accountId: "editor", phaseId: "phase-unbekannt", ...valid })).toThrow("nicht gefunden");
   });
 });
 
-describe("deleteDraftPhase", () => {
+describe("deleteCoursePhase", () => {
   it("removes the phase and stamps the course", () => {
     const sqlite = database();
     const [phaseId] = create(sqlite);
 
-    deleteDraftPhase(sqlite, { accountId: "editor", phaseId, now: new Date("2026-07-30T10:00:00.000Z") });
+    deleteCoursePhase(sqlite, { accountId: "editor", phaseId, now: new Date("2026-07-30T10:00:00.000Z") });
 
     expect(sqlite.prepare("SELECT count(*) AS count FROM course_phases").get()).toEqual({ count: 0 });
-    expect(sqlite.prepare("SELECT draft_updated_at AS at FROM courses").get()).toEqual({ at: "2026-07-30T10:00:00.000Z" });
+    expect(sqlite.prepare("SELECT updated_at AS at FROM courses").get()).toEqual({ at: "2026-07-30T10:00:00.000Z" });
   });
 
   it("reports a phase it cannot find", () => {
     const sqlite = database();
 
-    expect(() => deleteDraftPhase(sqlite, { accountId: "editor", phaseId: "phase-unbekannt" })).toThrow("nicht gefunden");
+    expect(() => deleteCoursePhase(sqlite, { accountId: "editor", phaseId: "phase-unbekannt" })).toThrow("nicht gefunden");
+  });
+});
+
+describe("changes to a published course", () => {
+  it("moves the adjacent boundary in the same transaction", () => {
+    const sqlite = database();
+    publishCompleteCourse(sqlite);
+
+    updateCoursePhase(sqlite, { accountId: "editor", phaseId: "phase-2", semester: "2", type: "PRACTICE", startDate: "2027-04-08", endDate: "2027-09-30" });
+
+    expect(sqlite.prepare("SELECT id, start_date AS startDate, end_date AS endDate FROM course_phases WHERE id IN ('phase-1', 'phase-2') ORDER BY id").all())
+      .toEqual([
+        { id: "phase-1", startDate: "2026-10-01", endDate: "2027-04-07" },
+        { id: "phase-2", startDate: "2027-04-08", endDate: "2027-09-30" },
+      ]);
+  });
+
+  it("rejects adding or deleting a single phase and preserves the public plan", () => {
+    const sqlite = database();
+    publishCompleteCourse(sqlite);
+
+    expect(() => create(sqlite, { startDate: "2027-01-01", endDate: "2027-01-02" })).toThrow("nicht unmittelbar veröffentlicht");
+    expect(() => deleteCoursePhase(sqlite, { accountId: "editor", phaseId: "phase-2" })).toThrow("nicht unmittelbar veröffentlicht");
+
+    expect(sqlite.prepare("SELECT count(*) FROM course_phases").pluck().get()).toBe(6);
+    expect(sqlite.prepare("SELECT start_date FROM course_phases WHERE id = 'phase-2'").pluck().get()).toBe("2027-04-01");
   });
 });

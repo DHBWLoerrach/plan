@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 
 import { formatCompactDuration } from "@/lib/domain/calendar-format";
 import { assumedLabelWidth, buildPlanTimeline, flagNarrowBars, type TimelineBar, type TimelineSemester } from "@/lib/domain/plan-timeline";
-import type { DraftCourse, DraftPhase } from "@/lib/domain/publication";
+import type { CoursePlan, CoursePhase } from "@/lib/domain/publication";
 
 /** The air a label keeps to the edges of the bar it sits in and to the label beside it, in pixels. */
 const labelAir = 8;
@@ -76,7 +76,7 @@ function useLabelWidths(labels: string[]) {
  * the diagram alone; heading, note and the rule that it stays hidden from assistive technology and from narrow screens
  * belong to the block around it (BARRIEREFREIHEIT.md).
  */
-export function PlanTimeline({ courses, phases }: { courses: DraftCourse[]; phases: DraftPhase[] }) {
+export function PlanTimeline({ courses, phases }: { courses: CoursePlan[]; phases: CoursePhase[] }) {
   const timeline = buildPlanTimeline(courses, phases);
   const drawnLabels = [...new Set(timeline?.lanes.flatMap((lane) => lane.bars.map(barLabel)) ?? [])];
   const { labelWidth, axis, probe } = useLabelWidths(drawnLabels);

@@ -9,17 +9,11 @@ export interface PublicCourseBlockPlan {
     program: { name: string; abbreviation: string };
     studyPeriod: { startDate: string; endDate: string };
   };
-  semesters: {
-    number: number;
-    phases: { type: PhaseType; startDate: string; endDate: string }[];
-  }[];
+  semesters: { number: number; phases: { type: PhaseType; startDate: string; endDate: string }[] }[];
 }
+export type PublicCourseBlockPlanResult = { kind: "found"; data: PublicCourseBlockPlan } | { kind: "not-found" };
 
-export type PublicCourseBlockPlanResult =
-  | { kind: "found"; data: PublicCourseBlockPlan }
-  | { kind: "not-found" };
-
-type PublishedCourseRow = {
+type CourseRow = {
   id: string;
   code: string;
   program: string;
@@ -28,31 +22,20 @@ type PublishedCourseRow = {
   studyEnd: string;
   semesters: number;
 };
+type PhaseRow = { semester: number; type: PhaseType; startDate: string; endDate: string };
 
-type PublishedPhaseRow = { semester: number; type: PhaseType; startDate: string; endDate: string };
-
-/**
- * The public, published course plan addressed by its exact course code. This reads the immutable snapshots rather
- * than current courses, so an unpublished edit never changes the API. The stored normalised key is unique
- * (`migrations/0003_unique_published_course_code.sql`), so one code names at most one published course.
- */
+/** The public API exposes the current rows of a course exactly while its publication timestamp is set. */
 export function readPublicCourseBlockPlan(sqlite: Database.Database, courseCode: string): PublicCourseBlockPlanResult {
   const normalizedCode = normalizeCourseCode(courseCode);
   if (!normalizedCode) return { kind: "not-found" };
-
-  const course = sqlite
-    .prepare(`SELECT snapshot.id, snapshot.code, snapshot.program_name AS program, snapshot.program_abbreviation AS programAbbreviation,
-        snapshot.study_start AS studyStart, snapshot.study_end AS studyEnd, snapshot.semesters
-      FROM published_course_search_keys search_key
-      JOIN published_courses snapshot ON snapshot.id = search_key.published_course_id
-      WHERE search_key.normalized_code = ?`)
-    .get(normalizedCode) as PublishedCourseRow | undefined;
+  const course = sqlite.prepare(`SELECT course.id, course.code, program.name AS program,
+      program.abbreviation AS programAbbreviation, course.study_start AS studyStart,
+      course.study_end AS studyEnd, program.semesters
+    FROM courses course JOIN programs program ON program.id = course.program_id
+    WHERE course.normalized_code = ? AND course.published_at IS NOT NULL`).get(normalizedCode) as CourseRow | undefined;
   if (!course) return { kind: "not-found" };
-
-  const phases = sqlite
-    .prepare(`SELECT semester, phase_type AS type, start_date AS startDate, end_date AS endDate
-      FROM published_phases WHERE published_course_id = ? ORDER BY semester, start_date, end_date`)
-    .all(course.id) as PublishedPhaseRow[];
+  const phases = sqlite.prepare(`SELECT semester, phase_type AS type, start_date AS startDate, end_date AS endDate
+    FROM course_phases WHERE course_id = ? ORDER BY semester, start_date, end_date`).all(course.id) as PhaseRow[];
   return {
     kind: "found",
     data: {
@@ -63,12 +46,7 @@ export function readPublicCourseBlockPlan(sqlite: Database.Database, courseCode:
       },
       semesters: Array.from({ length: course.semesters }, (_, index) => {
         const number = index + 1;
-        return {
-          number,
-          phases: phases
-            .filter((phase) => phase.semester === number)
-            .map(({ type, startDate, endDate }) => ({ type, startDate, endDate })),
-        };
+        return { number, phases: phases.filter((phase) => phase.semester === number).map(({ type, startDate, endDate }) => ({ type, startDate, endDate })) };
       }),
     },
   };

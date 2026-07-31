@@ -2,13 +2,13 @@
  * The cut a public view is formed over: a single course, a whole year of studies or a program or area within it.
  * A cut is bound to exactly one year, because the plan matrix compares semesters over one shared time axis and the
  * same semester of two years lies years apart (MVP-SPEZIFIKATION.md). It carries no id of its own: it addresses
- * itself through the designations the published snapshots froze.
+ * itself through the current designations of its published courses.
  */
 export type PublicCut =
   | { kind: "course"; code: string }
   | { kind: "year"; year: number }
   | { kind: "area"; year: number; name: string }
-  | { kind: "program"; year: number; name: string };
+  | { kind: "program"; year: number; abbreviation: string; name?: string };
 
 export type PublicCutKind = PublicCut["kind"];
 
@@ -34,7 +34,7 @@ export function publicCutPath(cut: PublicCut): string {
     case "area":
       return `/jahrgang/${cut.year}/bereich/${encodeURIComponent(cut.name)}`;
     case "program":
-      return `/jahrgang/${cut.year}/studiengang/${encodeURIComponent(cut.name)}`;
+      return `/jahrgang/${cut.year}/studiengang/${encodeURIComponent(cut.abbreviation)}`;
   }
 }
 
@@ -45,8 +45,10 @@ export function publicCutTitle(cut: PublicCut): string {
       return cut.code;
     case "year":
       return `Jahrgang ${cut.year}`;
-    default:
+    case "area":
       return `${cut.name} · Jahrgang ${cut.year}`;
+    case "program":
+      return `${cut.name ?? cut.abbreviation} · Jahrgang ${cut.year}`;
   }
 }
 
@@ -68,21 +70,21 @@ export function areaCut(year: string, name: string): PublicCut | null {
   return parsed === null || !name ? null : { kind: "area", year: parsed, name };
 }
 
-export function programCut(year: string, name: string): PublicCut | null {
+export function programCut(year: string, abbreviation: string): PublicCut | null {
   const parsed = cutYear(year);
-  return parsed === null || !name ? null : { kind: "program", year: parsed, name };
+  return parsed === null || !abbreviation ? null : { kind: "program", year: parsed, abbreviation };
 }
 
 /**
  * The cuts a shown cut leads on to: from one course to its year, its program and its area, and from a program or
  * area back to the whole year. They are the way from one course to its parallel courses and back.
  */
-export function relatedCuts(cut: PublicCut, course: { program: string; area: string; year: number }): PublicCut[] {
+export function relatedCuts(cut: PublicCut, course: { program: string; programAbbreviation: string; area: string; year: number }): PublicCut[] {
   switch (cut.kind) {
     case "course":
       return [
         { kind: "year", year: course.year },
-        { kind: "program", year: course.year, name: course.program },
+        { kind: "program", year: course.year, abbreviation: course.programAbbreviation, name: course.program },
         { kind: "area", year: course.year, name: course.area },
       ];
     case "year":

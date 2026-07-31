@@ -42,8 +42,8 @@ try {
     VALUES ('e2e-password-link', 'password-link-user', ?, '2099-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z')`)
     .run(createHash("sha256").update(linkToken).digest("hex"));
   const addCourse = sqlite.prepare(`INSERT INTO courses
-    (id, program_id, code, normalized_code, study_start, study_end, has_ever_been_published, draft_updated_at, draft_updated_by_account_id)
-    VALUES (?, ?, ?, ?, '2026-10-01', '2029-09-30', 0, '2026-01-01T00:00:00.000Z', 'system-admin')`);
+    (id, program_id, code, normalized_code, study_start, study_end, published_at, updated_at, updated_by_account_id)
+    VALUES (?, ?, ?, ?, '2026-10-01', '2029-09-30', NULL, '2026-01-01T00:00:00.000Z', 'system-admin')`);
   addCourse.run("e2e-course", "program-own", "TIF26E2E", "tif26e2e");
   addCourse.run("e2e-foreign-course", "program-foreign", "FRM26E2E", "frm26e2e");
   const addPhase = sqlite.prepare(`INSERT INTO course_phases

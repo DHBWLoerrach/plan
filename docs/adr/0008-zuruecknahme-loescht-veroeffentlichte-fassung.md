@@ -1,5 +1,5 @@
 ---
-status: superseded by ADR-0009
+status: superseded by ADR-0012
 ---
 
 # Zurücknahme löscht die veröffentlichte Fassung

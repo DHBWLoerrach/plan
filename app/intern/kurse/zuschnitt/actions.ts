@@ -5,9 +5,9 @@ import { revalidatePath } from "next/cache";
 import { sqlite } from "@/lib/db";
 import { FieldError } from "@/lib/domain/field-error";
 import { getActiveAccount } from "@/lib/internal-auth";
-import { deleteDraftEvents, deleteDraftPhases, updateDraftEvents, updateDraftPhases } from "@/lib/services/cut-editor";
-import { createDraftEvent, type EventField, type EventInput } from "@/lib/services/event-admin";
-import { createDraftPhases, type PhaseDetails, type PhaseField, type PhaseInput } from "@/lib/services/phase-admin";
+import { deleteCourseEvents, deleteCoursePhases, updateCourseEvents, updateCoursePhases } from "@/lib/services/cut-editor";
+import { createCourseEvent, type EventField, type EventInput } from "@/lib/services/event-admin";
+import { createCoursePhases, type PhaseDetails, type PhaseField, type PhaseInput } from "@/lib/services/phase-admin";
 
 export type CutFormState<TField extends string = string, TValues = never> = {
   error?: string;
@@ -49,7 +49,7 @@ function phaseInput(formData: FormData): PhaseInput {
 export async function createCutPhasesAction(_: CutFormState<PhaseField, PhaseInput>, formData: FormData): Promise<CutFormState<PhaseField, PhaseInput>> {
   const input = phaseInput(formData);
   try {
-    const created = createDraftPhases(sqlite, { accountId: await requireAccountId(), ...input });
+    const created = createCoursePhases(sqlite, { accountId: await requireAccountId(), ...input });
     revalidateCut();
     return { success: created.length === 1 ? "Die Kursphase wurde gespeichert." : `${created.length} eigenständige Kursphasen wurden gespeichert — je Kurs eine.` };
   } catch (error) {
@@ -69,7 +69,7 @@ function phaseDetails(formData: FormData): PhaseDetails {
 export async function updateCutPhasesAction(_: CutFormState<PhaseField, PhaseDetails>, formData: FormData): Promise<CutFormState<PhaseField, PhaseDetails>> {
   const details = phaseDetails(formData);
   try {
-    updateDraftPhases(sqlite, { accountId: await requireAccountId(), phaseIds: formData.getAll("phaseId").map(String), ...details });
+    updateCoursePhases(sqlite, { accountId: await requireAccountId(), phaseIds: formData.getAll("phaseId").map(String), ...details });
     revalidateCut();
     return { success: "Die Kursphasen wurden gespeichert." };
   } catch (error) {
@@ -79,7 +79,7 @@ export async function updateCutPhasesAction(_: CutFormState<PhaseField, PhaseDet
 
 export async function deleteCutPhasesAction(_: CutFormState, formData: FormData): Promise<CutFormState> {
   try {
-    deleteDraftPhases(sqlite, { accountId: await requireAccountId(), phaseIds: formData.getAll("phaseId").map(String) });
+    deleteCoursePhases(sqlite, { accountId: await requireAccountId(), phaseIds: formData.getAll("phaseId").map(String) });
     revalidateCut();
     return { success: "Die Kursphasen wurden gelöscht." };
   } catch (error) {
@@ -102,7 +102,7 @@ function eventInput(formData: FormData): EventInput {
 export async function createCutEventsAction(_: CutFormState<EventField, EventInput>, formData: FormData): Promise<CutFormState<EventField, EventInput>> {
   const input = eventInput(formData);
   try {
-    const created = createDraftEvent(sqlite, { accountId: await requireAccountId(), ...input });
+    const created = createCourseEvent(sqlite, { accountId: await requireAccountId(), ...input });
     revalidateCut();
     return { success: created.length === 1 ? "Der Termin wurde gespeichert." : `${created.length} eigenständige Termine wurden gespeichert — je Kurs einer.` };
   } catch (error) {
@@ -120,7 +120,7 @@ export async function updateCutEventsAction(_: CutFormState<EventField, Omit<Eve
     provisional: formData.get("provisional") !== null,
   };
   try {
-    updateDraftEvents(sqlite, { accountId: await requireAccountId(), eventIds: formData.getAll("eventId").map(String), ...input });
+    updateCourseEvents(sqlite, { accountId: await requireAccountId(), eventIds: formData.getAll("eventId").map(String), ...input });
     revalidateCut();
     return { success: "Die Termine wurden gespeichert." };
   } catch (error) {
@@ -130,7 +130,7 @@ export async function updateCutEventsAction(_: CutFormState<EventField, Omit<Eve
 
 export async function deleteCutEventsAction(_: CutFormState, formData: FormData): Promise<CutFormState> {
   try {
-    deleteDraftEvents(sqlite, { accountId: await requireAccountId(), eventIds: formData.getAll("eventId").map(String) });
+    deleteCourseEvents(sqlite, { accountId: await requireAccountId(), eventIds: formData.getAll("eventId").map(String) });
     revalidateCut();
     return { success: "Die Termine wurden gelöscht." };
   } catch (error) {

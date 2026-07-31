@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import { groupComparableCourses, groupComparableEvents } from "@/lib/domain/plan-comparison";
-import type { DraftCourse, DraftEvent, DraftPhase } from "@/lib/domain/publication";
+import type { CoursePlan, CourseEvent, CoursePhase } from "@/lib/domain/publication";
 
-const courses: DraftCourse[] = [
+const courses: CoursePlan[] = [
   { id: "course-a", code: "TIF26A", studyStart: "2026-10-01", studyEnd: "2027-09-30", semesters: 2 },
   { id: "course-b", code: "TIF26B", studyStart: "2026-10-01", studyEnd: "2027-09-30", semesters: 2 },
   { id: "course-c", code: "WWI26A", studyStart: "2026-10-01", studyEnd: "2027-09-30", semesters: 2 },
 ];
 
-function phases(courseId: string): DraftPhase[] {
+function phases(courseId: string): CoursePhase[] {
   return [
     { courseId, semester: 1, type: "THEORY", startDate: "2026-10-01", endDate: "2027-02-28" },
     { courseId, semester: 2, type: "PRACTICE", startDate: "2027-03-01", endDate: "2027-09-30" },
@@ -36,7 +36,7 @@ describe("groupComparableCourses", () => {
   });
 });
 
-function event(id: string, courseId: string, overrides: Partial<DraftEvent> = {}): DraftEvent {
+function event(id: string, courseId: string, overrides: Partial<CourseEvent> = {}): CourseEvent {
   return {
     id,
     title: "  Klausur   Algorithmen ",

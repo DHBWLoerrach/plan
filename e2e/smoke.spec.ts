@@ -50,10 +50,13 @@ test("opens on the own areas and keeps foreign courses read-only, confirming wit
   await expect(page.getByRole("button", { name: "Kurs veröffentlichen" })).toHaveCount(0);
 
   await page.goto("/intern/kurse/e2e-course");
-  const publish = page.getByRole("button", { name: "Kurs veröffentlichen" });
-  await publish.focus();
+  const correction = page.getByRole("button", { name: "Änderung prüfen" });
+  const publication = page.getByRole("button", { name: "Kurs veröffentlichen" });
+  const control = await correction.count() ? correction : publication;
+  const confirmationName = await correction.count() ? "Öffentliche Kursangaben ändern" : "Diesen Kurs veröffentlichen";
+  await control.focus();
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("group", { name: "Diesen Kurs veröffentlichen" })).toBeFocused();
+  await expect(page.getByRole("group", { name: confirmationName })).toBeFocused();
   await page.keyboard.press("Escape");
-  await expect(publish).toBeFocused();
+  await expect(control).toBeFocused();
 });

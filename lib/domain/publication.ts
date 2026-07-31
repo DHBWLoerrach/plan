@@ -2,7 +2,7 @@ import { plusDays } from "@/lib/domain/calendar-day";
 import type { EventCategory } from "@/lib/domain/event-category";
 import { type PhaseType, phaseTypeLabel } from "@/lib/domain/phase-type";
 
-export interface DraftCourse {
+export interface CoursePlan {
   id: string;
   code: string;
   studyStart: string;
@@ -10,7 +10,7 @@ export interface DraftCourse {
   semesters: number;
 }
 
-export interface DraftPhase {
+export interface CoursePhase {
   courseId: string;
   semester: number;
   type: PhaseType;
@@ -18,10 +18,10 @@ export interface DraftPhase {
   endDate: string;
 }
 
-/** A saved draft phase as the editor lists it: the domain data plus its identity and the code of its course. */
-export type PlanPhase = DraftPhase & { id: string; code: string };
+/** A saved phase as the editor lists it: the domain data plus its identity and the code of its course. */
+export type PlanPhase = CoursePhase & { id: string; code: string };
 
-export interface DraftEvent {
+export interface CourseEvent {
   id: string;
   title: string;
   description: string | null;
@@ -37,7 +37,6 @@ export type PublicationIssueField = "startDate" | "endDate" | "semester";
 
 export interface PublicationIssue {
   code:
-    | "course-code-published-elsewhere"
     | "coverage-gap"
     | "coverage-overlap"
     | "semester-missing"
@@ -63,9 +62,9 @@ export interface MatrixRow {
 /**
  * The semester an event belongs to for one affected course: the semester of the course phase covering its start day
  * (FACHLICHE_REGELN.md). An event spanning a semester change therefore belongs to the semester of its beginning.
- * In an incomplete draft such a phase may be missing; the semester is then not derivable and stays `null`.
+ * In an incomplete unpublished course such a phase may be missing; the semester is then not derivable and stays `null`.
  */
-export function deriveEventSemester(phases: DraftPhase[], courseId: string, startDate: string): number | null {
+export function deriveEventSemester(phases: CoursePhase[], courseId: string, startDate: string): number | null {
   const covering = phases.find((phase) => phase.courseId === courseId && phase.startDate <= startDate && phase.endDate >= startDate);
   return covering?.semester ?? null;
 }
@@ -75,16 +74,16 @@ export function validatePublication({
   phases,
   events,
 }: {
-  course: DraftCourse;
-  phases: DraftPhase[];
-  events: Omit<DraftEvent, "courseIds">[];
+  course: CoursePlan;
+  phases: CoursePhase[];
+  events: Omit<CourseEvent, "courseIds">[];
 }): PublicationIssue[] {
   const issues: PublicationIssue[] = [];
   const coursePhases = phases
     .filter((phase) => phase.courseId === course.id)
     .toSorted((left, right) => left.startDate.localeCompare(right.startDate));
   const seenSemesters = new Set<number>();
-  let previous: DraftPhase | undefined;
+  let previous: CoursePhase | undefined;
 
   for (const phase of coursePhases) {
     if (phase.semester < 1 || phase.semester > course.semesters) {
@@ -135,7 +134,7 @@ export function validatePublication({
 /** What a matrix cell says where a course has no phase covering the period of its row. */
 export const noPhaseLabel = "Nicht in diesem Semester";
 
-export function buildSemesterMatrix(courses: DraftCourse[], phases: DraftPhase[], semester: number): MatrixRow[] {
+export function buildSemesterMatrix(courses: CoursePlan[], phases: CoursePhase[], semester: number): MatrixRow[] {
   const semesterPhases = phases.filter((phase) => phase.semester === semester);
   const boundaries = new Set<string>();
   for (const phase of semesterPhases) {

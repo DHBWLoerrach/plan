@@ -128,14 +128,39 @@ export function AdoptCourseForm({ programs, template }: { programs: Program[]; t
   </form>;
 }
 
-export function EditCourseForm({ courseId, programs, course }: { courseId: string; programs: Program[]; course: Course }) {
+function CourseChangePreview({ before, programs, formData }: { before: Course; programs: Program[]; formData: FormData }) {
+  const after = {
+    code: String(formData.get("code") ?? ""),
+    programId: String(formData.get("programId") ?? ""),
+    studyStart: String(formData.get("studyStart") ?? ""),
+    studyEnd: String(formData.get("studyEnd") ?? ""),
+  };
+  const programLabel = (id: string) => programs.find((program) => program.id === id)?.label ?? id;
+  const rows = [
+    ["Kurskennung", before.code, after.code],
+    ["Studiengang", programLabel(before.programId), programLabel(after.programId)],
+    ["Studienbeginn", before.studyStart, after.studyStart],
+    ["Studienende", before.studyEnd, after.studyEnd],
+  ].filter(([, oldValue, newValue]) => oldValue !== newValue);
+  return <>
+    {rows.length ? <ul>{rows.map(([label, oldValue, newValue]) => <li key={label}><strong>{label}:</strong> {oldValue} → {newValue}</li>)}</ul> : <p>Die Kursangaben bleiben unverändert.</p>}
+    <p>Nach erfolgreicher Prüfung ist diese Änderung unmittelbar öffentlich sichtbar.</p>
+  </>;
+}
+
+export function EditCourseForm({ courseId, programs, course, published }: { courseId: string; programs: Program[]; course: Course; published: boolean }) {
   const [state, formAction, isPending] = useActionState<CourseFormState, FormData>(updateCourseAction, {});
   return <form action={formAction} className="account-form">
     <input type="hidden" name="courseId" value={courseId} />
     <CourseFields programs={programs} course={course} />
     {state.error ? <p role="alert">{state.error}</p> : null}
     {state.success ? <p role="status">{state.success}</p> : null}
-    <button className="button" type="submit" disabled={isPending}>{isPending ? "Wird gespeichert …" : "Kursangaben speichern"}</button>
+    {published
+      ? <ConfirmAction openLabel="Änderung prüfen" heading="Öffentliche Kursangaben ändern"
+          consequence="Die Änderung wird nach erfolgreicher Prüfung unmittelbar öffentlich sichtbar."
+          preview={(formData) => <CourseChangePreview before={course} programs={programs} formData={formData} />}
+          confirmLabel="Änderung speichern und veröffentlichen" pendingLabel="Wird gespeichert …" isPending={isPending} />
+      : <button className="button" type="submit" disabled={isPending}>{isPending ? "Wird gespeichert …" : "Kursangaben speichern"}</button>}
   </form>;
 }
 

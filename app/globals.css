@@ -110,7 +110,7 @@ p[role="status"] { margin: 0; color: var(--success); }
 .search-hero h1 { margin: 0; font-size: clamp(2rem, 4.5vw, 2.9rem); font-weight: 800; line-height: 1.05; letter-spacing: -.025em; }
 .search-hero__lead { margin: 1rem 0 0; color: var(--gray); font-size: 1.05rem; }
 /* The note carries the same statement as the former panel, but as a line beside the text instead of a
-   block of its own: the restriction to published versions is a caveat, not a second heading. It holds
+   block of its own: the restriction to published courses is a caveat, not a second heading. It holds
    no surface either, since the padding of a filled box would set its text off the column edge that
    mark, heading and lead all share. */
 .search-hero__note { display: flex; align-items: center; gap: .55rem; margin: .3rem 0 0; color: var(--gray-strong); font-size: .87rem; }
@@ -225,7 +225,7 @@ p[role="status"] { margin: 0; color: var(--success); }
 .timeline-years span:last-child { border-right: 1px solid #d9dde0; }
 .timeline-codes { margin: .9rem 0 .3rem; font-size: .95rem; font-weight: 700; }
 .timeline-track { height: 1.4rem; }
-/* The bar of a phase sits in the track of its lane; the fill of the track stays visible wherever a draft has not
+/* The bar of a phase sits in the track of its lane; the fill of the track stays visible wherever a course has not
    placed a course phase yet. */
 .timeline-bars { height: 2.6rem; margin-top: .25rem; background: var(--surface); }
 .timeline-track span { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid var(--line); color: var(--gray-strong); font-size: var(--timeline-label); white-space: nowrap; }

@@ -1,3 +1,7 @@
+---
+status: amended by ADR-0012
+---
+
 # Der Kurs ist Planungs- und Veröffentlichungseinheit, der Blockplan ein Erzeugnis
 
 Kursverlauf und prüfungsrelevante Termine gehören dem Kurs; jeder Termin betrifft genau einen Kurs. Ein Kurs besitzt seinen Planungsstand und höchstens eine veröffentlichte Fassung und wird einzeln freigegeben und zurückgenommen. Der Blockplan als eigenständige Planungs- und Veröffentlichungseinheit entfällt ersatzlos: „Blockplan“ bezeichnet fortan die veröffentlichte Darstellung eines oder mehrerer Kurse in einem gewählten Zuschnitt — ein Erzeugnis ohne Identität, Lebenszyklus oder eigene Daten.

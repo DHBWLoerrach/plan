@@ -1,20 +1,105 @@
 PRAGMA foreign_keys = ON;
-CREATE TABLE IF NOT EXISTS user (id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL, email TEXT NOT NULL UNIQUE, emailVerified INTEGER NOT NULL DEFAULT 0, image TEXT, role TEXT NOT NULL DEFAULT 'NONE' CHECK (role IN ('NONE', 'AREA_EDITOR')), system_admin INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'PASSWORD_PENDING' CHECK (status IN ('PASSWORD_PENDING', 'ACTIVE', 'LOCKED')), createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL);
-CREATE TABLE IF NOT EXISTS account (id TEXT PRIMARY KEY NOT NULL, accountId TEXT NOT NULL, providerId TEXT NOT NULL, userId TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE, accessToken TEXT, refreshToken TEXT, idToken TEXT, accessTokenExpiresAt INTEGER, refreshTokenExpiresAt INTEGER, scope TEXT, password TEXT, createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL, UNIQUE(providerId, accountId));
-CREATE TABLE IF NOT EXISTS session (id TEXT PRIMARY KEY NOT NULL, token TEXT NOT NULL UNIQUE, userId TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE, expiresAt INTEGER NOT NULL, ipAddress TEXT, userAgent TEXT, createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL);
-CREATE TABLE IF NOT EXISTS verification (id TEXT PRIMARY KEY NOT NULL, identifier TEXT NOT NULL, value TEXT NOT NULL, expiresAt INTEGER NOT NULL, createdAt INTEGER, updatedAt INTEGER);
-CREATE TABLE IF NOT EXISTS areas (id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL, normalized_name TEXT NOT NULL UNIQUE);
-CREATE TABLE IF NOT EXISTS programs (id TEXT PRIMARY KEY NOT NULL, area_id TEXT NOT NULL REFERENCES areas(id), name TEXT NOT NULL, abbreviation TEXT NOT NULL UNIQUE, semesters INTEGER NOT NULL CHECK (semesters IN (6,7)));
-CREATE TABLE IF NOT EXISTS area_assignments (user_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE, area_id TEXT NOT NULL REFERENCES areas(id) ON DELETE CASCADE, PRIMARY KEY(user_id, area_id));
-CREATE TABLE IF NOT EXISTS password_links (id TEXT PRIMARY KEY NOT NULL, user_id TEXT NOT NULL UNIQUE REFERENCES user(id) ON DELETE CASCADE, token_hash TEXT NOT NULL, expires_at TEXT NOT NULL, created_at TEXT NOT NULL);
-CREATE TABLE IF NOT EXISTS block_plans (id TEXT PRIMARY KEY NOT NULL, area_id TEXT NOT NULL REFERENCES areas(id), name TEXT, normalized_name TEXT, has_ever_been_published INTEGER NOT NULL DEFAULT 0, draft_updated_at TEXT NOT NULL, draft_updated_by_account_id TEXT REFERENCES user(id));
-CREATE UNIQUE INDEX IF NOT EXISTS block_plans_unique_name_per_area ON block_plans(area_id, normalized_name) WHERE normalized_name IS NOT NULL;
-CREATE TABLE IF NOT EXISTS courses (id TEXT PRIMARY KEY NOT NULL, program_id TEXT NOT NULL REFERENCES programs(id), block_plan_id TEXT REFERENCES block_plans(id), code TEXT NOT NULL, normalized_code TEXT NOT NULL UNIQUE, study_start TEXT NOT NULL, study_end TEXT NOT NULL, CHECK (study_start < study_end));
-CREATE TABLE IF NOT EXISTS draft_phases (id TEXT PRIMARY KEY NOT NULL, block_plan_id TEXT NOT NULL REFERENCES block_plans(id) ON DELETE CASCADE, course_id TEXT NOT NULL REFERENCES courses(id), semester INTEGER NOT NULL, phase_type TEXT NOT NULL CHECK (phase_type IN ('THEORY','PRACTICE')), start_date TEXT NOT NULL, end_date TEXT NOT NULL, CHECK (start_date <= end_date));
-CREATE TABLE IF NOT EXISTS draft_events (id TEXT PRIMARY KEY NOT NULL, block_plan_id TEXT NOT NULL REFERENCES block_plans(id) ON DELETE CASCADE, title TEXT NOT NULL, description TEXT, category TEXT NOT NULL CHECK (category IN ('REGISTRATION','SUBMISSION','PRESENTATION','EXAM','OTHER')), start_date TEXT NOT NULL, end_date TEXT, provisional INTEGER NOT NULL DEFAULT 0, CHECK (end_date IS NULL OR start_date <= end_date));
-CREATE TABLE IF NOT EXISTS draft_event_courses (event_id TEXT NOT NULL REFERENCES draft_events(id) ON DELETE CASCADE, course_id TEXT NOT NULL REFERENCES courses(id), PRIMARY KEY (event_id, course_id));
-CREATE TABLE IF NOT EXISTS published_versions (id TEXT PRIMARY KEY NOT NULL, block_plan_id TEXT NOT NULL UNIQUE REFERENCES block_plans(id) ON DELETE CASCADE, published_at TEXT NOT NULL, block_plan_name TEXT NOT NULL, area_name TEXT NOT NULL);
-CREATE TABLE IF NOT EXISTS published_course_snapshots (id TEXT PRIMARY KEY NOT NULL, version_id TEXT NOT NULL REFERENCES published_versions(id) ON DELETE CASCADE, source_course_id TEXT NOT NULL, code TEXT NOT NULL, program_name TEXT NOT NULL, program_abbreviation TEXT NOT NULL, study_start TEXT NOT NULL, study_end TEXT NOT NULL, semesters INTEGER NOT NULL, UNIQUE(version_id, source_course_id), UNIQUE(source_course_id));
-CREATE TABLE IF NOT EXISTS published_phases (id TEXT PRIMARY KEY NOT NULL, version_id TEXT NOT NULL REFERENCES published_versions(id) ON DELETE CASCADE, course_snapshot_id TEXT NOT NULL REFERENCES published_course_snapshots(id) ON DELETE CASCADE, semester INTEGER NOT NULL, phase_type TEXT NOT NULL CHECK (phase_type IN ('THEORY','PRACTICE')), start_date TEXT NOT NULL, end_date TEXT NOT NULL, CHECK (start_date <= end_date));
-CREATE TABLE IF NOT EXISTS published_events (id TEXT PRIMARY KEY NOT NULL, version_id TEXT NOT NULL REFERENCES published_versions(id) ON DELETE CASCADE, title TEXT NOT NULL, description TEXT, category TEXT NOT NULL CHECK (category IN ('REGISTRATION','SUBMISSION','PRESENTATION','EXAM','OTHER')), start_date TEXT NOT NULL, end_date TEXT, provisional INTEGER NOT NULL DEFAULT 0);
-CREATE TABLE IF NOT EXISTS published_event_courses (event_id TEXT NOT NULL REFERENCES published_events(id) ON DELETE CASCADE, course_snapshot_id TEXT NOT NULL REFERENCES published_course_snapshots(id) ON DELETE CASCADE, PRIMARY KEY(event_id, course_snapshot_id));
+
+CREATE TABLE IF NOT EXISTS user (
+  id TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL COLLATE NOCASE UNIQUE CHECK (length(trim(email)) BETWEEN 1 AND 254),
+  emailVerified INTEGER NOT NULL DEFAULT 0 CHECK (emailVerified IN (0, 1)),
+  image TEXT,
+  role TEXT NOT NULL DEFAULT 'NONE' CHECK (role IN ('NONE', 'AREA_EDITOR')),
+  system_admin INTEGER NOT NULL DEFAULT 0 CHECK (system_admin IN (0, 1)),
+  status TEXT NOT NULL DEFAULT 'PASSWORD_PENDING' CHECK (status IN ('PASSWORD_PENDING', 'ACTIVE', 'LOCKED')),
+  createdAt INTEGER NOT NULL,
+  updatedAt INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS account (
+  id TEXT PRIMARY KEY NOT NULL,
+  accountId TEXT NOT NULL,
+  providerId TEXT NOT NULL,
+  userId TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+  accessToken TEXT,
+  refreshToken TEXT,
+  idToken TEXT,
+  accessTokenExpiresAt INTEGER,
+  refreshTokenExpiresAt INTEGER,
+  scope TEXT,
+  password TEXT,
+  createdAt INTEGER NOT NULL,
+  updatedAt INTEGER NOT NULL,
+  UNIQUE(providerId, accountId)
+);
+CREATE TABLE IF NOT EXISTS session (
+  id TEXT PRIMARY KEY NOT NULL,
+  token TEXT NOT NULL UNIQUE,
+  userId TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+  expiresAt INTEGER NOT NULL,
+  ipAddress TEXT,
+  userAgent TEXT,
+  createdAt INTEGER NOT NULL,
+  updatedAt INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS verification (
+  id TEXT PRIMARY KEY NOT NULL,
+  identifier TEXT NOT NULL,
+  value TEXT NOT NULL,
+  expiresAt INTEGER NOT NULL,
+  createdAt INTEGER,
+  updatedAt INTEGER
+);
+CREATE TABLE IF NOT EXISTS areas (
+  id TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL CHECK (length(trim(name)) BETWEEN 1 AND 120),
+  normalized_name TEXT NOT NULL UNIQUE CHECK (length(trim(normalized_name)) > 0)
+);
+CREATE TABLE IF NOT EXISTS programs (
+  id TEXT PRIMARY KEY NOT NULL,
+  area_id TEXT NOT NULL REFERENCES areas(id),
+  name TEXT NOT NULL CHECK (length(trim(name)) BETWEEN 1 AND 160),
+  abbreviation TEXT NOT NULL COLLATE NOCASE UNIQUE CHECK (length(trim(abbreviation)) BETWEEN 1 AND 20),
+  semesters INTEGER NOT NULL CHECK (semesters IN (6, 7))
+);
+CREATE TABLE IF NOT EXISTS area_assignments (
+  user_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+  area_id TEXT NOT NULL REFERENCES areas(id) ON DELETE CASCADE,
+  PRIMARY KEY(user_id, area_id)
+);
+CREATE TABLE IF NOT EXISTS password_links (
+  id TEXT PRIMARY KEY NOT NULL,
+  user_id TEXT NOT NULL UNIQUE REFERENCES user(id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL UNIQUE,
+  expires_at TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS courses (
+  id TEXT PRIMARY KEY NOT NULL,
+  program_id TEXT NOT NULL REFERENCES programs(id),
+  code TEXT NOT NULL CHECK (length(trim(code)) BETWEEN 1 AND 32),
+  normalized_code TEXT NOT NULL UNIQUE CHECK (length(trim(normalized_code)) > 0),
+  study_start TEXT NOT NULL CHECK (date(study_start) IS NOT NULL AND date(study_start) = study_start),
+  study_end TEXT NOT NULL CHECK (date(study_end) IS NOT NULL AND date(study_end) = study_end),
+  published_at TEXT,
+  updated_at TEXT NOT NULL,
+  updated_by_account_id TEXT NOT NULL REFERENCES user(id),
+  CHECK (study_start < study_end)
+);
+CREATE TABLE IF NOT EXISTS course_phases (
+  id TEXT PRIMARY KEY NOT NULL,
+  course_id TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+  semester INTEGER NOT NULL CHECK (typeof(semester) = 'integer' AND semester BETWEEN 1 AND 7),
+  phase_type TEXT NOT NULL CHECK (phase_type IN ('THEORY', 'PRACTICE')),
+  start_date TEXT NOT NULL CHECK (date(start_date) IS NOT NULL AND date(start_date) = start_date),
+  end_date TEXT NOT NULL CHECK (date(end_date) IS NOT NULL AND date(end_date) = end_date),
+  CHECK (start_date <= end_date)
+);
+CREATE TABLE IF NOT EXISTS course_events (
+  id TEXT PRIMARY KEY NOT NULL,
+  course_id TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+  title TEXT NOT NULL CHECK (length(trim(title)) >= 1 AND length(title) <= 160),
+  description TEXT CHECK (description IS NULL OR (length(trim(description)) >= 1 AND length(description) <= 2000)),
+  category TEXT NOT NULL CHECK (category IN ('REGISTRATION', 'SUBMISSION', 'PRESENTATION', 'EXAM', 'OTHER')),
+  start_date TEXT NOT NULL CHECK (date(start_date) IS NOT NULL AND date(start_date) = start_date),
+  end_date TEXT CHECK (end_date IS NULL OR (date(end_date) IS NOT NULL AND date(end_date) = end_date)),
+  provisional INTEGER NOT NULL DEFAULT 0 CHECK (provisional IN (0, 1)),
+  CHECK (end_date IS NULL OR start_date <= end_date)
+);

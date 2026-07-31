@@ -14,36 +14,38 @@ export function databaseWithMasterData() {
 }
 
 type PhaseInput = { semester: number; type?: PhaseType; startDate: string; endDate: string };
-export type PublishedCourseInput = { code: string; program?: string; studyStart: string; studyEnd?: string; semesters?: number; phases?: PhaseInput[] };
+export type CourseInput = { code: string; program?: string; studyStart: string; studyEnd?: string; semesters?: number; phases?: PhaseInput[] };
 type EventInput = { title: string; description?: string | null; category?: EventCategory; startDate: string; endDate?: string | null; provisional?: boolean; courses?: string[] };
-type PublicationInput = { id?: string; area?: string; areaId?: string; courses: PublishedCourseInput[]; events?: EventInput[] };
+type PublicationInput = { id?: string; area?: string; areaId?: string; courses: CourseInput[]; events?: EventInput[] };
 
-/** Inserts independent, published course snapshots. A test helper may publish several courses, but no production row groups them. */
+/** Inserts current course rows and marks them as published; no separate publication records exist. */
 export function publish(sqlite: Database.Database, publication: PublicationInput) {
   for (const course of publication.courses) {
     const courseId = `course-${publication.id ?? "published"}-${course.code}`;
-    const publishedId = `published-${publication.id ?? "published"}-${course.code}`;
     const year = Number(course.studyStart.slice(0, 4));
-    sqlite.prepare(`INSERT OR IGNORE INTO courses (id, program_id, code, normalized_code, study_start, study_end, has_ever_been_published, draft_updated_at, draft_updated_by_account_id)
-      VALUES (?, ?, ?, ?, ?, ?, 1, '2026-01-01T00:00:00.000Z', 'seed')`).run(courseId, publication.areaId === "area-2" ? "program-2" : "program-1", `${course.code}-source`, `${course.code}-source`.toLowerCase(), course.studyStart, course.studyEnd ?? `${year + 3}-09-30`);
-    sqlite.prepare(`INSERT INTO published_courses (id, course_id, published_at, area_name, program_name, program_abbreviation, code, study_start, study_end, semesters)
-      VALUES (?, ?, '2026-01-01T00:00:00.000Z', ?, ?, 'TIF', ?, ?, ?, ?)`).run(publishedId, courseId, publication.area ?? "Technik", course.program ?? "Informatik", course.code, course.studyStart, course.studyEnd ?? `${year + 3}-09-30`, course.semesters ?? 6);
-    sqlite.prepare("INSERT INTO published_course_search_keys VALUES (?, ?)").run(publishedId, course.code.toLocaleLowerCase("de-DE"));
-    for (const [index, phase] of (course.phases ?? []).entries()) sqlite.prepare("INSERT INTO published_phases VALUES (?, ?, ?, ?, ?, ?)")
-      .run(`phase-${publishedId}-${index}`, publishedId, phase.semester, phase.type ?? "THEORY", phase.startDate, phase.endDate);
+    sqlite.prepare(`INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, published_at, updated_at, updated_by_account_id)
+      VALUES (?, ?, ?, ?, ?, ?, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 'seed')`)
+      .run(courseId, publication.areaId === "area-2" ? "program-2" : "program-1", course.code, course.code.toLocaleLowerCase("de-DE"), course.studyStart, course.studyEnd ?? `${year + 3}-09-30`);
+    for (const [index, phase] of (course.phases ?? []).entries()) {
+      sqlite.prepare("INSERT INTO course_phases VALUES (?, ?, ?, ?, ?, ?)")
+        .run(`phase-${courseId}-${index}`, courseId, phase.semester, phase.type ?? "THEORY", phase.startDate, phase.endDate);
+    }
   }
   for (const [index, event] of (publication.events ?? []).entries()) {
     for (const code of event.courses ?? publication.courses.map((course) => course.code)) {
-      const publishedId = `published-${publication.id ?? "published"}-${code}`;
-      sqlite.prepare("INSERT INTO published_events VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
-        .run(`event-${publication.id ?? "published"}-${index}-${code}`, publishedId, event.title, event.description ?? null, event.category ?? "EXAM", event.startDate, event.endDate ?? null, event.provisional ? 1 : 0);
+      const courseId = `course-${publication.id ?? "published"}-${code}`;
+      sqlite.prepare("INSERT INTO course_events VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+        .run(`event-${publication.id ?? "published"}-${index}-${code}`, courseId, event.title, event.description ?? null, event.category ?? "EXAM", event.startDate, event.endDate ?? null, event.provisional ? 1 : 0);
     }
   }
 }
 
-export function snapshotId(code: string) { return `published-${code.includes("24") ? "tif24a" : "published"}-${code}`; }
-export function draftOnlyCourse(sqlite: Database.Database, code: string) {
-  sqlite.prepare(`INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, has_ever_been_published, draft_updated_at, draft_updated_by_account_id) VALUES (?, 'program-2', ?, ?, '2099-10-01', '2102-09-30', 0, '2026-01-01T00:00:00.000Z', 'seed')`)
-    .run(`course-draft-${code}`, code, code.toLocaleLowerCase("de-DE"));
+export function courseIdForCode(code: string) { return `course-${code.includes("24") ? "tif24a" : "published"}-${code}`; }
+export function unpublishedCourse(sqlite: Database.Database, code: string) {
+  sqlite.prepare(`INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, published_at, updated_at, updated_by_account_id)
+    VALUES (?, 'program-2', ?, ?, '2099-10-01', '2102-09-30', NULL, '2026-01-01T00:00:00.000Z', 'seed')`)
+    .run(`course-unpublished-${code}`, code, code.toLocaleLowerCase("de-DE"));
 }
-export function withdraw(sqlite: Database.Database, versionId: string) { sqlite.prepare("DELETE FROM published_courses WHERE id LIKE ?").run(`published-${versionId}-%`); }
+export function withdraw(sqlite: Database.Database, publicationId: string) {
+  sqlite.prepare("UPDATE courses SET published_at = NULL WHERE id LIKE ?").run(`course-${publicationId}-%`);
+}

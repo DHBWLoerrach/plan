@@ -2,7 +2,7 @@ import Database from "better-sqlite3";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { FieldError } from "@/lib/domain/field-error";
-import { createDraftEvent, deleteDraftEvent, updateDraftEvent } from "@/lib/services/event-admin";
+import { createCourseEvent, deleteCourseEvent, updateCourseEvent } from "@/lib/services/event-admin";
 import { applySchema } from "@/test/schema";
 
 const databases: Database.Database[] = [];
@@ -16,15 +16,15 @@ function database() {
     INSERT INTO programs VALUES ('program', 'area', 'Informatik', 'TIF', 6);
     INSERT INTO user VALUES ('editor', 'Editor', 'editor@test', 0, NULL, 'AREA_EDITOR', 0, 'ACTIVE', 0, 0);
     INSERT INTO area_assignments VALUES ('editor', 'area');
-    INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, has_ever_been_published, draft_updated_at, draft_updated_by_account_id) VALUES
-      ('course', 'program', 'TIF26A', 'tif26a', '2026-10-01', '2029-09-30', 0, '2026-01-01T00:00:00.000Z', 'editor');`);
+    INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, published_at, updated_at, updated_by_account_id) VALUES
+      ('course', 'program', 'TIF26A', 'tif26a', '2026-10-01', '2029-09-30', NULL, '2026-01-01T00:00:00.000Z', 'editor');`);
   return sqlite;
 }
 
 const valid = { title: "Prüfung", description: "", category: "EXAM", startDate: "2026-12-01", endDate: "", provisional: false };
 
 function create(sqlite: Database.Database, details: Partial<typeof valid> = {}, courseIds = ["course"]) {
-  return createDraftEvent(sqlite, { accountId: "editor", courseIds, ...valid, ...details });
+  return createCourseEvent(sqlite, { accountId: "editor", courseIds, ...valid, ...details });
 }
 
 function rejectedField(save: () => unknown) {
@@ -41,11 +41,22 @@ function storedEvent(sqlite: Database.Database) {
     FROM course_events`).get();
 }
 
+function publishCompleteCourse(sqlite: Database.Database) {
+  sqlite.exec(`INSERT INTO course_phases VALUES
+    ('phase-1', 'course', 1, 'THEORY', '2026-10-01', '2027-03-31'),
+    ('phase-2', 'course', 2, 'PRACTICE', '2027-04-01', '2027-09-30'),
+    ('phase-3', 'course', 3, 'THEORY', '2027-10-01', '2028-03-31'),
+    ('phase-4', 'course', 4, 'PRACTICE', '2028-04-01', '2028-09-30'),
+    ('phase-5', 'course', 5, 'THEORY', '2028-10-01', '2029-03-31'),
+    ('phase-6', 'course', 6, 'PRACTICE', '2029-04-01', '2029-09-30');
+    UPDATE courses SET published_at = '2026-07-01T00:00:00.000Z' WHERE id = 'course';`);
+}
+
 afterEach(() => {
   for (const sqlite of databases.splice(0)) sqlite.close();
 });
 
-describe("createDraftEvent", () => {
+describe("createCourseEvent", () => {
   it("stores the event on the course, with no end date meaning the start day alone", () => {
     const sqlite = database();
 
@@ -114,20 +125,20 @@ describe("createDraftEvent", () => {
   it("records the moment of the change on the course", () => {
     const sqlite = database();
 
-    createDraftEvent(sqlite, { accountId: "editor", courseIds: ["course"], ...valid, now: new Date("2026-07-30T09:00:00.000Z") });
+    createCourseEvent(sqlite, { accountId: "editor", courseIds: ["course"], ...valid, now: new Date("2026-07-30T09:00:00.000Z") });
 
-    expect(sqlite.prepare("SELECT draft_updated_at AS at, draft_updated_by_account_id AS by FROM courses").get())
+    expect(sqlite.prepare("SELECT updated_at AS at, updated_by_account_id AS by FROM courses").get())
       .toEqual({ at: "2026-07-30T09:00:00.000Z", by: "editor" });
   });
 });
 
-describe("updateDraftEvent", () => {
+describe("updateCourseEvent", () => {
   it("checks the changed values the same way the creation does", () => {
     const sqlite = database();
     const [eventId] = create(sqlite);
 
-    expect(rejectedField(() => updateDraftEvent(sqlite, { accountId: "editor", eventId, ...valid, category: "URLAUB" }))).toBe("category");
-    expect(rejectedField(() => updateDraftEvent(sqlite, { accountId: "editor", eventId, ...valid, title: "" }))).toBe("title");
+    expect(rejectedField(() => updateCourseEvent(sqlite, { accountId: "editor", eventId, ...valid, category: "URLAUB" }))).toBe("category");
+    expect(rejectedField(() => updateCourseEvent(sqlite, { accountId: "editor", eventId, ...valid, title: "" }))).toBe("title");
     expect(storedEvent(sqlite)).toMatchObject({ title: "Prüfung", category: "EXAM" });
   });
 
@@ -135,7 +146,7 @@ describe("updateDraftEvent", () => {
     const sqlite = database();
     const [eventId] = create(sqlite, { endDate: "2026-12-05" });
 
-    updateDraftEvent(sqlite, { accountId: "editor", eventId, ...valid, endDate: "" });
+    updateCourseEvent(sqlite, { accountId: "editor", eventId, ...valid, endDate: "" });
 
     expect(storedEvent(sqlite)).toMatchObject({ endDate: null });
   });
@@ -143,24 +154,48 @@ describe("updateDraftEvent", () => {
   it("reports an event it cannot find", () => {
     const sqlite = database();
 
-    expect(() => updateDraftEvent(sqlite, { accountId: "editor", eventId: "termin-unbekannt", ...valid })).toThrow("nicht gefunden");
+    expect(() => updateCourseEvent(sqlite, { accountId: "editor", eventId: "termin-unbekannt", ...valid })).toThrow("nicht gefunden");
   });
 });
 
-describe("deleteDraftEvent", () => {
+describe("deleteCourseEvent", () => {
   it("removes the event and stamps the course", () => {
     const sqlite = database();
     const [eventId] = create(sqlite);
 
-    deleteDraftEvent(sqlite, { accountId: "editor", eventId, now: new Date("2026-07-30T10:00:00.000Z") });
+    deleteCourseEvent(sqlite, { accountId: "editor", eventId, now: new Date("2026-07-30T10:00:00.000Z") });
 
     expect(sqlite.prepare("SELECT count(*) AS count FROM course_events").get()).toEqual({ count: 0 });
-    expect(sqlite.prepare("SELECT draft_updated_at AS at FROM courses").get()).toEqual({ at: "2026-07-30T10:00:00.000Z" });
+    expect(sqlite.prepare("SELECT updated_at AS at FROM courses").get()).toEqual({ at: "2026-07-30T10:00:00.000Z" });
   });
 
   it("reports an event it cannot find", () => {
     const sqlite = database();
 
-    expect(() => deleteDraftEvent(sqlite, { accountId: "editor", eventId: "termin-unbekannt" })).toThrow("nicht gefunden");
+    expect(() => deleteCourseEvent(sqlite, { accountId: "editor", eventId: "termin-unbekannt" })).toThrow("nicht gefunden");
+  });
+});
+
+describe("changes to a published course", () => {
+  it("makes a valid event correction directly on the published rows", () => {
+    const sqlite = database();
+    const [eventId] = create(sqlite);
+    publishCompleteCourse(sqlite);
+
+    updateCourseEvent(sqlite, { accountId: "editor", eventId, ...valid, title: "Nachholprüfung", startDate: "2027-01-12" });
+
+    expect(storedEvent(sqlite)).toMatchObject({ title: "Nachholprüfung", startDate: "2027-01-12" });
+    expect(sqlite.prepare("SELECT published_at FROM courses").pluck().get()).toBe("2026-07-01T00:00:00.000Z");
+  });
+
+  it("rolls an invalid public correction back completely", () => {
+    const sqlite = database();
+    const [eventId] = create(sqlite);
+    publishCompleteCourse(sqlite);
+
+    expect(() => updateCourseEvent(sqlite, { accountId: "editor", eventId, ...valid, startDate: "2030-01-01" }))
+      .toThrow("nicht unmittelbar veröffentlicht");
+
+    expect(storedEvent(sqlite)).toMatchObject({ startDate: "2026-12-01" });
   });
 });

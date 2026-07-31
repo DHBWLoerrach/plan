@@ -24,18 +24,15 @@ function database() {
     INSERT INTO user VALUES ('editor', 'Editor', 'editor@test', 0, NULL, 'AREA_EDITOR', 0, 'ACTIVE', 0, 0);
     INSERT INTO user VALUES ('admin', 'Admin', 'admin@test', 0, NULL, 'NONE', 1, 'ACTIVE', 0, 0);
     INSERT INTO area_assignments VALUES ('editor', 'area-technik');
-    INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, has_ever_been_published, draft_updated_at, draft_updated_by_account_id) VALUES
-      ('course-tif', 'prog-tif', 'TIF26A', 'tif26a', '2026-10-01', '2029-09-30', 0, '2026-01-01T00:00:00.000Z', 'editor'),
-      ('course-wwi', 'prog-wwi', 'WWI27A', 'wwi27a', '2027-10-01', '2030-09-30', 0, '2026-01-01T00:00:00.000Z', 'editor');`);
+    INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, published_at, updated_at, updated_by_account_id) VALUES
+      ('course-tif', 'prog-tif', 'TIF26A', 'tif26a', '2026-10-01', '2029-09-30', NULL, '2026-01-01T00:00:00.000Z', 'editor'),
+      ('course-wwi', 'prog-wwi', 'WWI27A', 'wwi27a', '2027-10-01', '2030-09-30', NULL, '2026-01-01T00:00:00.000Z', 'editor');`);
   return sqlite;
 }
 
-/** Gives the course a published version, as publication would, without running the whole publication service. */
+/** Marks the current course data as published without running the whole publication service. */
 function publish(sqlite: Database.Database, courseId: string, publishedAt: string) {
-  sqlite.prepare(`INSERT INTO published_courses (id, course_id, published_at, area_name, program_name, program_abbreviation, code, study_start, study_end, semesters)
-    SELECT 'published-' || course.id, course.id, ?, area.name, program.name, program.abbreviation, course.code, course.study_start, course.study_end, program.semesters
-    FROM courses course JOIN programs program ON program.id = course.program_id JOIN areas area ON area.id = program.area_id WHERE course.id = ?`).run(publishedAt, courseId);
-  sqlite.prepare("UPDATE courses SET has_ever_been_published = 1 WHERE id = ?").run(courseId);
+  sqlite.prepare("UPDATE courses SET published_at = ? WHERE id = ?").run(publishedAt, courseId);
 }
 
 afterEach(() => {
@@ -75,19 +72,18 @@ describe("courseListData", () => {
   it("filters by publication state across areas", () => {
     const sqlite = database();
     publish(sqlite, "course-wwi", "2026-06-01T00:00:00.000Z");
-    const codes = (state: "NEVER_PUBLISHED" | "PUBLISHED" | "WITHDRAWN") => courseListData(sqlite, editor, { ...noFilters, state }, "code").courses.map((course) => course.code);
+    const codes = (state: "UNPUBLISHED" | "PUBLISHED") => courseListData(sqlite, editor, { ...noFilters, state }, "code").courses.map((course) => course.code);
     expect(codes("PUBLISHED")).toEqual(["WWI27A"]);
-    expect(codes("NEVER_PUBLISHED")).toEqual(["TIF26A"]);
-    expect(codes("WITHDRAWN")).toEqual([]);
+    expect(codes("UNPUBLISHED")).toEqual(["TIF26A"]);
   });
 
-  it("marks a foreign course as in progress while its planning state differs from its published version", () => {
+  it("keeps a published course settled while current data is corrected", () => {
     const sqlite = database();
     publish(sqlite, "course-wwi", "2026-06-01T00:00:00.000Z");
     const inProgress = () => Object.fromEntries(courseListData(sqlite, editor, noFilters, "code").courses.map((course) => [course.code, course.workInProgress]));
     expect(inProgress()).toEqual({ TIF26A: true, WWI27A: false });
-    sqlite.prepare("UPDATE courses SET draft_updated_at = '2026-07-01T00:00:00.000Z' WHERE id = 'course-wwi'").run();
-    expect(inProgress()).toEqual({ TIF26A: true, WWI27A: true });
+    sqlite.prepare("UPDATE courses SET updated_at = '2026-07-01T00:00:00.000Z' WHERE id = 'course-wwi'").run();
+    expect(inProgress()).toEqual({ TIF26A: true, WWI27A: false });
   });
 });
 
@@ -121,8 +117,8 @@ describe("overviewPrograms", () => {
 
   /** A second course in the study program of the editor, in a year before the seeded one. */
   function addEarlierCourse(sqlite: Database.Database) {
-    sqlite.prepare(`INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, has_ever_been_published, draft_updated_at, draft_updated_by_account_id)
-      VALUES ('course-tif25', 'prog-tif', 'TIF25A', 'tif25a', '2025-10-01', '2028-09-30', 0, '2026-01-01T00:00:00.000Z', 'editor')`).run();
+    sqlite.prepare(`INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, published_at, updated_at, updated_by_account_id)
+      VALUES ('course-tif25', 'prog-tif', 'TIF25A', 'tif25a', '2025-10-01', '2028-09-30', NULL, '2026-01-01T00:00:00.000Z', 'editor')`).run();
   }
 
   it("keeps the overview inside the own areas, unlike the course list", () => {
@@ -134,8 +130,8 @@ describe("overviewPrograms", () => {
   it("groups the courses of a study program by year, ascending", () => {
     const sqlite = database();
     addEarlierCourse(sqlite);
-    sqlite.prepare(`INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, has_ever_been_published, draft_updated_at, draft_updated_by_account_id)
-      VALUES ('course-tif26b', 'prog-tif', 'TIF26B', 'tif26b', '2026-10-01', '2029-09-30', 0, '2026-01-01T00:00:00.000Z', 'editor')`).run();
+    sqlite.prepare(`INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, published_at, updated_at, updated_by_account_id)
+      VALUES ('course-tif26b', 'prog-tif', 'TIF26B', 'tif26b', '2026-10-01', '2029-09-30', NULL, '2026-01-01T00:00:00.000Z', 'editor')`).run();
     const [program] = overviewPrograms(sqlite, editor, today);
     expect(program.years.map((year) => [year.year, year.courses.map((course) => course.code)]))
       .toEqual([["2025", ["TIF25A"]], ["2026", ["TIF26A", "TIF26B"]]]);
@@ -144,8 +140,8 @@ describe("overviewPrograms", () => {
   it("orders the study programs by area and names both, since the same name may occur in two areas", () => {
     const sqlite = database();
     sqlite.prepare("INSERT INTO programs VALUES ('prog-wti', 'area-wirtschaft', 'Informatik', 'WTI', 6)").run();
-    sqlite.prepare(`INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, has_ever_been_published, draft_updated_at, draft_updated_by_account_id)
-      VALUES ('course-wti', 'prog-wti', 'WTI26A', 'wti26a', '2026-10-01', '2029-09-30', 0, '2026-01-01T00:00:00.000Z', 'admin')`).run();
+    sqlite.prepare(`INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, published_at, updated_at, updated_by_account_id)
+      VALUES ('course-wti', 'prog-wti', 'WTI26A', 'wti26a', '2026-10-01', '2029-09-30', NULL, '2026-01-01T00:00:00.000Z', 'admin')`).run();
     expect(overviewPrograms(sqlite, admin, today).map((program) => [program.id, program.abbreviation, program.name, program.areaName]))
       .toEqual([["prog-tif", "TIF", "Informatik", "Technik"], ["prog-wti", "WTI", "Informatik", "Wirtschaft"], ["prog-wwi", "WWI", "Wirtschaftsinformatik", "Wirtschaft"]]);
   });
@@ -156,7 +152,7 @@ describe("overviewPrograms", () => {
     publish(sqlite, "course-tif25", "2026-06-01T00:00:00.000Z");
     const [program] = overviewPrograms(sqlite, editor, today);
     expect(program.years.flatMap((year) => year.courses).map((course) => [course.code, course.state, course.workInProgress]))
-      .toEqual([["TIF25A", "PUBLISHED", false], ["TIF26A", "NEVER_PUBLISHED", true]]);
+      .toEqual([["TIF25A", "PUBLISHED", false], ["TIF26A", "UNPUBLISHED", true]]);
   });
 
   it("reads the standing of every course from its own phases, not from those of the course beside it", () => {

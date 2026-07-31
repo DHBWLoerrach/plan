@@ -44,7 +44,7 @@ export default async function CoursesPage({ searchParams }: PageProps<"/intern/k
   return <SiteShell nav={<InternalNav account={account} current="kurse" />}><section className="search-panel" aria-labelledby="courses-heading">
     <p className="eyebrow">Interner Bereich</p>
     <h1 id="courses-heading">Kurse</h1>
-    <p>Sie sehen die Kurse aller Bereiche. Bearbeiten können Sie ausschließlich die Kurse Ihrer eigenen Bereiche; die Spalte „Bearbeitung“ nennt es je Kurs. Ein Kurs ohne veröffentlichte Fassung oder mit nicht veröffentlichten Änderungen ist als „{workInProgressLabel}“ gekennzeichnet und damit noch nicht abgestimmt.</p>
+    <p>Sie sehen die Kurse aller Bereiche. Bearbeiten können Sie ausschließlich die Kurse Ihrer eigenen Bereiche; die Spalte „Bearbeitung“ nennt es je Kurs. Ein nicht veröffentlichter Kurs ist als „{workInProgressLabel}“ gekennzeichnet. Bestätigte Änderungen an veröffentlichten Kursen wirken unmittelbar öffentlich.</p>
     <p><Link className="button" href="/intern/kurse/neu">Kurs anlegen</Link></p>
     <form className="filter-grid" role="search" aria-label="Kurse filtern">
       <label>Bereich<select name="area" defaultValue={area ?? ""}><option value="">Alle Bereiche</option>{areas.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</select></label>

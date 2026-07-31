@@ -8,7 +8,7 @@ Die Leseeinsicht auf die zugeordneten Bereiche zu beschränken und Vorlagen nur 
 
 ## Konsequenzen
 
-Noch nicht veröffentlichte Planungen anderer Bereiche werden für alle internen Konten sichtbar. Bisher blieb ein in Arbeit befindlicher Plan innerhalb seines Bereichs. Unfertige und noch nicht abgestimmte Termine könnten dadurch als gesetzt gelesen werden; jeder Kurs ohne veröffentlichte Fassung beziehungsweise mit nicht veröffentlichten Änderungen ist deshalb sichtbar als „in Arbeit“ gekennzeichnet.
+Noch nicht veröffentlichte Planungen anderer Bereiche werden für alle internen Konten sichtbar. Unfertige und noch nicht abgestimmte Termine könnten dadurch als gesetzt gelesen werden; jeder nicht veröffentlichte Kurs ist deshalb sichtbar als „in Arbeit“ gekennzeichnet.
 
 Datenschutzrechtlich ändert sich nichts: Die Anwendung verarbeitet keine Studierendendaten, und die sichtbaren Angaben sind Planungsdaten der Hochschule.
 

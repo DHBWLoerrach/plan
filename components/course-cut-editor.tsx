@@ -19,18 +19,18 @@ import { PlanMatrix } from "@/components/plan-matrix";
 import { areaAccessLabel, workInProgressLabel } from "@/lib/domain/course-status";
 import { eventCategories, eventCategoryLabel } from "@/lib/domain/event-category";
 import { phaseTypeLabel, phaseTypes } from "@/lib/domain/phase-type";
-import { validatePublication, type DraftEvent, type DraftPhase } from "@/lib/domain/publication";
+import { validatePublication, type CourseEvent, type CoursePhase } from "@/lib/domain/publication";
 import type { EventField, EventInput } from "@/lib/services/event-admin";
 import type { PhaseDetails, PhaseField, PhaseInput } from "@/lib/services/phase-admin";
 
-type EditablePhase = DraftPhase & { id: string };
+type EditablePhase = CoursePhase & { id: string };
 
 /** Only the courses of the own areas are offered: a write to a foreign course would be refused by the domain logic. */
 function CourseChoices({ courses }: { courses: CutCourse[] }) {
   return <fieldset className="account-fieldset">
     <legend>Betroffene Kurse</legend>
     <p>Bei mehreren Kursen entstehen eigenständige Angaben. Spätere Änderungen an einem Kurs wirken nicht auf die anderen.</p>
-    {courses.map((course) => <label key={course.id}><input name="courseId" type="checkbox" value={course.id} /> {course.code}</label>)}
+    {courses.map((course) => <label key={course.id}><input name="courseId" type="checkbox" value={course.id} /> {course.code}{course.state === "PUBLISHED" ? " · veröffentlicht" : ""}</label>)}
   </fieldset>;
 }
 
@@ -77,11 +77,20 @@ function EventCreateForm({ courses }: { courses: CutCourse[] }) {
     <DateField label="Startdatum" name="startDate" required defaultValue={values?.startDate ?? ""} invalid={state.field === "startDate"} errorId={ids.error} />
     <DateField label="Enddatum (optional)" name="endDate" defaultValue={values?.endDate ?? ""} invalid={state.field === "endDate"} errorId={ids.error} />
     <label className="account-check"><input type="checkbox" name="provisional" defaultChecked={values?.provisional} /> Zeitangabe ist vorläufig</label>
-    <button className="button" type="submit" disabled={pending}>{pending ? "Wird gespeichert …" : "Termin speichern"}</button>
+    <ConfirmAction openLabel="Termin prüfen" heading="Prüfungsrelevanten Termin speichern"
+      consequence="Der Termin wird gespeichert. Für veröffentlichte Kurse ist er anschließend unmittelbar öffentlich sichtbar."
+      shouldConfirm={(formData) => formData.getAll("courseId").some((id) => courses.find((course) => course.id === id)?.state === "PUBLISHED")}
+      preview={(formData) => {
+        const selected = formData.getAll("courseId").map(String).map((id) => courses.find((course) => course.id === id)).filter(Boolean) as CutCourse[];
+        return <><p><strong>Betroffene Kurse:</strong> {selected.map((course) => course.code).join(", ")}</p>
+          <p><strong>Termin:</strong> {String(formData.get("title") ?? "")} · {String(formData.get("startDate") ?? "")}{formData.get("endDate") ? ` bis ${String(formData.get("endDate"))}` : ""}</p>
+          <p>Für veröffentlichte Kurse ist der Termin nach erfolgreicher Prüfung unmittelbar öffentlich sichtbar.</p></>;
+      }}
+      confirmLabel="Termin speichern und veröffentlichen" pendingLabel="Wird gespeichert …" isPending={pending} />
   </form>;
 }
 
-function CourseStatus({ course, phases, events }: { course: CutCourse; phases: DraftPhase[]; events: DraftEvent[] }) {
+function CourseStatus({ course, phases, events }: { course: CutCourse; phases: CoursePhase[]; events: CourseEvent[] }) {
   const issues = validatePublication({
     course,
     phases: phases.filter((phase) => phase.courseId === course.id),
@@ -139,8 +148,13 @@ function PhaseRowEditor({ group, coursesById }: { group: PhaseGroup; coursesById
   const { editable: editablePhases, editableCodes, readOnlyCodes } =
     splitByEditability(group.phases, (phase) => Boolean(courseOf(phase)?.editable), (phase) => [courseOf(phase)?.code ?? phase.courseId]);
   const shared = editableCodes.length > 1;
+  const publishedCodes = editablePhases.filter((phase) => courseOf(phase)?.state === "PUBLISHED")
+    .map((phase) => courseOf(phase)?.code ?? phase.courseId);
+  const deletablePhases = editablePhases.filter((phase) => courseOf(phase)?.state === "UNPUBLISHED");
+  const deletableCodes = deletablePhases.map((phase) => courseOf(phase)?.code ?? phase.courseId);
   const values = updateState.values;
-  const hidden = editablePhases.map((phase) => <input key={phase.id} type="hidden" name="phaseId" value={phase.id} />);
+  const updateHidden = editablePhases.map((phase) => <input key={phase.id} type="hidden" name="phaseId" value={phase.id} />);
+  const deleteHidden = deletablePhases.map((phase) => <input key={phase.id} type="hidden" name="phaseId" value={phase.id} />);
   const consequence = `Folgende Kursphasen werden einzeln geändert: ${editableCodes.join(", ")}. Spätere Änderungen wirken jeweils nur auf den betreffenden Kurs.`;
   // The semester range is that of the courses actually being changed, so a foreign course of a longer study program
   // never offers a semester the own course would refuse.
@@ -153,7 +167,7 @@ function PhaseRowEditor({ group, coursesById }: { group: PhaseGroup; coursesById
   return <li className="editor-card">
     {header}
     <form action={updateAction} className="account-form">
-      {hidden}
+      {updateHidden}
       {updateState.error ? <p id={ids.error} role="alert">{updateState.error}</p> : null}
       {updateState.success ? <p role="status">{updateState.success}</p> : null}
       <label htmlFor={ids.semester}>Semester</label>
@@ -164,25 +178,34 @@ function PhaseRowEditor({ group, coursesById }: { group: PhaseGroup; coursesById
       <select id={ids.type} name="type" defaultValue={values?.type ?? group.type} required aria-invalid={updateState.field === "type" || undefined} aria-describedby={updateState.field === "type" ? ids.error : undefined}>{phaseTypes.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}</select>
       <DateField label="Startdatum" name="startDate" required defaultValue={values?.startDate ?? group.startDate} invalid={updateState.field === "startDate"} errorId={ids.error} />
       <DateField label="Enddatum" name="endDate" required defaultValue={values?.endDate ?? group.endDate} invalid={updateState.field === "endDate"} errorId={ids.error} />
-      {shared
-        ? <ConfirmAction openLabel="Kursphasen ändern" heading="Zusammengefasste Kursphasen ändern" consequence={consequence} confirmLabel="Änderungen speichern" pendingLabel="Wird gespeichert …" isPending={updating} />
+      {shared || publishedCodes.length
+        ? <ConfirmAction openLabel="Kursphasen prüfen" heading={shared ? "Zusammengefasste Kursphasen ändern" : "Öffentliche Kursphase ändern"} consequence={consequence}
+            preview={(formData) => <><p><strong>Betroffene Kurse:</strong> {editableCodes.join(", ")}</p>
+              <ul>
+                <li>Semester: {group.semester} → {String(formData.get("semester") ?? "")}</li>
+                <li>Phasentyp: {phaseTypeLabel(group.type)} → {phaseTypes.find((type) => type.value === formData.get("type"))?.label ?? String(formData.get("type") ?? "")}</li>
+                <li>Zeitraum: {group.startDate} bis {group.endDate} → {String(formData.get("startDate") ?? "")} bis {String(formData.get("endDate") ?? "")}</li>
+              </ul>
+              {publishedCodes.length ? <p>Bei {publishedCodes.join(", ")} werden angrenzende Phasengrenzen in derselben Transaktion mitverschoben. Nach erfolgreicher Gesamtprüfung ist die Änderung unmittelbar öffentlich sichtbar.</p> : <p>{consequence}</p>}</>}
+            confirmLabel={publishedCodes.length ? "Änderungen speichern und veröffentlichen" : "Änderungen speichern"} pendingLabel="Wird gespeichert …" isPending={updating} />
         : <button className="button" type="submit" disabled={updating}>{updating ? "Wird gespeichert …" : "Kursphase speichern"}</button>}
     </form>
-    <form action={deleteAction} className="account-form">
-      {hidden}
+    {publishedCodes.length ? <p className="notice">Einzelne Phasen von {publishedCodes.join(", ")} können im veröffentlichten, lückenlosen Verlauf nicht gelöscht werden. Ihre Grenzen können oben atomar verschoben werden.</p> : null}
+    {deletablePhases.length ? <form action={deleteAction} className="account-form">
+      {deleteHidden}
       {deleteState.error ? <p role="alert">{deleteState.error}</p> : null}
       {deleteState.success ? <p role="status">{deleteState.success}</p> : null}
-      <ConfirmAction openLabel="Kursphase löschen" heading={shared ? "Zusammengefasste Kursphasen löschen" : "Kursphase löschen"}
-        consequence={shared
-          ? `Folgende Kursphasen werden einzeln gelöscht: ${editableCodes.join(", ")}.`
-          : `Die Kursphase von ${editableCodes.join(", ")} wird aus dem Planungsstand gelöscht.`}
+      <ConfirmAction openLabel="Kursphase löschen" heading={deletableCodes.length > 1 ? "Zusammengefasste Kursphasen löschen" : "Kursphase löschen"}
+        consequence={deletableCodes.length > 1
+          ? `Folgende Kursphasen werden einzeln gelöscht: ${deletableCodes.join(", ")}.`
+          : `Die Kursphase von ${deletableCodes.join(", ")} wird aus dem Planungsstand gelöscht.`}
         confirmLabel="Endgültig löschen" pendingLabel="Wird gelöscht …" isPending={deleting} danger />
-    </form>
+    </form> : null}
   </li>;
 }
 
-type CutEvent = DraftEvent & { affectedCourseCodes: string[] };
-type EventGroup = { title: string; category: DraftEvent["category"]; startDate: string; endDate: string | null; provisional: boolean; events: CutEvent[] };
+type CutEvent = CourseEvent & { affectedCourseCodes: string[] };
+type EventGroup = { title: string; category: CourseEvent["category"]; startDate: string; endDate: string | null; provisional: boolean; events: CutEvent[] };
 
 function eventGroups(events: CutEvent[]): EventGroup[] {
   const groups = new Map<string, EventGroup>();
@@ -204,6 +227,8 @@ function EventRowEditor({ group, coursesById }: { group: EventGroup; coursesById
   const { editable: editableEvents, editableCodes, readOnlyCodes } = splitByEditability(group.events,
     (event) => event.courseIds.every((courseId) => coursesById.get(courseId)?.editable), (event) => event.affectedCourseCodes);
   const shared = editableCodes.length > 1;
+  const publishedCodes = editableEvents.filter((event) => event.courseIds.some((courseId) => coursesById.get(courseId)?.state === "PUBLISHED"))
+    .flatMap((event) => event.affectedCourseCodes);
   const values = updateState.values;
   const hidden = editableEvents.map((event) => <input key={event.id} type="hidden" name="eventId" value={event.id} />);
   const consequence = `Folgende Termine werden einzeln geändert: ${editableCodes.join(", ")}. Spätere Änderungen wirken jeweils nur auf den betreffenden Kurs.`;
@@ -226,8 +251,16 @@ function EventRowEditor({ group, coursesById }: { group: EventGroup; coursesById
       <DateField label="Startdatum" name="startDate" required defaultValue={values?.startDate ?? group.startDate} invalid={updateState.field === "startDate"} errorId={ids.error} />
       <DateField label="Enddatum (optional)" name="endDate" defaultValue={values?.endDate ?? group.endDate ?? ""} invalid={updateState.field === "endDate"} errorId={ids.error} />
       <label className="account-check"><input type="checkbox" name="provisional" defaultChecked={values?.provisional ?? group.provisional} /> Zeitangabe ist vorläufig</label>
-      {shared
-        ? <ConfirmAction openLabel="Termine ändern" heading="Zusammengefasste Termine ändern" consequence={consequence} confirmLabel="Änderungen speichern" pendingLabel="Wird gespeichert …" isPending={updating} />
+      {shared || publishedCodes.length
+        ? <ConfirmAction openLabel="Termine prüfen" heading={shared ? "Zusammengefasste Termine ändern" : "Öffentlichen Termin ändern"} consequence={consequence}
+            preview={(formData) => <><p><strong>Betroffene Kurse:</strong> {editableCodes.join(", ")}</p>
+              <ul>
+                <li>Titel: {group.title} → {String(formData.get("title") ?? "")}</li>
+                <li>Kategorie: {eventCategoryLabel(group.category)} → {eventCategories.find((category) => category.value === formData.get("category"))?.label ?? String(formData.get("category") ?? "")}</li>
+                <li>Zeitraum: {group.startDate}{group.endDate ? ` bis ${group.endDate}` : ""} → {String(formData.get("startDate") ?? "")}{formData.get("endDate") ? ` bis ${String(formData.get("endDate"))}` : ""}</li>
+              </ul>
+              {publishedCodes.length ? <p>Nach erfolgreicher Prüfung ist die Änderung bei {publishedCodes.join(", ")} unmittelbar öffentlich sichtbar.</p> : <p>{consequence}</p>}</>}
+            confirmLabel={publishedCodes.length ? "Änderungen speichern und veröffentlichen" : "Änderungen speichern"} pendingLabel="Wird gespeichert …" isPending={updating} />
         : <button className="button" type="submit" disabled={updating}>{updating ? "Wird gespeichert …" : "Termin speichern"}</button>}
     </form>
     <form action={deleteAction} className="account-form">
@@ -237,7 +270,7 @@ function EventRowEditor({ group, coursesById }: { group: EventGroup; coursesById
       <ConfirmAction openLabel="Termin löschen" heading={shared ? "Zusammengefasste Termine löschen" : "Termin löschen"}
         consequence={shared
           ? `Folgende Termine werden einzeln gelöscht: ${editableCodes.join(", ")}.`
-          : `Der Termin von ${editableCodes.join(", ")} wird aus dem Planungsstand gelöscht.`}
+          : `Der Termin von ${editableCodes.join(", ")} wird gelöscht.${publishedCodes.length ? " Die Löschung ist nach erfolgreicher Prüfung unmittelbar öffentlich sichtbar." : ""}`}
         confirmLabel="Endgültig löschen" pendingLabel="Wird gelöscht …" isPending={deleting} danger />
     </form>
   </li>;
@@ -252,7 +285,8 @@ export function CourseCutEditor({ courses, phases, events }: {
   const editableCourses = courses.filter((course) => course.editable);
   // What may be created is bounded by the own courses alone: a foreign study program of seven semesters must not offer
   // a seventh semester for an own course of six.
-  const semesters = Math.max(...editableCourses.map((course) => course.semesters), 0);
+  const phaseCreationCourses = editableCourses.filter((course) => course.state === "UNPUBLISHED");
+  const semesters = Math.max(...phaseCreationCourses.map((course) => course.semesters), 0);
   const readOnlyCodes = courses.filter((course) => !course.editable).map((course) => course.code);
   const readOnlyHint = readOnlyCodes.length
     ? <p className="notice">Sie können {readOnlyCodes.join(", ")} nur lesen: {readOnlyCodes.length === 1 ? "dieser Kurs gehört" : "diese Kurse gehören"} zu einem Bereich, der Ihnen nicht zugeordnet ist. Angelegt wird deshalb ausschließlich für Ihre eigenen Kurse.</p>
@@ -260,7 +294,7 @@ export function CourseCutEditor({ courses, phases, events }: {
   return <>
     <section className="workspace-panel" aria-labelledby="cut-status-heading">
       <h2 id="cut-status-heading">Planungsstand je Kurs</h2>
-      <p>Ein Kurs ohne veröffentlichte Fassung oder mit nicht veröffentlichten Änderungen ist als „{workInProgressLabel}“ gekennzeichnet und noch nicht abgestimmt.</p>
+      <p>Ein nicht veröffentlichter Kurs ist als „{workInProgressLabel}“ gekennzeichnet und darf unvollständig sein. Bestätigte Änderungen an veröffentlichten Kursen wirken unmittelbar öffentlich.</p>
       <ul className="entry-list">{courses.map((course) => <CourseStatus key={course.id} course={course} phases={phases} events={events} />)}</ul>
     </section>
     <PlanMatrix courses={courses} phases={phases} events={events} workInProgressCourseIds={courses.filter((course) => course.workInProgress).map((course) => course.id)} />
@@ -268,7 +302,9 @@ export function CourseCutEditor({ courses, phases, events }: {
       <h2 id="phase-create-heading">Kursphase anlegen</h2>
       <p>Jede Speicherung ist eine einzelne Operation. Es gibt kein automatisches Speichern.</p>
       {readOnlyHint}
-      {editableCourses.length ? <PhaseCreateForm courses={editableCourses} semesters={semesters} /> : <p className="empty-note">Dieser Zuschnitt enthält keinen Kurs Ihrer Bereiche. Sie können ihn lesen, aber keine Kursphase anlegen.</p>}
+      {editableCourses.some((course) => course.state === "UNPUBLISHED")
+        ? <PhaseCreateForm courses={phaseCreationCourses} semesters={semesters} />
+        : <p className="empty-note">In veröffentlichten Kursen werden keine einzelnen Phasen ergänzt. Verschieben Sie stattdessen eine vorhandene Phasengrenze; angrenzende Phasen werden atomar angepasst.</p>}
       {phases.length ? <section aria-labelledby="phase-edit-heading">
         <h3 id="phase-edit-heading">Gespeicherte Kursphasen</h3>
         <p>Übereinstimmende Kursphasen stehen zusammen. Eine Änderung oder Löschung nennt vor dem Speichern alle einzeln betroffenen Kurse.</p>

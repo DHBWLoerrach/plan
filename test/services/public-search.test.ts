@@ -7,7 +7,7 @@ import {
   readPublicFilterOptions,
   searchPublicPlans,
 } from "@/lib/services/public-search";
-import { databaseWithMasterData, draftOnlyCourse, publish, snapshotId, withdraw } from "@/test/published-plans";
+import { databaseWithMasterData, unpublishedCourse, publish, courseIdForCode, withdraw } from "@/test/published-plans";
 
 const today = "2026-07-26";
 
@@ -20,22 +20,22 @@ function courseCodes(result: ReturnType<typeof searchPublicPlans>) {
 }
 
 describe("readPublicFilterOptions", () => {
-  it("forms every option from published snapshots, not current master data", () => {
+  it("forms every option from the current master data of published courses", () => {
     const sqlite = databaseWithMasterData();
     publish(sqlite, { id: "tech", courses: [{ code: "TIF24A", studyStart: "2024-10-01" }] });
     publish(sqlite, { id: "business", area: "Wirtschaft", areaId: "area-2", courses: [{ code: "WWI26A", program: "BWL", studyStart: "2026-10-01" }] });
     sqlite.exec("UPDATE areas SET name = 'Ingenieurwesen' WHERE id = 'area-1'; UPDATE programs SET name = 'Angewandte Informatik' WHERE id = 'program-1'");
 
     expect(readPublicFilterOptions(sqlite)).toEqual({
-      areas: ["Technik", "Wirtschaft"],
-      programs: ["BWL", "Informatik"],
+      areas: ["Ingenieurwesen", "Wirtschaft"],
+      programs: [{ value: "TIF", label: "TIF — Angewandte Informatik" }, { value: "WWI", label: "WWI — BWL" }],
       years: [2026, 2024],
     });
   });
 
   it("omits unpublished courses", () => {
     const sqlite = databaseWithMasterData();
-    draftOnlyCourse(sqlite, "WWI99A");
+    unpublishedCourse(sqlite, "WWI99A");
 
     expect(readPublicFilterOptions(sqlite)).toEqual({ areas: [], programs: [], years: [] });
   });
@@ -63,8 +63,9 @@ describe("searchPublicPlans", () => {
   it("combines area, program, year and course-prefix filters on the same published course", () => {
     const sqlite = databaseWithCourses();
 
-    expect(courseCodes(searchPublicPlans(sqlite, { area: "Technik", program: "Informatik", year: "2024", course: "tif24b" }, today))).toEqual(["TIF24B"]);
-    expect(courseCodes(searchPublicPlans(sqlite, { area: "Technik", program: "BWL" }, today))).toEqual([]);
+    expect(courseCodes(searchPublicPlans(sqlite, { area: "Technik", program: "tif", year: "2024", course: "tif24b" }, today))).toEqual(["TIF24B"]);
+    expect(searchPublicPlans(sqlite, { program: "tif" }, today).filters.program).toBe("TIF");
+    expect(courseCodes(searchPublicPlans(sqlite, { area: "Technik", program: "WWI" }, today))).toEqual([]);
     expect(courseCodes(searchPublicPlans(sqlite, { course: "IF24" }, today))).toEqual([]);
     expect(courseCodes(searchPublicPlans(sqlite, { course: "%" }, today))).toEqual([]);
   });
@@ -113,33 +114,57 @@ describe("readPublicCut", () => {
     return sqlite;
   }
 
-  it("reads one course by its published code, including only its published phases and events", () => {
+  it("reads one course by its current published code, including its current phases and events", () => {
     const cut = readPublicCut(databaseWithCuts(), { kind: "course", code: "tif24a" });
 
     expect(cut?.cut).toEqual({ kind: "course", code: "TIF24A" });
     expect(cut?.courses.map((course) => course.code)).toEqual(["TIF24A"]);
-    expect(cut?.phases).toEqual([{ courseId: snapshotId("TIF24A"), semester: 1, type: "THEORY", startDate: "2024-10-01", endDate: "2024-12-20" }]);
-    expect(cut?.events.map((event) => [event.title, event.courseIds])).toEqual([["Klausur A", [snapshotId("TIF24A")]]]);
+    expect(cut?.phases).toEqual([{ courseId: courseIdForCode("TIF24A"), semester: 1, type: "THEORY", startDate: "2024-10-01", endDate: "2024-12-20" }]);
+    expect(cut?.events.map((event) => [event.title, event.courseIds])).toEqual([["Klausur A", [courseIdForCode("TIF24A")]]]);
   });
 
-  it("forms year, area and program cuts only from their matching published snapshots", () => {
+  it("forms year, area and program cuts only from matching published courses", () => {
     const sqlite = databaseWithCuts();
 
     expect(readPublicCut(sqlite, yearCut("2024")!)?.courses.map((course) => course.code)).toEqual(["TIF24A", "TIF24B", "WWI24A"]);
     expect(readPublicCut(sqlite, areaCut("2024", "Technik")!)?.courses.map((course) => course.code)).toEqual(["TIF24A", "TIF24B"]);
-    expect(readPublicCut(sqlite, programCut("2024", "Informatik")!)?.courses.map((course) => course.code)).toEqual(["TIF24A", "TIF24B"]);
+    const program = readPublicCut(sqlite, programCut("2024", "tif")!);
+    expect(program?.courses.map((course) => course.code)).toEqual(["TIF24A", "TIF24B"]);
+    expect(program?.cut).toEqual({ kind: "program", year: 2024, abbreviation: "TIF", name: "Informatik" });
+  });
+
+  it("keeps equally named programs separate through their unique abbreviations", () => {
+    const sqlite = databaseWithCuts();
+    sqlite.exec(`
+      INSERT INTO programs VALUES ('program-3', 'area-2', 'Informatik', 'INF', 6);
+      INSERT INTO courses
+        (id, program_id, code, normalized_code, study_start, study_end, published_at, updated_at, updated_by_account_id)
+      VALUES
+        ('course-inf24a', 'program-3', 'INF24A', 'inf24a', '2024-10-01', '2027-09-30',
+         '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 'seed');
+    `);
+
+    expect(readPublicCut(sqlite, programCut("2024", "TIF")!)?.courses.map((course) => course.code))
+      .toEqual(["TIF24A", "TIF24B"]);
+    expect(readPublicCut(sqlite, programCut("2024", "inf")!)?.courses.map((course) => course.code))
+      .toEqual(["INF24A"]);
+    expect(readPublicFilterOptions(sqlite).programs).toEqual([
+      { value: "WWI", label: "WWI — BWL" },
+      { value: "INF", label: "INF — Informatik" },
+      { value: "TIF", label: "TIF — Informatik" },
+    ]);
   });
 
   it("never widens a cut to another year", () => {
     const sqlite = databaseWithCuts();
 
     expect(readPublicCut(sqlite, areaCut("2025", "Technik")!)?.courses.map((course) => course.code)).toEqual(["TIF25A"]);
-    expect(readPublicCut(sqlite, programCut("2025", "BWL")!)).toBeNull();
+    expect(readPublicCut(sqlite, programCut("2025", "WWI")!)).toBeNull();
   });
 
   it("makes unknown, unpublished and withdrawn addresses indistinguishable", () => {
     const sqlite = databaseWithCuts();
-    draftOnlyCourse(sqlite, "TIF99A");
+    unpublishedCourse(sqlite, "TIF99A");
     withdraw(sqlite, "tif24a");
 
     expect(readPublicCut(sqlite, { kind: "course", code: "unbekannt" })).toBeNull();

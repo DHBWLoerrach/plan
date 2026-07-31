@@ -25,7 +25,7 @@ export function publicSearchData(request: PublicFilters & { page?: string }) {
 }
 
 /**
- * The published snapshots of one public cut, or `null` when none is visible. Page and `generateMetadata` ask for the
+ * The current data of the published courses in one public cut, or `null` when none is visible. Page and `generateMetadata` ask for the
  * same data, so the read is memoised per request — the Next.js guide names React `cache` for reads without `fetch`.
  */
 export const publicCutData = cache((cut: PublicCut): PublicCutDetail | null => readPublicCut(sqlite, cut));

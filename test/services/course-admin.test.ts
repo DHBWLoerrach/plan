@@ -2,7 +2,7 @@ import Database from "better-sqlite3";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createCourse, deleteCourse, updateCourse } from "@/lib/services/course-admin";
-import { createDraftPhases } from "@/lib/services/phase-admin";
+import { createCoursePhases } from "@/lib/services/phase-admin";
 import { applySchema } from "@/test/schema";
 
 const databases: Database.Database[] = [];
@@ -18,14 +18,14 @@ describe("courses", () => {
   it("stores its own change metadata and no block-plan assignment", () => {
     const sqlite = database();
     const id = createCourse(sqlite, { accountId: "admin", code: " TIF26A ", programId: "program-6", studyStart: "2026-10-01", studyEnd: "2029-09-30" });
-    expect(sqlite.prepare("SELECT code, has_ever_been_published AS published, draft_updated_by_account_id AS editor FROM courses WHERE id = ?").get(id)).toEqual({ code: "TIF26A", published: 0, editor: "admin" });
+    expect(sqlite.prepare("SELECT code, published_at AS publishedAt, updated_by_account_id AS editor FROM courses WHERE id = ?").get(id)).toEqual({ code: "TIF26A", publishedAt: null, editor: "admin" });
     expect(sqlite.prepare("SELECT 1 FROM pragma_table_info('courses') WHERE name = 'block_plan_id'").get()).toBeUndefined();
   });
 
   it("rejects a study period or program that invalidates existing phases", () => {
     const sqlite = database();
     const id = createCourse(sqlite, { accountId: "admin", code: "TIF26A", programId: "program-7", studyStart: "2026-10-01", studyEnd: "2029-09-30" });
-    createDraftPhases(sqlite, { accountId: "admin", courseIds: [id], semester: "7", type: "THEORY", startDate: "2029-01-01", endDate: "2029-09-30" });
+    createCoursePhases(sqlite, { accountId: "admin", courseIds: [id], semester: "7", type: "THEORY", startDate: "2029-01-01", endDate: "2029-09-30" });
     expect(() => updateCourse(sqlite, { accountId: "admin", courseId: id, code: "TIF26A", programId: "program-7", studyStart: "2026-10-01", studyEnd: "2029-06-30" })).toThrow("alle Kursphasen");
     expect(() => updateCourse(sqlite, { accountId: "admin", courseId: id, code: "TIF26A", programId: "program-6", studyStart: "2026-10-01", studyEnd: "2029-09-30" })).toThrow("mindestens 7 Semester");
   });
@@ -53,8 +53,7 @@ describe("courses", () => {
   it("refuses to delete a course that is publicly visible", () => {
     const sqlite = database();
     const id = createCourse(sqlite, { accountId: "admin", code: "TIF26A", programId: "program-6", studyStart: "2026-10-01", studyEnd: "2029-09-30" });
-    sqlite.prepare(`INSERT INTO published_courses (id, course_id, published_at, area_name, program_name, program_abbreviation, code, study_start, study_end, semesters)
-      VALUES ('published', ?, '2026-06-01T00:00:00.000Z', 'Technik', 'Informatik', 'TIF', 'TIF26A', '2026-10-01', '2029-09-30', 6)`).run(id);
+    sqlite.prepare("UPDATE courses SET published_at = '2026-06-01T00:00:00.000Z' WHERE id = ?").run(id);
 
     expect(() => deleteCourse(sqlite, { accountId: "admin", courseId: id })).toThrow("zuerst zurück");
     expect(sqlite.prepare("SELECT count(*) AS count FROM courses WHERE id = ?").get(id)).toEqual({ count: 1 });
@@ -63,7 +62,7 @@ describe("courses", () => {
   it("deletes dependent planning data when no public version exists", () => {
     const sqlite = database();
     const id = createCourse(sqlite, { accountId: "admin", code: "TIF26A", programId: "program-6", studyStart: "2026-10-01", studyEnd: "2029-09-30" });
-    createDraftPhases(sqlite, { accountId: "admin", courseIds: [id], semester: "1", type: "THEORY", startDate: "2026-10-01", endDate: "2026-12-31" });
+    createCoursePhases(sqlite, { accountId: "admin", courseIds: [id], semester: "1", type: "THEORY", startDate: "2026-10-01", endDate: "2026-12-31" });
     deleteCourse(sqlite, { accountId: "admin", courseId: id });
     expect(sqlite.prepare("SELECT count(*) AS count FROM course_phases").get()).toEqual({ count: 0 });
   });

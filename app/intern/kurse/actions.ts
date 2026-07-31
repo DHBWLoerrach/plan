@@ -86,7 +86,7 @@ export async function deleteCourseAction(_: CourseFormState, formData: FormData)
 export async function publishCourseAction(_: CoursePublicationFormState, formData: FormData): Promise<CoursePublicationFormState> {
   const courseId = String(formData.get("courseId") ?? "");
   try {
-    publishCourse(sqlite, { courseId, accountId: await requireAccountId(), seenDraftUpdatedAt: String(formData.get("draftUpdatedAt") ?? ""), seenPublishedCourseId: String(formData.get("publishedCourseId") ?? "") || null });
+    publishCourse(sqlite, { courseId, accountId: await requireAccountId(), seenUpdatedAt: String(formData.get("updatedAt") ?? ""), seenPublishedAt: String(formData.get("publishedAt") ?? "") || null });
   } catch (error) {
     if (error instanceof StaleStateError) return { error: "Der angezeigte Planungsstand hat sich geändert. Laden Sie die Seite neu." };
     return { error: errorMessage(error) };
@@ -98,7 +98,7 @@ export async function publishCourseAction(_: CoursePublicationFormState, formDat
 export async function withdrawCourseAction(_: CoursePublicationFormState, formData: FormData): Promise<CoursePublicationFormState> {
   const courseId = String(formData.get("courseId") ?? "");
   try {
-    withdrawCourse(sqlite, { courseId, accountId: await requireAccountId(), seenPublishedCourseId: String(formData.get("publishedCourseId") ?? "") });
+    withdrawCourse(sqlite, { courseId, accountId: await requireAccountId(), seenPublishedAt: String(formData.get("publishedAt") ?? "") });
   } catch (error) {
     if (error instanceof StaleStateError) return { error: "Die angezeigte Veröffentlichung hat sich geändert. Laden Sie die Seite neu." };
     return { error: errorMessage(error) };

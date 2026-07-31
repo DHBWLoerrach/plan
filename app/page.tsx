@@ -3,7 +3,7 @@ import { connection } from "next/server";
 
 import { SiteShell } from "@/components/site-shell";
 import { publicCutPath } from "@/lib/domain/public-cut";
-import { filterKeys, type PublicFilters, type PublicPlanGroup } from "@/lib/services/public-search";
+import { filterKeys, type PublicFilterOption, type PublicFilters, type PublicPlanGroup } from "@/lib/services/public-search";
 
 import { publicSearchData, searchParam } from "./data";
 
@@ -15,12 +15,14 @@ const filterLabels: Record<(typeof filterKeys)[number], string> = {
 };
 
 /**
- * The options come exclusively from the master data snapshots of published versions (MVP-SPEZIFIKATION.md). A value
- * taken from the URL that no version carries any more is not offered as a further choice but marked as such, so that
+ * The options come exclusively from the current master data of published courses (MVP-SPEZIFIKATION.md). A value
+ * taken from the URL that no published course carries any more is not offered as a further choice but marked as such, so that
  * the shown state still matches the shared link.
  */
-function options(published: (string | number)[], current: string | undefined) {
-  const values = published.map((value) => ({ value: String(value), label: String(value) }));
+function options(published: (string | number | PublicFilterOption)[], current: string | undefined) {
+  const values = published.map((option) => typeof option === "object"
+    ? option
+    : { value: String(option), label: String(option) });
   return current && !values.some((option) => option.value === current)
     ? [...values, { value: current, label: `${current} (nicht mehr veröffentlicht)` }]
     : values;
@@ -58,7 +60,14 @@ export default async function Home({ searchParams }: PageProps<"/">) {
     page: searchParam(raw, "page"),
   });
   const filters = result.filters;
-  const activeFilters = filterKeys.flatMap((key) => (filters[key] ? [{ label: filterLabels[key], value: filters[key] as string }] : []));
+  const activeFilters = filterKeys.flatMap((key) => {
+    const value = filters[key];
+    if (!value) return [];
+    const displayedValue = key === "program"
+      ? published.programs.find((option) => option.value === value)?.label ?? value
+      : value;
+    return [{ label: filterLabels[key], value: displayedValue }];
+  });
   const filterText = activeFilters.length
     ? `Aktive Filter: ${activeFilters.map((filter) => `${filter.label} ${filter.value}`).join(", ")}.`
     : "Keine Filter gesetzt.";

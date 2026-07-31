@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import { buildPlanTimeline, flagNarrowBars, type TimelineBar } from "@/lib/domain/plan-timeline";
-import type { DraftCourse, DraftPhase } from "@/lib/domain/publication";
+import type { CoursePlan, CoursePhase } from "@/lib/domain/publication";
 
 /** An axis of exactly 100 days, so every percentage of the diagram is readable as a number of days. */
-function course(id: string, code: string): DraftCourse {
+function course(id: string, code: string): CoursePlan {
   return { id, code, studyStart: "2026-01-01", studyEnd: "2026-04-10", semesters: 2 };
 }
 
-function run(courseId: string): DraftPhase[] {
+function run(courseId: string): CoursePhase[] {
   return [
     { courseId, semester: 1, type: "THEORY", startDate: "2026-01-01", endDate: "2026-02-09" },
     { courseId, semester: 1, type: "PRACTICE", startDate: "2026-02-10", endDate: "2026-03-01" },
@@ -92,7 +92,7 @@ describe("buildPlanTimeline", () => {
   });
 
   it("ignores the phases of a course the matrix does not show", () => {
-    const hidden: DraftPhase[] = [
+    const hidden: CoursePhase[] = [
       { courseId: "course-b", semester: 1, type: "THEORY", startDate: "2025-01-01", endDate: "2025-06-30" },
     ];
     const timeline = buildPlanTimeline([course("course-a", "TIF26A")], [...run("course-a"), ...hidden]);
@@ -101,7 +101,7 @@ describe("buildPlanTimeline", () => {
     expect(timeline?.lanes).toHaveLength(1);
   });
 
-  it("stretches the axis over a phase a draft placed outside the study period", () => {
+  it("stretches the axis over a phase placed outside the study period", () => {
     const overshooting = [...run("course-a"), {
       courseId: "course-a",
       semester: 2,
@@ -115,7 +115,7 @@ describe("buildPlanTimeline", () => {
     expect(timeline?.lanes[0].bars.at(-1)?.width).toBeCloseTo((10 / 110) * 100, 2);
   });
 
-  it("leaves the gap of an incomplete draft between the bars", () => {
+  it("leaves the gap of an incomplete course between the bars", () => {
     const withGap = run("course-a").filter((phase) => phase.type !== "PRACTICE");
     const timeline = buildPlanTimeline([course("course-a", "TIF26A")], withGap);
     const [first, second] = timeline?.lanes[0].bars ?? [];
@@ -147,7 +147,7 @@ describe("buildPlanTimeline", () => {
   });
 
   it("clips the first and the last year to the axis", () => {
-    const spanning: DraftCourse = { id: "course-a", code: "TIF26A", studyStart: "2026-10-01", studyEnd: "2028-03-31", semesters: 3 };
+    const spanning: CoursePlan = { id: "course-a", code: "TIF26A", studyStart: "2026-10-01", studyEnd: "2028-03-31", semesters: 3 };
     const timeline = buildPlanTimeline([spanning], []);
 
     expect(timeline?.years.map((year) => [year.year, year.startDate, year.endDate])).toEqual([

@@ -7,6 +7,7 @@ import { normalizeCourseCode } from "@/lib/domain/course-code";
 import { assertAreaEditPermission, assertCourseEditPermission } from "@/lib/services/authorization";
 import { adoptIntoCourse, type AdoptionInput } from "@/lib/services/course-adoption";
 import { touchCourse } from "@/lib/services/phase-admin";
+import { assertPublishedCourseValid } from "@/lib/services/publication";
 
 const maximumCodeLength = 32;
 type CourseInput = { code: string; programId: string; studyStart: string; studyEnd: string };
@@ -28,8 +29,8 @@ export function createCourse(sqlite: Database.Database, input: { accountId: stri
     assertCodeAvailable(sqlite, normalized.normalizedCode, null);
     const id = randomUUID();
     sqlite.prepare(`INSERT INTO courses
-      (id, program_id, code, normalized_code, study_start, study_end, has_ever_been_published, draft_updated_at, draft_updated_by_account_id)
-      VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)`)
+      (id, program_id, code, normalized_code, study_start, study_end, published_at, updated_at, updated_by_account_id)
+      VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?)`)
       .run(id, normalized.programId, normalized.code, normalized.normalizedCode, normalized.studyStart, normalized.studyEnd, now.toISOString(), input.accountId);
     if (input.adoption) {
       adoptIntoCourse(sqlite, { courseId: id, studyStart: normalized.studyStart, studyEnd: normalized.studyEnd, semesters: program.semesters, adoption: input.adoption });
@@ -56,6 +57,7 @@ export function updateCourse(sqlite: Database.Database, input: { accountId: stri
     sqlite.prepare("UPDATE courses SET program_id = ?, code = ?, normalized_code = ?, study_start = ?, study_end = ? WHERE id = ?")
       .run(normalized.programId, normalized.code, normalized.normalizedCode, normalized.studyStart, normalized.studyEnd, input.courseId);
     touchCourse(sqlite, input.courseId, input.accountId, now);
+    assertPublishedCourseValid(sqlite, input.courseId);
   })();
 }
 
@@ -63,8 +65,8 @@ export function deleteCourse(sqlite: Database.Database, input: { accountId: stri
   sqlite.transaction(() => {
     requireCourse(sqlite, input.courseId);
     assertCourseEditPermission(sqlite, input.accountId, input.courseId);
-    if (sqlite.prepare("SELECT 1 FROM published_courses WHERE course_id = ?").get(input.courseId)) {
-      throw new Error("Der Kurs besitzt eine veröffentlichte Fassung und kann nicht gelöscht werden. Nehmen Sie sie zuerst zurück.");
+    if (sqlite.prepare("SELECT published_at FROM courses WHERE id = ?").pluck().get(input.courseId)) {
+      throw new Error("Der Kurs ist veröffentlicht und kann nicht gelöscht werden. Nehmen Sie die Veröffentlichung zuerst zurück.");
     }
     sqlite.prepare("DELETE FROM courses WHERE id = ?").run(input.courseId);
   })();

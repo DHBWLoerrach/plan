@@ -1,4 +1,4 @@
-import type { DraftCourse, DraftEvent, DraftPhase } from "@/lib/domain/publication";
+import type { CoursePlan, CourseEvent, CoursePhase } from "@/lib/domain/publication";
 
 /** Courses that share every phase can use one visual column or one overview lane without sharing any stored data. */
 export interface ComparableCourseGroup {
@@ -14,14 +14,14 @@ export interface ComparableEventCourse {
 /** One row of the public event comparison. Its key is display-only and deliberately carries no identity. */
 export interface ComparableEvent {
   title: string;
-  category: DraftEvent["category"];
+  category: CourseEvent["category"];
   startDate: string;
   endDate: string | null;
   provisional: boolean;
   courses: ComparableEventCourse[];
 }
 
-function phaseSequenceKey(courseId: string, phases: DraftPhase[]): string {
+function phaseSequenceKey(courseId: string, phases: CoursePhase[]): string {
   return JSON.stringify(phases
     .filter((phase) => phase.courseId === courseId)
     .toSorted((left, right) => (
@@ -37,7 +37,7 @@ function phaseSequenceKey(courseId: string, phases: DraftPhase[]): string {
  * Groups courses only where their whole phase sequences agree. A single changed phase produces a different key and
  * therefore its own column or lane; the source phases remain independent records.
  */
-export function groupComparableCourses(courses: DraftCourse[], phases: DraftPhase[]): ComparableCourseGroup[] {
+export function groupComparableCourses(courses: CoursePlan[], phases: CoursePhase[]): ComparableCourseGroup[] {
   const groups = new Map<string, ComparableCourseGroup>();
   for (const course of courses) {
     const key = phaseSequenceKey(course.id, phases);
@@ -56,7 +56,7 @@ function normalizeEventTitle(title: string): string {
   return title.trim().replace(/\s+/g, " ");
 }
 
-function eventKey(event: DraftEvent): string {
+function eventKey(event: CourseEvent): string {
   return JSON.stringify({
     category: event.category,
     title: normalizeEventTitle(event.title),
@@ -70,7 +70,7 @@ function eventKey(event: DraftEvent): string {
  * Joins only events whose category, normalized title and complete time indication agree. Descriptions intentionally
  * do not enter the key: they remain listed at the course that supplies them.
  */
-export function groupComparableEvents(events: DraftEvent[]): ComparableEvent[] {
+export function groupComparableEvents(events: CourseEvent[]): ComparableEvent[] {
   const groups = new Map<string, ComparableEvent>();
   for (const event of events) {
     const key = eventKey(event);

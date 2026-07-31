@@ -22,8 +22,8 @@ function database() {
       ('prog-wwi', 'area-wirtschaft', 'Wirtschaftsinformatik', 'WWI', 6);
     INSERT INTO user VALUES ('editor', 'Editor', 'editor@test', 0, NULL, 'AREA_EDITOR', 0, 'ACTIVE', 0, 0);
     INSERT INTO area_assignments VALUES ('editor', 'area-technik');
-    INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, has_ever_been_published, draft_updated_at, draft_updated_by_account_id)
-      VALUES ('template', 'prog-wwi', 'WWI25A', 'wwi25a', '2025-10-01', '2026-09-30', 0, '2026-01-01T00:00:00.000Z', 'editor');
+    INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, published_at, updated_at, updated_by_account_id)
+      VALUES ('template', 'prog-wwi', 'WWI25A', 'wwi25a', '2025-10-01', '2026-09-30', NULL, '2026-01-01T00:00:00.000Z', 'editor');
     INSERT INTO course_phases (id, course_id, semester, phase_type, start_date, end_date) VALUES
       ('phase-1', 'template', 1, 'THEORY', '2025-10-01', '2025-12-31'),
       ('phase-2', 'template', 2, 'PRACTICE', '2026-01-01', '2026-09-30');

@@ -8,7 +8,7 @@ import { workInProgressLabel } from "@/lib/domain/course-status";
 import { eventCategoryLabel } from "@/lib/domain/event-category";
 import { groupComparableCourses, groupComparableEvents, type ComparableCourseGroup } from "@/lib/domain/plan-comparison";
 import { phaseTypeLabel } from "@/lib/domain/phase-type";
-import { buildSemesterMatrix, deriveEventSemester, noPhaseLabel, type DraftCourse, type DraftEvent, type DraftPhase, type MatrixRow } from "@/lib/domain/publication";
+import { buildSemesterMatrix, deriveEventSemester, noPhaseLabel, type CoursePlan, type CourseEvent, type CoursePhase, type MatrixRow } from "@/lib/domain/publication";
 
 /**
  * How a matrix cell shows the phase label the domain produced: the full label stays in the cell for assistive
@@ -74,9 +74,9 @@ function PhaseCell({ cell, group, headers, rowSpan = 1, duration }: { cell: stri
 
 /**
  * `workInProgressCourseIds` names the courses whose planning state is not the published one. Only the internal views
- * pass it: a published version is never in progress, so the public matrix leaves it out (ADR 0011).
+ * pass it: a published course is never in progress, so the public matrix leaves it out (ADR 0012).
  */
-export function PlanMatrix({ courses, phases, events, workInProgressCourseIds = [] }: { courses: DraftCourse[]; phases: DraftPhase[]; events: DraftEvent[]; workInProgressCourseIds?: string[] }) {
+export function PlanMatrix({ courses, phases, events, workInProgressCourseIds = [] }: { courses: CoursePlan[]; phases: CoursePhase[]; events: CourseEvent[]; workInProgressCourseIds?: string[] }) {
   const inProgress = new Set(workInProgressCourseIds);
   const columnLabel = (course: { id: string; code: string }) => inProgress.has(course.id) ? `${course.code} (${workInProgressLabel})` : course.code;
   const [visibleCourseIds, setVisibleCourseIds] = useState(() => new Set(courses.map((course) => course.id)));
@@ -99,7 +99,7 @@ export function PlanMatrix({ courses, phases, events, workInProgressCourseIds = 
     }));
   });
   // The legend explains what the section actually shows: a complete plan never says that a course misses a semester,
-  // and a draft under review may. It is drawn from the whole year group rather than from the visible columns, because
+  // and an incomplete unpublished course may. It is drawn from the whole year group rather than from the visible columns, because
   // it names overview and matrix alike and the overview keeps the lane of a course the matrix hides.
   const legendRows = Array.from({ length: semesters }, (_, index) => buildSemesterMatrix(courses, phases, index + 1));
   const shownCells = new Set(legendRows.flatMap((rows) => (rows.length ? rows.flatMap((row) => row.cells) : [noPhaseLabel])));
@@ -114,7 +114,7 @@ export function PlanMatrix({ courses, phases, events, workInProgressCourseIds = 
     setStatus((previous) => ({ message, announcement: previous.announcement + 1 }));
   }
 
-  function toggleCourse(course: DraftCourse) {
+  function toggleCourse(course: CoursePlan) {
     const next = new Set(visibleCourseIds);
     if (next.has(course.id)) next.delete(course.id); else next.add(course.id);
     setVisibleCourseIds(next);
@@ -128,7 +128,7 @@ export function PlanMatrix({ courses, phases, events, workInProgressCourseIds = 
    * checkbox is activated by a click event either way. React derives its change event from that same click and fires
    * it regardless, so the change handler has to stand down on its own as well.
    */
-  function refuseHiding(event: MouseEvent<HTMLInputElement>, course: DraftCourse) {
+  function refuseHiding(event: MouseEvent<HTMLInputElement>, course: CoursePlan) {
     event.preventDefault();
     announce(`${course.code} bleibt sichtbar: Mindestens ein Kurs muss in der Planmatrix angezeigt werden.`);
   }

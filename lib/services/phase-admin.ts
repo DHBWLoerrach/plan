@@ -2,20 +2,21 @@ import { randomUUID } from "node:crypto";
 
 import type Database from "better-sqlite3";
 
-import { normalizeCalendarDayField } from "@/lib/domain/calendar-day";
+import { normalizeCalendarDayField, plusDays } from "@/lib/domain/calendar-day";
 import { FieldError } from "@/lib/domain/field-error";
 import { type PhaseType, isPhaseType } from "@/lib/domain/phase-type";
 import { assertCourseEditPermission, assertCoursesEditPermission } from "@/lib/services/authorization";
+import { assertPublishedCourseValid } from "@/lib/services/publication";
 
 export type PhaseField = "courseIds" | "semester" | "type" | "startDate" | "endDate";
 export type PhaseDetails = { semester: string; type: string; startDate: string; endDate: string };
 export type PhaseInput = PhaseDetails & { courseIds: string[] };
 
-type CourseRow = { id: string; code: string; semesters: number; studyStart: string; studyEnd: string };
+type CourseRow = { id: string; code: string; semesters: number; studyStart: string; studyEnd: string; publishedAt: string | null };
 type NormalizedPhase = { semester: number; type: PhaseType; startDate: string; endDate: string };
 
 /** Creates one independent course phase for every selected course. */
-export function createDraftPhases(sqlite: Database.Database, input: { accountId: string; now?: Date } & PhaseInput): string[] {
+export function createCoursePhases(sqlite: Database.Database, input: { accountId: string; now?: Date } & PhaseInput): string[] {
   const now = input.now ?? new Date();
   return sqlite.transaction(() => {
     const courses = requireCourses(sqlite, input.courseIds);
@@ -29,38 +30,75 @@ export function createDraftPhases(sqlite: Database.Database, input: { accountId:
       const id = randomUUID();
       add.run(id, course.id, phase.semester, phase.type, phase.startDate, phase.endDate);
       touchCourse(sqlite, course.id, input.accountId, now);
+      assertPublishedCourseValid(sqlite, course.id);
       ids.push(id);
     }
     return ids;
   })();
 }
 
-export function updateDraftPhase(sqlite: Database.Database, input: { accountId: string; phaseId: string; now?: Date } & PhaseDetails): void {
+export function updateCoursePhase(sqlite: Database.Database, input: { accountId: string; phaseId: string; now?: Date } & PhaseDetails): void {
   const now = input.now ?? new Date();
   sqlite.transaction(() => {
     const course = requireCourseOfPhase(sqlite, input.phaseId);
     assertCourseEditPermission(sqlite, input.accountId, course.id);
     const phase = normalizePhaseDetails(input, course.semesters);
     assertPhaseWithinStudyPeriod(phase, course);
+    if (course.publishedAt) adjustPublishedPhaseNeighbours(sqlite, input.phaseId, course, phase);
     sqlite.prepare("UPDATE course_phases SET semester = ?, phase_type = ?, start_date = ?, end_date = ? WHERE id = ?")
       .run(phase.semester, phase.type, phase.startDate, phase.endDate, input.phaseId);
     touchCourse(sqlite, course.id, input.accountId, now);
+    assertPublishedCourseValid(sqlite, course.id);
   })();
 }
 
-export function deleteDraftPhase(sqlite: Database.Database, input: { accountId: string; phaseId: string; now?: Date }): void {
+export function deleteCoursePhase(sqlite: Database.Database, input: { accountId: string; phaseId: string; now?: Date }): void {
   const now = input.now ?? new Date();
   sqlite.transaction(() => {
     const course = requireCourseOfPhase(sqlite, input.phaseId);
     assertCourseEditPermission(sqlite, input.accountId, course.id);
     sqlite.prepare("DELETE FROM course_phases WHERE id = ?").run(input.phaseId);
     touchCourse(sqlite, course.id, input.accountId, now);
+    assertPublishedCourseValid(sqlite, course.id);
   })();
 }
 
 export function touchCourse(sqlite: Database.Database, courseId: string, accountId: string, now: Date): void {
-  sqlite.prepare("UPDATE courses SET draft_updated_at = ?, draft_updated_by_account_id = ? WHERE id = ?")
+  sqlite.prepare("UPDATE courses SET updated_at = ?, updated_by_account_id = ? WHERE id = ?")
     .run(now.toISOString(), accountId, courseId);
+}
+
+type StoredPhase = { id: string; startDate: string; endDate: string };
+
+/** A published phase boundary is one fact shared by two neighbours, so both rows move in the same transaction. */
+function adjustPublishedPhaseNeighbours(
+  sqlite: Database.Database,
+  phaseId: string,
+  course: CourseRow,
+  replacement: NormalizedPhase,
+): void {
+  const current = sqlite.prepare(`SELECT id, start_date AS startDate, end_date AS endDate
+    FROM course_phases WHERE id = ?`).get(phaseId) as StoredPhase;
+  if (replacement.startDate !== current.startDate) {
+    const previous = sqlite.prepare(`SELECT id, start_date AS startDate, end_date AS endDate FROM course_phases
+      WHERE course_id = ? AND start_date < ? ORDER BY start_date DESC LIMIT 1`)
+      .get(course.id, current.startDate) as StoredPhase | undefined;
+    if (previous) {
+      const endDate = plusDays(replacement.startDate, -1);
+      if (endDate < previous.startDate) throw new FieldError("startDate", "Die verschobene Grenze würde die vorherige Kursphase vollständig verdrängen.");
+      sqlite.prepare("UPDATE course_phases SET end_date = ? WHERE id = ?").run(endDate, previous.id);
+    }
+  }
+  if (replacement.endDate !== current.endDate) {
+    const next = sqlite.prepare(`SELECT id, start_date AS startDate, end_date AS endDate FROM course_phases
+      WHERE course_id = ? AND start_date > ? ORDER BY start_date LIMIT 1`)
+      .get(course.id, current.startDate) as StoredPhase | undefined;
+    if (next) {
+      const startDate = plusDays(replacement.endDate, 1);
+      if (startDate > next.endDate) throw new FieldError("endDate", "Die verschobene Grenze würde die folgende Kursphase vollständig verdrängen.");
+      sqlite.prepare("UPDATE course_phases SET start_date = ? WHERE id = ?").run(startDate, next.id);
+    }
+  }
 }
 
 function requireCourses(sqlite: Database.Database, rawIds: string[]): CourseRow[] {
@@ -68,13 +106,15 @@ function requireCourses(sqlite: Database.Database, rawIds: string[]): CourseRow[
   if (!ids.length) throw new FieldError("courseIds", "Wählen Sie mindestens einen Kurs für die Kursphase.");
   const placeholders = ids.map(() => "?").join(", ");
   const courses = sqlite.prepare(`SELECT course.id, course.code, program.semesters, course.study_start AS studyStart, course.study_end AS studyEnd
+      , course.published_at AS publishedAt
     FROM courses course JOIN programs program ON program.id = course.program_id WHERE course.id IN (${placeholders})`).all(...ids) as CourseRow[];
   if (courses.length !== ids.length) throw new FieldError("courseIds", "Ein ausgewählter Kurs wurde nicht gefunden.");
   return courses;
 }
 
 function requireCourseOfPhase(sqlite: Database.Database, phaseId: string): CourseRow {
-  const course = sqlite.prepare(`SELECT course.id, course.code, program.semesters, course.study_start AS studyStart, course.study_end AS studyEnd
+  const course = sqlite.prepare(`SELECT course.id, course.code, program.semesters, course.study_start AS studyStart,
+      course.study_end AS studyEnd, course.published_at AS publishedAt
     FROM course_phases phase JOIN courses course ON course.id = phase.course_id JOIN programs program ON program.id = course.program_id
     WHERE phase.id = ?`).get(phaseId) as CourseRow | undefined;
   if (!course) throw new Error("Die Kursphase wurde nicht gefunden.");
