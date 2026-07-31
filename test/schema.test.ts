@@ -122,6 +122,13 @@ describe("course planning schema", () => {
     const sqlite = databaseWithCourse();
 
     expectCheckFailure(() => sqlite.prepare("UPDATE users SET email = ? WHERE id = 'editor'").run(" "));
+    // One case per whitespace character the constraint names, so none of them can be dropped unnoticed.
+    for (const email of [
+      " test@example.com", "test@example.com ", "test @example.com",
+      "test@example.com\t", "test@example.com\n", "test@example.com\v", "test@example.com\f", "test@example.com\r",
+    ]) {
+      expectCheckFailure(() => sqlite.prepare("UPDATE users SET email = ? WHERE id = 'editor'").run(email));
+    }
     expectCheckFailure(() => sqlite.prepare("UPDATE users SET email = ? WHERE id = 'editor'").run(`${"a".repeat(243)}@example.invalid`));
     expectCheckFailure(() => sqlite.prepare("UPDATE areas SET name = ? WHERE id = 'area'").run(" "));
     expectCheckFailure(() => sqlite.prepare("UPDATE areas SET name = ? WHERE id = 'area'").run("a".repeat(121)));

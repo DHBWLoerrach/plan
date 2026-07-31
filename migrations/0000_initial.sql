@@ -3,7 +3,15 @@ PRAGMA foreign_keys = ON;
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY NOT NULL,
   name TEXT NOT NULL,
-  email TEXT NOT NULL COLLATE NOCASE UNIQUE CHECK (length(trim(email)) BETWEEN 1 AND 254),
+  email TEXT NOT NULL COLLATE NOCASE UNIQUE CHECK (
+    length(email) BETWEEN 1 AND 254
+    AND instr(email, ' ') = 0
+    AND instr(email, char(9)) = 0
+    AND instr(email, char(10)) = 0
+    AND instr(email, char(11)) = 0
+    AND instr(email, char(12)) = 0
+    AND instr(email, char(13)) = 0
+  ),
   email_verified INTEGER NOT NULL DEFAULT 0 CHECK (email_verified IN (0, 1)),
   image TEXT,
   role TEXT NOT NULL DEFAULT 'NONE' CHECK (role IN ('NONE', 'AREA_EDITOR')),

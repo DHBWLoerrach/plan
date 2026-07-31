@@ -17,7 +17,7 @@ Die Regeln im Abschnitt [Veröffentlichungsprüfung](#veröffentlichungsprüfung
 - Texte werden an beiden Rändern getrimmt. Pflichttexte dürfen danach nicht leer sein; leere optionale Texte werden als nicht angegeben behandelt.
 - Bei menschlichen Bezeichnungen werden aufeinanderfolgende Leerzeichen für den Anzeigewert auf eines reduziert.
 - Bereichsbezeichnungen, Studiengangskürzel und Kurskennungen sind ohne Beachtung der Groß-/Kleinschreibung systemweit eindeutig.
-- Dienstliche E-Mail-Adressen müssen syntaktisch gültig sein, werden getrimmt und kleingeschrieben und sind systemweit eindeutig. Das MVP beschränkt sie nicht auf eine bestimmte Domain.
+- Dienstliche E-Mail-Adressen müssen syntaktisch gültig sein, werden getrimmt und kleingeschrieben und sind systemweit eindeutig. Sie enthalten weder Leerzeichen noch ASCII-Whitespace-Steuerzeichen; die Datenbank sichert dies zusätzlich gegen direkte Schreibzugriffe ab. Das MVP beschränkt sie nicht auf eine bestimmte Domain.
 - Passwörter werden weder getrimmt noch normalisiert.
 
 Nach der Normalisierung gelten folgende Höchstlängen in Unicode-Codepoints:
