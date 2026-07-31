@@ -25,7 +25,7 @@ function createDatabase() {
 }
 
 function insertAccount(sqlite: Database.Database, id: string, account: { role: string; systemAdmin: number; status: string; areaIds?: string[] }) {
-  sqlite.prepare(`INSERT INTO user (id, name, email, emailVerified, role, system_admin, status, createdAt, updatedAt)
+  sqlite.prepare(`INSERT INTO user (id, name, email, email_verified, role, system_admin, status, created_at, updated_at)
     VALUES (?, ?, ?, 0, ?, ?, ?, ?, ?)`).run(id, id, `${id}@example.test`, account.role, account.systemAdmin, account.status, Date.now(), Date.now());
   for (const areaId of account.areaIds ?? []) sqlite.prepare("INSERT INTO area_assignments (user_id, area_id) VALUES (?, ?)").run(id, areaId);
 }

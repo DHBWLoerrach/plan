@@ -27,7 +27,7 @@ function createRunningDatabase(directory: string, email = "admin@dhbw-loerrach.d
   applySchema(sqlite);
   const record = sqlite.prepare("INSERT INTO _migrations (id, applied_at) VALUES (?, ?)");
   for (const migrationId of migrationIds()) record.run(migrationId, new Date().toISOString());
-  sqlite.prepare("INSERT INTO user (id, name, email, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?)").run("account-1", email, email, 1, 1);
+  sqlite.prepare("INSERT INTO user (id, name, email, created_at, updated_at) VALUES (?, ?, ?, ?, ?)").run("account-1", email, email, 1, 1);
   return { databasePath, sqlite };
 }
 

@@ -25,7 +25,7 @@ try {
     INSERT INTO programs VALUES ('program-own', 'area-own', 'Testinformatik', 'TIF', 6), ('program-foreign', 'area-foreign', 'Fremdinformatik', 'FRM', 6);
   `);
   const addUser = sqlite.prepare(`INSERT INTO user
-    (id, name, email, emailVerified, role, system_admin, status, createdAt, updatedAt)
+    (id, name, email, email_verified, role, system_admin, status, created_at, updated_at)
     VALUES (?, ?, ?, 0, ?, ?, ?, ?, ?)`);
   addUser.run("password-link-user", "Link User", "link@test.invalid", "NONE", 1, "PASSWORD_PENDING", now, now);
   addUser.run("system-admin", "System Admin", "admin@test.invalid", "NONE", 1, "ACTIVE", now, now);
@@ -33,7 +33,7 @@ try {
   sqlite.prepare("INSERT INTO area_assignments VALUES ('area-editor', 'area-own')").run();
   const passwordHash = await hashPassword(password);
   const addCredential = sqlite.prepare(`INSERT INTO account
-    (id, accountId, providerId, userId, password, createdAt, updatedAt)
+    (id, account_id, provider_id, user_id, password, created_at, updated_at)
     VALUES (?, ?, 'credential', ?, ?, ?, ?)`);
   addCredential.run("admin-credential", "system-admin", "system-admin", passwordHash, now, now);
   addCredential.run("editor-credential", "area-editor", "area-editor", passwordHash, now, now);

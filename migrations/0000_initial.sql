@@ -4,47 +4,47 @@ CREATE TABLE IF NOT EXISTS user (
   id TEXT PRIMARY KEY NOT NULL,
   name TEXT NOT NULL,
   email TEXT NOT NULL COLLATE NOCASE UNIQUE CHECK (length(trim(email)) BETWEEN 1 AND 254),
-  emailVerified INTEGER NOT NULL DEFAULT 0 CHECK (emailVerified IN (0, 1)),
+  email_verified INTEGER NOT NULL DEFAULT 0 CHECK (email_verified IN (0, 1)),
   image TEXT,
   role TEXT NOT NULL DEFAULT 'NONE' CHECK (role IN ('NONE', 'AREA_EDITOR')),
   system_admin INTEGER NOT NULL DEFAULT 0 CHECK (system_admin IN (0, 1)),
   status TEXT NOT NULL DEFAULT 'PASSWORD_PENDING' CHECK (status IN ('PASSWORD_PENDING', 'ACTIVE', 'LOCKED')),
-  createdAt INTEGER NOT NULL,
-  updatedAt INTEGER NOT NULL
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS account (
   id TEXT PRIMARY KEY NOT NULL,
-  accountId TEXT NOT NULL,
-  providerId TEXT NOT NULL,
-  userId TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
-  accessToken TEXT,
-  refreshToken TEXT,
-  idToken TEXT,
-  accessTokenExpiresAt INTEGER,
-  refreshTokenExpiresAt INTEGER,
+  account_id TEXT NOT NULL,
+  provider_id TEXT NOT NULL,
+  user_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+  access_token TEXT,
+  refresh_token TEXT,
+  id_token TEXT,
+  access_token_expires_at INTEGER,
+  refresh_token_expires_at INTEGER,
   scope TEXT,
   password TEXT,
-  createdAt INTEGER NOT NULL,
-  updatedAt INTEGER NOT NULL,
-  UNIQUE(providerId, accountId)
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  UNIQUE(provider_id, account_id)
 );
 CREATE TABLE IF NOT EXISTS session (
   id TEXT PRIMARY KEY NOT NULL,
   token TEXT NOT NULL UNIQUE,
-  userId TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
-  expiresAt INTEGER NOT NULL,
-  ipAddress TEXT,
-  userAgent TEXT,
-  createdAt INTEGER NOT NULL,
-  updatedAt INTEGER NOT NULL
+  user_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+  expires_at INTEGER NOT NULL,
+  ip_address TEXT,
+  user_agent TEXT,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS verification (
   id TEXT PRIMARY KEY NOT NULL,
   identifier TEXT NOT NULL,
   value TEXT NOT NULL,
-  expiresAt INTEGER NOT NULL,
-  createdAt INTEGER,
-  updatedAt INTEGER
+  expires_at INTEGER NOT NULL,
+  created_at INTEGER,
+  updated_at INTEGER
 );
 CREATE TABLE IF NOT EXISTS areas (
   id TEXT PRIMARY KEY NOT NULL,

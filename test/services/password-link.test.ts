@@ -12,7 +12,7 @@ function databaseWithPasswordLink({ expiresAt = "2030-01-08T00:00:00.000Z", stat
   const sqlite = new Database(":memory:");
   databases.push(sqlite);
   applySchema(sqlite);
-  sqlite.prepare("INSERT INTO user (id, name, email, emailVerified, role, system_admin, status, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
+  sqlite.prepare("INSERT INTO user (id, name, email, email_verified, role, system_admin, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
     "user-1", "admin@example.test", "admin@example.test", 0, "NONE", 1, status, Date.now(), Date.now(),
   );
   const token = "password-link-token";
@@ -29,7 +29,7 @@ afterEach(() => {
 describe("redeemPasswordLink", () => {
   it("activates the account, stores the Better Auth password hash and consumes the link", async () => {
     const { sqlite, token } = databaseWithPasswordLink();
-    sqlite.prepare("INSERT INTO session (id, token, userId, expiresAt, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)").run(
+    sqlite.prepare("INSERT INTO session (id, token, user_id, expires_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)").run(
       "old-session", "old-session-token", "user-1", Date.now() + 60_000, Date.now(), Date.now(),
     );
 
@@ -41,7 +41,7 @@ describe("redeemPasswordLink", () => {
     });
 
     expect(sqlite.prepare("SELECT status FROM user WHERE id = 'user-1'").get()).toEqual({ status: "ACTIVE" });
-    expect(sqlite.prepare("SELECT providerId, accountId, password FROM account WHERE userId = 'user-1'").get()).toEqual({
+    expect(sqlite.prepare("SELECT provider_id AS providerId, account_id AS accountId, password FROM account WHERE user_id = 'user-1'").get()).toEqual({
       providerId: "credential", accountId: "user-1", password: "better-auth:Ein-sehr-langes-Passwort1!",
     });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM password_links").get()).toEqual({ count: 0 });
@@ -108,10 +108,10 @@ describe("redeemPasswordLink", () => {
 
   it("resets an active account by revoking its password and sessions before issuing a new hashed link", () => {
     const { sqlite } = databaseWithPasswordLink({ status: "ACTIVE" });
-    sqlite.prepare("INSERT INTO account (id, accountId, providerId, userId, password, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)").run(
+    sqlite.prepare("INSERT INTO account (id, account_id, provider_id, user_id, password, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)").run(
       "credential-account", "user-1", "credential", "user-1", "old-hash", Date.now(), Date.now(),
     );
-    sqlite.prepare("INSERT INTO session (id, token, userId, expiresAt, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)").run(
+    sqlite.prepare("INSERT INTO session (id, token, user_id, expires_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)").run(
       "old-session", "old-session-token", "user-1", Date.now() + 60_000, Date.now(), Date.now(),
     );
 
@@ -127,10 +127,10 @@ describe("redeemPasswordLink", () => {
 
   it("locks an account by removing its local credential, sessions and open link, then can unlock it with a new link", () => {
     const { sqlite } = databaseWithPasswordLink({ status: "ACTIVE" });
-    sqlite.prepare("INSERT INTO account (id, accountId, providerId, userId, password, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)").run(
+    sqlite.prepare("INSERT INTO account (id, account_id, provider_id, user_id, password, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)").run(
       "credential-account", "user-1", "credential", "user-1", "old-hash", Date.now(), Date.now(),
     );
-    sqlite.prepare("INSERT INTO session (id, token, userId, expiresAt, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)").run(
+    sqlite.prepare("INSERT INTO session (id, token, user_id, expires_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)").run(
       "old-session", "old-session-token", "user-1", Date.now() + 60_000, Date.now(), Date.now(),
     );
 
@@ -149,11 +149,11 @@ describe("redeemPasswordLink", () => {
 
   it("keeps the current session while changing the password and revokes the other sessions", async () => {
     const { sqlite } = databaseWithPasswordLink({ status: "ACTIVE" });
-    sqlite.prepare("INSERT INTO account (id, accountId, providerId, userId, password, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)").run(
+    sqlite.prepare("INSERT INTO account (id, account_id, provider_id, user_id, password, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)").run(
       "credential-account", "user-1", "credential", "user-1", "old-hash", Date.now(), Date.now(),
     );
     for (const sessionId of ["current-session", "other-session"]) {
-      sqlite.prepare("INSERT INTO session (id, token, userId, expiresAt, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)").run(
+      sqlite.prepare("INSERT INTO session (id, token, user_id, expires_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)").run(
         sessionId, `${sessionId}-token`, "user-1", Date.now() + 60_000, Date.now(), Date.now(),
       );
     }
@@ -173,11 +173,11 @@ describe("redeemPasswordLink", () => {
 
   it("keeps the credential and every session when the previous password is wrong", async () => {
     const { sqlite } = databaseWithPasswordLink({ status: "ACTIVE" });
-    sqlite.prepare("INSERT INTO account (id, accountId, providerId, userId, password, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)").run(
+    sqlite.prepare("INSERT INTO account (id, account_id, provider_id, user_id, password, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)").run(
       "credential-account", "user-1", "credential", "user-1", "old-hash", Date.now(), Date.now(),
     );
     for (const sessionId of ["current-session", "other-session"]) {
-      sqlite.prepare("INSERT INTO session (id, token, userId, expiresAt, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)").run(
+      sqlite.prepare("INSERT INTO session (id, token, user_id, expires_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)").run(
         sessionId, `${sessionId}-token`, "user-1", Date.now() + 60_000, Date.now(), Date.now(),
       );
     }

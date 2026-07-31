@@ -8,11 +8,15 @@ function hasSchemaObject(sqlite: Database.Database, kind: "table" | "index", nam
   return sqlite.prepare("SELECT 1 FROM sqlite_master WHERE type = ? AND name = ?").pluck().get(kind, name) === 1;
 }
 
+function columnNames(sqlite: Database.Database, table: string): string[] {
+  return (sqlite.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).map((column) => column.name);
+}
+
 function databaseWithCourse() {
   const sqlite = new Database(":memory:");
   applySchema(sqlite);
   sqlite.exec(`
-    INSERT INTO user (id, name, email, emailVerified, role, system_admin, status, createdAt, updatedAt)
+    INSERT INTO user (id, name, email, email_verified, role, system_admin, status, created_at, updated_at)
       VALUES ('editor', 'Editor', 'editor@test.invalid', 0, 'AREA_EDITOR', 0, 'ACTIVE', 0, 0);
     INSERT INTO areas VALUES ('area', 'Technik', 'technik');
     INSERT INTO programs VALUES ('program', 'area', 'Informatik', 'TIF', 6);
@@ -56,6 +60,15 @@ describe("applySchemaThrough", () => {
 });
 
 describe("course planning schema", () => {
+  it("uses snake_case for every physical column name", () => {
+    const sqlite = new Database(":memory:");
+    applySchema(sqlite);
+
+    for (const table of ["user", "account", "session", "verification", "areas", "programs", "area_assignments", "password_links", "courses", "course_phases", "course_events"]) {
+      expect(columnNames(sqlite, table).every((name) => /^[a-z][a-z0-9_]*$/u.test(name))).toBe(true);
+    }
+  });
+
   it("has one set of course-owned data tables with foreign-key indexes", () => {
     const sqlite = new Database(":memory:");
     applySchema(sqlite);
@@ -74,7 +87,7 @@ describe("course planning schema", () => {
   it("restricts every stored boolean to zero or one", () => {
     const sqlite = databaseWithCourse();
 
-    expectCheckFailure(() => sqlite.prepare("UPDATE user SET emailVerified = 2 WHERE id = 'editor'").run());
+    expectCheckFailure(() => sqlite.prepare("UPDATE user SET email_verified = 2 WHERE id = 'editor'").run());
     expectCheckFailure(() => sqlite.prepare("UPDATE user SET system_admin = -1 WHERE id = 'editor'").run());
     expectCheckFailure(() => sqlite.prepare(`INSERT INTO course_events
       (id, course_id, title, description, category, start_date, end_date, provisional)
@@ -133,11 +146,11 @@ describe("course planning schema", () => {
   it("keeps login addresses, program abbreviations and password-link hashes unambiguous", () => {
     const sqlite = databaseWithCourse();
     sqlite.prepare(`INSERT INTO user
-      (id, name, email, emailVerified, role, system_admin, status, createdAt, updatedAt)
+      (id, name, email, email_verified, role, system_admin, status, created_at, updated_at)
       VALUES ('other', 'Other', 'other@test.invalid', 0, 'NONE', 1, 'ACTIVE', 0, 0)`).run();
 
     expectUniqueFailure(() => sqlite.prepare(`INSERT INTO user
-      (id, name, email, emailVerified, role, system_admin, status, createdAt, updatedAt)
+      (id, name, email, email_verified, role, system_admin, status, created_at, updated_at)
       VALUES ('same-email', 'Same', 'EDITOR@test.invalid', 0, 'NONE', 1, 'ACTIVE', 0, 0)`).run());
     expectUniqueFailure(() => sqlite.prepare(`INSERT INTO programs
       (id, area_id, name, abbreviation, semesters) VALUES ('same-abbreviation', 'area', 'Andere Informatik', 'tif', 6)`).run());

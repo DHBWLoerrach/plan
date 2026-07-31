@@ -45,7 +45,7 @@ describe("Better Auth storage", () => {
     const now = Date.now();
     const userId = "auth-storage-user";
     sqlite.prepare(`INSERT INTO user
-      (id, name, email, emailVerified, role, system_admin, status, createdAt, updatedAt)
+      (id, name, email, email_verified, role, system_admin, status, created_at, updated_at)
       VALUES (?, ?, ?, 0, 'NONE', 1, 'ACTIVE', ?, ?)`).run(
       userId,
       "Testkonto",
@@ -54,7 +54,7 @@ describe("Better Auth storage", () => {
       now,
     );
     sqlite.prepare(`INSERT INTO account
-      (id, accountId, providerId, userId, password, createdAt, updatedAt)
+      (id, account_id, provider_id, user_id, password, created_at, updated_at)
       VALUES (?, ?, 'credential', ?, ?, ?, ?)`).run(
       "auth-storage-account",
       userId,
@@ -75,16 +75,16 @@ describe("Better Auth storage", () => {
 
     expect(response.status).toBe(200);
     expect(sqlite.prepare(`SELECT
-      typeof(user.createdAt) AS userCreatedAt,
-      typeof(user.updatedAt) AS userUpdatedAt,
-      typeof(account.createdAt) AS accountCreatedAt,
-      typeof(account.updatedAt) AS accountUpdatedAt,
-      typeof(session.expiresAt) AS sessionExpiresAt,
-      typeof(session.createdAt) AS sessionCreatedAt,
-      typeof(session.updatedAt) AS sessionUpdatedAt
+      typeof(user.created_at) AS userCreatedAt,
+      typeof(user.updated_at) AS userUpdatedAt,
+      typeof(account.created_at) AS accountCreatedAt,
+      typeof(account.updated_at) AS accountUpdatedAt,
+      typeof(session.expires_at) AS sessionExpiresAt,
+      typeof(session.created_at) AS sessionCreatedAt,
+      typeof(session.updated_at) AS sessionUpdatedAt
       FROM user
-      JOIN account ON account.userId = user.id
-      JOIN session ON session.userId = user.id
+      JOIN account ON account.user_id = user.id
+      JOIN session ON session.user_id = user.id
       WHERE user.id = ?`).get(userId)).toEqual({
       userCreatedAt: "integer",
       userUpdatedAt: "integer",

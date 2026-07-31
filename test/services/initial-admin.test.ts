@@ -83,7 +83,7 @@ describe("bootstrapInitialSystemAdmin", () => {
   it("rejects a second bootstrap attempt without changing the existing account", () => {
     const databasePath = createDatabase();
     const sqlite = new Database(databasePath);
-    sqlite.prepare("INSERT INTO user (id, name, email, emailVerified, role, system_admin, status, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
+    sqlite.prepare("INSERT INTO user (id, name, email, email_verified, role, system_admin, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
       "existing-user", "existing@example.test", "existing@example.test", 0, "NONE", 1, "PASSWORD_PENDING", Date.now(), Date.now(),
     );
     sqlite.close();
@@ -121,7 +121,7 @@ describe("bootstrapInitialSystemAdmin", () => {
     const databasePath = createDatabase();
     const sqlite = new Database(databasePath);
     sqlite.pragma("foreign_keys = OFF");
-    sqlite.prepare("INSERT INTO account (id, accountId, providerId, userId, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)").run(
+    sqlite.prepare("INSERT INTO account (id, account_id, provider_id, user_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)").run(
       "orphan-account", "orphan-account", "credential", "missing-user", Date.now(), Date.now(),
     );
     sqlite.close();

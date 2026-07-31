@@ -19,16 +19,16 @@ function createDatabase() {
 
 function insertUser(sqlite: Database.Database, overrides: { id: string; email?: string; role?: string; systemAdmin?: number; status?: string }) {
   const email = overrides.email ?? `${overrides.id}@example.test`;
-  sqlite.prepare("INSERT INTO user (id, name, email, emailVerified, role, system_admin, status, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
+  sqlite.prepare("INSERT INTO user (id, name, email, email_verified, role, system_admin, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
     overrides.id, email, email, 0, overrides.role ?? "NONE", overrides.systemAdmin ?? 0, overrides.status ?? "ACTIVE", Date.now(), Date.now(),
   );
 }
 
 function addCredential(sqlite: Database.Database, userId: string) {
-  sqlite.prepare("INSERT INTO account (id, accountId, providerId, userId, password, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)").run(
+  sqlite.prepare("INSERT INTO account (id, account_id, provider_id, user_id, password, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)").run(
     `${userId}-credential`, userId, "credential", userId, "old-hash", Date.now(), Date.now(),
   );
-  sqlite.prepare("INSERT INTO session (id, token, userId, expiresAt, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)").run(
+  sqlite.prepare("INSERT INTO session (id, token, user_id, expires_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)").run(
     `${userId}-session`, `${userId}-session-token`, userId, Date.now() + 60_000, Date.now(), Date.now(),
   );
 }
@@ -149,8 +149,8 @@ describe("issuePasswordLink", () => {
     const token = issuePasswordLink(sqlite, "user-1", new Date("2030-01-01T00:00:00.000Z"));
 
     expect(sqlite.prepare("SELECT status FROM user WHERE id = 'user-1'").get()).toEqual({ status: "PASSWORD_PENDING" });
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM account WHERE userId = 'user-1'").get()).toEqual({ count: 0 });
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM session WHERE userId = 'user-1'").get()).toEqual({ count: 0 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM account WHERE user_id = 'user-1'").get()).toEqual({ count: 0 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM session WHERE user_id = 'user-1'").get()).toEqual({ count: 0 });
     expect(sqlite.prepare("SELECT token_hash AS tokenHash FROM password_links WHERE user_id = 'user-1'").get()).toEqual({
       tokenHash: createHash("sha256").update(token).digest("hex"),
     });
@@ -182,7 +182,7 @@ describe("issuePasswordLink", () => {
     addCredential(sqlite, "sole-admin");
     expect(() => issuePasswordLink(sqlite, "sole-admin")).toThrow("letzte aktive Systemadministrationskonto");
     expect(sqlite.prepare("SELECT status FROM user WHERE id = 'sole-admin'").get()).toEqual({ status: "ACTIVE" });
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM account WHERE userId = 'sole-admin'").get()).toEqual({ count: 1 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM account WHERE user_id = 'sole-admin'").get()).toEqual({ count: 1 });
   });
 });
 

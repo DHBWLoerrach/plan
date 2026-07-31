@@ -24,7 +24,7 @@ export function createInternalAccount(sqlite: Database.Database, input: CreateIn
     assertAreasExist(sqlite, areaIds);
     const userId = randomUUID();
     sqlite.prepare(`
-      INSERT INTO user (id, name, email, emailVerified, role, system_admin, status, createdAt, updatedAt)
+      INSERT INTO user (id, name, email, email_verified, role, system_admin, status, created_at, updated_at)
       VALUES (?, ?, ?, 0, ?, ?, 'PASSWORD_PENDING', ?, ?)
     `).run(userId, email, email, input.role, input.systemAdmin ? 1 : 0, now.getTime(), now.getTime());
     assignAreas(sqlite, userId, areaIds);
@@ -38,7 +38,7 @@ export function updateAccountEmail(sqlite: Database.Database, input: { userId: s
   sqlite.transaction(() => {
     requireUser(sqlite, input.userId);
     assertEmailAvailable(sqlite, email, input.userId);
-    sqlite.prepare("UPDATE user SET email = ?, name = ?, updatedAt = ? WHERE id = ?").run(email, email, now.getTime(), input.userId);
+    sqlite.prepare("UPDATE user SET email = ?, name = ?, updated_at = ? WHERE id = ?").run(email, email, now.getTime(), input.userId);
   })();
 }
 
@@ -52,7 +52,7 @@ export function updateAccountPermissions(sqlite: Database.Database, input: { use
     if (removesSystemAdmin && user.status === "ACTIVE" && activeSystemAdminCount(sqlite) <= 1) {
       throw new Error(lastActiveSystemAdminMessage);
     }
-    sqlite.prepare("UPDATE user SET role = ?, system_admin = ?, updatedAt = ? WHERE id = ?").run(input.role, input.systemAdmin ? 1 : 0, now.getTime(), input.userId);
+    sqlite.prepare("UPDATE user SET role = ?, system_admin = ?, updated_at = ? WHERE id = ?").run(input.role, input.systemAdmin ? 1 : 0, now.getTime(), input.userId);
     sqlite.prepare("DELETE FROM area_assignments WHERE user_id = ?").run(input.userId);
     assignAreas(sqlite, input.userId, areaIds);
   })();
