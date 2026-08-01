@@ -4,17 +4,17 @@ import type Database from "better-sqlite3";
 
 import { matchesCodePrefix, normalizeCodePrefix } from "@/lib/domain/course-code";
 import { courseStanding, type CourseStanding, type StandingPhase } from "@/lib/domain/course-progress";
-import { courseStatus, type CourseStatus, type PublicationState } from "@/lib/domain/course-status";
+import { areaAccessLabel, courseStatus, publicationStateLabels, workInProgressLabel, type CourseStatus, type PublicationState } from "@/lib/domain/course-status";
 import { type CoursePlan, type CourseEvent, type CoursePhase } from "@/lib/domain/publication";
 
-import { type AreaOption, allAreas, manageableAreas } from "../data";
+import { manageableAreas } from "../data";
 
 type AccountScope = { id: string; systemAdmin: boolean };
-export type CourseListFilters = { area: string | null; program: string | null; year: string | null; code: string | null; state: PublicationState | null };
+export type CourseListFilters = { program: string | null; year: string | null; code: string | null };
 /** What a course is marked with in every internal view: visibility, completeness and write permission. */
 export type CourseMarking = { state: PublicationState; workInProgress: boolean; editable: boolean };
 export type CourseListRow = CourseMarking & { id: string; code: string; program: string; areaId: string; areaName: string; studyStart: string; studyEnd: string };
-export type CourseListData = { areas: AreaOption[]; programs: LabeledOption[]; years: { year: string }[]; courses: CourseListRow[] };
+export type CourseListData = { programs: LabeledOption[]; years: { year: string }[]; courses: CourseListRow[] };
 export type InternalCourse = CourseMarking & { id: string; code: string; programId: string; program: string; areaId: string; areaName: string; studyStart: string; studyEnd: string; publishedAt: string | null };
 /** An entry of a select: the value it submits and the text it shows. */
 export type LabeledOption = { id: string; label: string };
@@ -26,10 +26,14 @@ export type OverviewCourse = CourseStatus & CourseStanding & { id: string; code:
 export type OverviewYear = { year: string; courses: OverviewCourse[] };
 export type OverviewProgram = { id: string; name: string; abbreviation: string; areaName: string; years: OverviewYear[] };
 export type CourseCutData = { year: string; courses: CutCourse[]; phases: (CoursePhase & { id: string })[]; events: (CourseEvent & { affectedCourseCodes: string[] })[] };
-export type CourseSort = "code" | "year";
-export const courseSortLabels: Record<CourseSort, string> = { code: "Kurskennung", year: "Jahrgang, dann Kurskennung" };
-const courseOrderClauses: Record<CourseSort, string> = { code: "course.code COLLATE NOCASE", year: "substr(course.study_start, 1, 4) DESC, course.code COLLATE NOCASE" };
-export function isCourseSort(value: string | null): value is CourseSort { return value !== null && Object.hasOwn(courseSortLabels, value); }
+export type CourseSort = "code" | "program" | "area" | "studyPeriod" | "publication" | "access";
+export type CourseSortDirection = "asc" | "desc";
+export function isCourseSort(value: string | null): value is CourseSort {
+  return value !== null && ["code", "program", "area", "studyPeriod", "publication", "access"].includes(value);
+}
+export function isCourseSortDirection(value: string | null): value is CourseSortDirection {
+  return value === "asc" || value === "desc";
+}
 
 /** The two designations of a study program, because the same name may occur in more than one area once all of them are listed. */
 function programLabel(program: { name: string; abbreviation: string }): string {
@@ -53,11 +57,10 @@ type CourseRow = MarkingColumns & { id: string; code: string; program: string; a
 
 /**
  * Every course of every area, because area editing reads system wide and only writes within its own areas (ADR 0011).
- * The area, study program and year filters therefore offer foreign values too — a filter that hid them would leave the
+ * The study program and year filters therefore offer foreign values too — a filter that hid them would leave the
  * foreign courses findable in name only.
  */
-export function courseListData(sqlite: Database.Database, account: AccountScope, filters: CourseListFilters, sort: CourseSort): CourseListData {
-  const areas = allAreas(sqlite);
+export function courseListData(sqlite: Database.Database, account: AccountScope, filters: CourseListFilters, sort: CourseSort, direction: CourseSortDirection = "asc"): CourseListData {
   const editableAreas = editableAreaIds(sqlite, account);
   const programs = (sqlite.prepare("SELECT id, name, abbreviation FROM programs ORDER BY abbreviation COLLATE NOCASE").all() as { id: string; name: string; abbreviation: string }[])
     .map((program) => ({ id: program.id, label: programLabel(program) }));
@@ -65,14 +68,28 @@ export function courseListData(sqlite: Database.Database, account: AccountScope,
   const rows = sqlite.prepare(`SELECT course.id, course.code, program.name AS program, area.id AS areaId, area.name AS areaName,
       course.study_start AS studyStart, course.study_end AS studyEnd, course.published_at AS publishedAt
     FROM courses course JOIN programs program ON program.id = course.program_id JOIN areas area ON area.id = program.area_id
-    WHERE (? IS NULL OR program.area_id = ?) AND (? IS NULL OR course.program_id = ?) AND (? IS NULL OR substr(course.study_start, 1, 4) = ?)
-    ORDER BY ${courseOrderClauses[sort]}`).all(filters.area, filters.area, filters.program, filters.program, filters.year, filters.year) as CourseRow[];
+    WHERE (? IS NULL OR course.program_id = ?) AND (? IS NULL OR substr(course.study_start, 1, 4) = ?)
+    ORDER BY course.code COLLATE NOCASE`).all(filters.program, filters.program, filters.year, filters.year) as CourseRow[];
   const codePrefix = normalizeCodePrefix(filters.code);
   const courses = rows
     .filter((row) => !codePrefix || matchesCodePrefix(row.code, codePrefix))
-    .map((row) => markCourse(row, editableAreas))
-    .filter((course) => !filters.state || course.state === filters.state);
-  return { areas, programs, years, courses };
+    .map((row) => markCourse(row, editableAreas));
+  const collator = new Intl.Collator("de", { sensitivity: "base", numeric: true });
+  const valueOf = (course: CourseListRow): string => {
+    switch (sort) {
+      case "program": return course.program;
+      case "area": return course.areaName;
+      case "studyPeriod": return course.studyStart;
+      case "publication": return `${publicationStateLabels[course.state]} ${course.workInProgress ? workInProgressLabel : ""}`;
+      case "access": return areaAccessLabel(course.editable);
+      default: return course.code;
+    }
+  };
+  courses.sort((left, right) => {
+    const primary = collator.compare(valueOf(left), valueOf(right)) * (direction === "asc" ? 1 : -1);
+    return primary || collator.compare(left.code, right.code);
+  });
+  return { programs, years, courses };
 }
 
 type OverviewRow = Omit<MarkingColumns, "areaId"> & { id: string; code: string; studyStart: string; studyEnd: string; programId: string; programName: string; abbreviation: string; areaName: string };

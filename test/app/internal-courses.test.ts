@@ -8,7 +8,7 @@ const databases: Database.Database[] = [];
 
 const editor = { id: "editor", role: "AREA_EDITOR" as const, systemAdmin: false };
 const admin = { id: "admin", role: "NONE" as const, systemAdmin: true };
-const noFilters: CourseListFilters = { area: null, program: null, year: null, code: null, state: null };
+const noFilters: CourseListFilters = { program: null, year: null, code: null };
 
 /**
  * Two areas with one study program each. The editor is assigned to Technik only, so every read of `course-wwi` is a
@@ -52,29 +52,29 @@ describe("courseListData", () => {
     expect(courses.every((course) => course.editable)).toBe(true);
   });
 
-  it("offers the areas, study programs and years of foreign courses as filter values", () => {
+  it("offers the study programs and years of foreign courses as filter values", () => {
     const sqlite = database();
-    const { areas, programs, years } = courseListData(sqlite, editor, noFilters, "code");
-    expect(areas.map((area) => area.id)).toEqual(["area-technik", "area-wirtschaft"]);
+    const { programs, years } = courseListData(sqlite, editor, noFilters, "code");
     expect(programs.map((program) => program.id)).toEqual(["prog-tif", "prog-wwi"]);
     expect(years.map((entry) => entry.year)).toEqual(["2027", "2026"]);
   });
 
-  it("filters foreign courses by area, study program, year and course code alike", () => {
+  it("filters foreign courses by study program, year and course code alike", () => {
     const sqlite = database();
     const codes = (filters: Partial<CourseListFilters>) => courseListData(sqlite, editor, { ...noFilters, ...filters }, "code").courses.map((course) => course.code);
-    expect(codes({ area: "area-wirtschaft" })).toEqual(["WWI27A"]);
     expect(codes({ program: "prog-wwi" })).toEqual(["WWI27A"]);
     expect(codes({ year: "2027" })).toEqual(["WWI27A"]);
     expect(codes({ code: "wwi" })).toEqual(["WWI27A"]);
   });
 
-  it("filters by publication state across areas", () => {
+  it("sorts directly by the visible table values in both directions", () => {
     const sqlite = database();
     publish(sqlite, "course-wwi", "2026-06-01T00:00:00.000Z");
-    const codes = (state: "UNPUBLISHED" | "PUBLISHED") => courseListData(sqlite, editor, { ...noFilters, state }, "code").courses.map((course) => course.code);
-    expect(codes("PUBLISHED")).toEqual(["WWI27A"]);
-    expect(codes("UNPUBLISHED")).toEqual(["TIF26A"]);
+    const codes = (sort: Parameters<typeof courseListData>[3], direction: Parameters<typeof courseListData>[4]) =>
+      courseListData(sqlite, editor, noFilters, sort, direction).courses.map((course) => course.code);
+    expect(codes("studyPeriod", "desc")).toEqual(["WWI27A", "TIF26A"]);
+    expect(codes("access", "asc")).toEqual(["TIF26A", "WWI27A"]);
+    expect(codes("publication", "asc")).toEqual(["TIF26A", "WWI27A"]);
   });
 
   it("keeps a published course settled while current data is corrected", () => {
