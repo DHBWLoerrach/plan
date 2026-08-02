@@ -1,7 +1,7 @@
 import Database from "better-sqlite3";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { courseCutData, courseListData, findInternalCourse, overviewPrograms, programOptions, type CourseListFilters } from "@/app/intern/kurse/data";
+import { coursePlanData, courseListData, findInternalCourse, overviewPrograms, programOptions, type CourseListFilters } from "@/app/intern/kurse/data";
 import { applySchema } from "@/test/schema";
 
 const databases: Database.Database[] = [];
@@ -176,11 +176,74 @@ describe("overviewPrograms", () => {
   });
 });
 
-describe("courseCutData", () => {
-  it("puts a foreign course beside an own one and marks it as read only", () => {
-    const sqlite = database();
-    sqlite.prepare("UPDATE courses SET study_start = '2026-10-01', study_end = '2029-09-30' WHERE id = 'course-wwi'").run();
-    const cut = courseCutData(sqlite, editor, { year: "2026", courseIds: ["course-tif", "course-wwi"] });
-    expect(cut?.courses.map((course) => [course.code, course.editable])).toEqual([["TIF26A", true], ["WWI27A", false]]);
+describe("coursePlanData", () => {
+  /**
+   * Around `course-tif`: a parallel course of its own study program, a second study program inside its own area, a
+   * course of a foreign area and one of the following year. Only the second study program tells the area scope from
+   * the study program scope — the base fixture has one study program per area, where both would agree.
+   */
+  function withParallelCourses(sqlite: Database.Database) {
+    sqlite.prepare("UPDATE courses SET code = 'WWI26A', normalized_code = 'wwi26a', study_start = '2026-10-01', study_end = '2029-09-30' WHERE id = 'course-wwi'").run();
+    sqlite.exec(`
+      INSERT INTO programs VALUES ('prog-mb', 'area-technik', 'Maschinenbau', 'MB', 6);
+      INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, published_at, updated_at, updated_by_account_id) VALUES
+        ('course-tif-b', 'prog-tif', 'TIF26B', 'tif26b', '2026-10-01', '2029-09-30', NULL, '2026-01-01T00:00:00.000Z', 'editor'),
+        ('course-mb', 'prog-mb', 'MB26A', 'mb26a', '2026-10-01', '2029-09-30', NULL, '2026-01-01T00:00:00.000Z', 'editor'),
+        ('course-tif-later', 'prog-tif', 'TIF27A', 'tif27a', '2027-10-01', '2030-09-30', NULL, '2026-01-01T00:00:00.000Z', 'editor');`);
+    return sqlite;
+  }
+
+  it("compares a course with the parallel courses of its own study program by default", () => {
+    const sqlite = withParallelCourses(database());
+    const plan = coursePlanData(sqlite, editor, "course-tif", "program");
+    expect(plan?.course.code).toBe("TIF26A");
+    expect(plan?.comparison.map((course) => course.code)).toEqual(["TIF26B"]);
+  });
+
+  it("widens to the other study programs of the area without leaving it", () => {
+    const sqlite = withParallelCourses(database());
+    const plan = coursePlanData(sqlite, editor, "course-tif", "area");
+    expect(plan?.comparison.map((course) => course.code)).toEqual(["MB26A", "TIF26B"]);
+  });
+
+  it("widens to the year across areas and marks the foreign course as read only", () => {
+    const sqlite = withParallelCourses(database());
+    const plan = coursePlanData(sqlite, editor, "course-tif", "year");
+    expect(plan?.comparison.map((course) => [course.code, course.editable])).toEqual([["MB26A", true], ["TIF26B", true], ["WWI26A", false]]);
+  });
+
+  /* The editor decides from `course.editable` whether it shows forms or the read-only notice, so the marking of the
+     edited course matters as much as that of the courses it is compared with (ADR 0011). */
+  it("reads a course of a foreign area but does not report it as writable", () => {
+    const sqlite = withParallelCourses(database());
+    const plan = coursePlanData(sqlite, editor, "course-wwi", "program");
+    expect(plan?.course.code).toBe("WWI26A");
+    expect(plan?.course.editable).toBe(false);
+    expect(coursePlanData(sqlite, editor, "course-tif", "program")?.course.editable).toBe(true);
+  });
+
+  it("never leaves the year of the edited course, whatever the scope", () => {
+    const sqlite = withParallelCourses(database());
+    for (const scope of ["program", "area", "year"] as const) {
+      expect(coursePlanData(sqlite, editor, "course-tif", scope)?.comparison.map((course) => course.code)).not.toContain("TIF27A");
+    }
+  });
+
+  it("stands the course alone when no comparison is asked for", () => {
+    const sqlite = withParallelCourses(database());
+    const plan = coursePlanData(sqlite, editor, "course-tif", "none");
+    expect(plan?.comparison).toEqual([]);
+  });
+
+  it("reads the plan of every shown course, so the matrix can draw all of its columns", () => {
+    const sqlite = withParallelCourses(database());
+    sqlite.exec(`INSERT INTO course_phases VALUES ('phase-a', 'course-tif', 1, 'THEORY', '2026-10-01', '2026-12-31'),
+      ('phase-b', 'course-tif-b', 1, 'PRACTICE', '2026-10-01', '2026-12-31');`);
+    const plan = coursePlanData(sqlite, editor, "course-tif", "program");
+    expect(plan?.phases.map((phase) => [phase.code, phase.type])).toEqual([["TIF26A", "THEORY"], ["TIF26B", "PRACTICE"]]);
+  });
+
+  it("reports an unknown course rather than an empty plan", () => {
+    expect(coursePlanData(database(), editor, "kurs-unbekannt", "program")).toBeNull();
   });
 });

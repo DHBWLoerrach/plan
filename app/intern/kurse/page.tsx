@@ -6,6 +6,7 @@ import { CourseListFilter } from "@/components/course-list-filter";
 import { InternalNav } from "@/components/internal-nav";
 import { SiteShell } from "@/components/site-shell";
 import { sqlite } from "@/lib/db";
+import { coursePlanPath } from "@/lib/domain/course-comparison";
 import { areaAccessLabel, publicationStateLabels, workInProgressLabel } from "@/lib/domain/course-status";
 import { getActiveAccount, managesAnyArea } from "@/lib/internal-auth";
 
@@ -37,10 +38,13 @@ function SortHeader({ header, currentSort, direction, filters }: { header: Sorta
 }
 
 function CourseHeaders({ sort, direction, filters }: { sort: CourseSort; direction: CourseSortDirection; filters: CourseFilters }) {
-  return <>{headers.map((header) => <SortHeader key={header.sort} header={header} currentSort={sort} direction={direction} filters={filters} />)}<th scope="col">Aktion</th></>;
+  return <>{headers.map((header) => <SortHeader key={header.sort} header={header} currentSort={sort} direction={direction} filters={filters} />)}<th scope="col">Aktionen</th></>;
 }
 
-/** The cells every course row shows, whether or not the list currently builds a cut. */
+/**
+ * A course row leads to the two things one does with a course: its master data and publication on the course page,
+ * its progression and events on its plan page. Both are the course itself — the list never bundles several of them.
+ */
 function CourseCells({ course }: { course: CourseListRow }) {
   return <>
     <td>{course.code}</td>
@@ -49,7 +53,10 @@ function CourseCells({ course }: { course: CourseListRow }) {
     <td>{course.studyStart} – {course.studyEnd}</td>
     <td>{publicationStateLabels[course.state]}{course.workInProgress ? ` · ${workInProgressLabel}` : ""}</td>
     <td>{areaAccessLabel(course.editable)}</td>
-    <td><Link className="text-link" href={`/intern/kurse/${course.id}`}>{course.editable ? "Verwalten" : "Ansehen"}</Link></td>
+    <td className="course-actions">
+      <Link className="text-link" href={`/intern/kurse/${course.id}`}>{course.editable ? "Verwalten" : "Ansehen"}</Link>
+      <Link className="text-link" href={coursePlanPath(course.id)}>Planungsstand<span className="sr-only"> von {course.code}</span></Link>
+    </td>
   </>;
 }
 
@@ -72,20 +79,8 @@ export default async function CoursesPage({ searchParams }: PageProps<"/intern/k
   return <SiteShell nav={<InternalNav account={account} current="kurse" />}><section className="course-overview" aria-labelledby="courses-heading">
     <header className="course-overview__header"><h1 id="courses-heading">Kurse</h1><Link className="button button--compact" href="/intern/kurse/neu">Kurs anlegen</Link></header>
     <CourseListFilter programs={programs} years={years} values={filters} />
-    {courses.length ? year ? <form action="/intern/kurse/zuschnitt" className="course-cut-form">
-      <input type="hidden" name="year" value={year} />
-      <p id="cut-selection-hint">Wählen Sie die Kurse, die Sie im Zuschnitt nebeneinander sehen möchten. Kurse fremder Bereiche stehen dort nur lesend daneben. Der Zuschnitt wird nicht gespeichert und umfasst ausschließlich Jahrgang {year}.</p>
-      <div className="matrix-wrap" tabIndex={0}><table className="event-table"><thead><tr><th scope="col">Auswahl</th><CourseHeaders sort={sort} direction={direction} filters={filters} /></tr></thead>
-      <tbody>{courses.map((course) => <tr key={course.id}>
-        <td><label><input type="checkbox" name="courseId" value={course.id} aria-describedby="cut-selection-hint" /> <span className="sr-only">{course.code} auswählen</span></label></td>
-        <CourseCells course={course} />
-      </tr>)}</tbody></table></div>
-      <p><button className="button" type="submit">Ausgewählte Kurse öffnen</button></p>
-    </form> : <>
-      <p className="notice">Wählen Sie zuerst einen Jahrgang, um einen Zuschnitt für die gemeinsame Bearbeitung zu bilden.</p>
-      <div className="matrix-wrap" tabIndex={0}><table className="event-table"><thead><tr><CourseHeaders sort={sort} direction={direction} filters={filters} /></tr></thead>
-        <tbody>{courses.map((course) => <tr key={course.id}><CourseCells course={course} /></tr>)}</tbody>
-      </table></div>
-    </> : <p className="empty-note">Für diese Filter gibt es keine Kurse.</p>}
+    {courses.length ? <div className="matrix-wrap" tabIndex={0}><table className="event-table"><thead><tr><CourseHeaders sort={sort} direction={direction} filters={filters} /></tr></thead>
+      <tbody>{courses.map((course) => <tr key={course.id}><CourseCells course={course} /></tr>)}</tbody>
+    </table></div> : <p className="empty-note">Für diese Filter gibt es keine Kurse.</p>}
   </section></SiteShell>;
 }

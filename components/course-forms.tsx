@@ -72,7 +72,7 @@ function AdoptionPreview({ template, studyStart, studyEnd, withPhases, withEvent
     <PhaseList heading={`Auf den Studienzeitraum gekürzt ${truncated.length === 1 ? "wird diese Kursphase" : "werden diese Kursphasen"}:`} phases={truncated} />
     <PhaseList heading={`Außerhalb des Studienzeitraums ${adoption.droppedPhases.length === 1 ? "liegt diese Kursphase; sie wird nicht übernommen" : "liegen diese Kursphasen; sie werden nicht übernommen"}:`} phases={adoption.droppedPhases} />
     {truncated.length || adoption.droppedPhases.length
-      ? <p>Lücken an den Rändern werden nicht automatisch geschlossen. Die Vollständigkeitsanzeige des Zuschnitts benennt sie.</p>
+      ? <p>Lücken an den Rändern werden nicht automatisch geschlossen. Die Vollständigkeitsanzeige des Planungsstands benennt sie.</p>
       : null}
   </div>;
 }

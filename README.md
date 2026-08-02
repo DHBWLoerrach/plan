@@ -17,7 +17,10 @@ seine technischen Artefakte behalten den Namen `dhbw-mgmt`.
 Planungs- und Veröffentlichungseinheit ist der Kurs, der Blockplan ist die
 veröffentlichte Darstellung eines Zuschnitts (siehe
 [ADR 0010](docs/adr/0010-kurs-als-planungs-und-veroeffentlichungseinheit.md) und
-[ADR 0011](docs/adr/0011-systemweite-leseeinsicht-in-kurse.md)).
+[ADR 0011](docs/adr/0011-systemweite-leseeinsicht-in-kurse.md)). Intern ist der
+Kurs zugleich der Bearbeitungsgegenstand: Kursverlauf und Termine werden je Kurs
+gepflegt, während die Kurse desselben Jahrgangs nur zum Vergleich danebenstehen
+([ADR 0013](docs/adr/0013-kurs-als-bearbeitungsgegenstand-vergleich-als-vorschau.md)).
 
 Der aktuelle Funktions- und Regelumfang wird nicht zusätzlich in einem
 Spezifikationsdokument nacherzählt. Maßgeblich sind Anwendungscode,

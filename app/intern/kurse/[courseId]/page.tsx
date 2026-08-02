@@ -7,6 +7,7 @@ import { CoursePublicationControls } from "@/components/course-publication-contr
 import { InternalNav } from "@/components/internal-nav";
 import { SiteShell } from "@/components/site-shell";
 import { sqlite } from "@/lib/db";
+import { coursePlanPath } from "@/lib/domain/course-comparison";
 import { areaAccessLabel, publicationStateLabels, workInProgressLabel } from "@/lib/domain/course-status";
 import { getActiveAccount, managesAnyArea } from "@/lib/internal-auth";
 import { readPublicationPreview } from "@/lib/services/publication";
@@ -40,7 +41,8 @@ export default async function CourseDetailPage({ params, searchParams }: PagePro
         <p className="notice">Dieser Kurs gehört zum Bereich {course.areaName}, der Ihnen nicht zugeordnet ist. Sie können ihn lesen, aber nicht bearbeiten, löschen oder veröffentlichen.</p></>}
 
     <h2>Planungsstand</h2>
-    <p>Kursverlauf und prüfungsrelevante Termine sehen Sie über einen Zuschnitt aus der Kursliste. Ein Zuschnitt wird nicht gespeichert und kann jederzeit anders gewählt werden.</p>
+    <p>Kursverlauf und prüfungsrelevante Termine dieses Kurses stehen auf einer eigenen Seite. Dort ist der Kurs der Gegenstand der Bearbeitung; seine Parallelkurse stehen zum Vergleich daneben, ohne mitbearbeitet zu werden.</p>
+    <p><Link className="button button--compact" href={coursePlanPath(course.id)}>{course.editable ? "Planungsstand bearbeiten" : "Planungsstand ansehen"}</Link></p>
 
     {course.editable && publication ? <>
       <CoursePublicationControls courseId={course.id} updatedAt={publication.course.updatedAt} publishedAt={publication.course.publishedAt} issues={publication.issues.map((issue) => issue.message)} />

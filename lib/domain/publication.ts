@@ -32,6 +32,9 @@ export interface CourseEvent {
   courseIds: string[];
 }
 
+/** A saved event as the editor lists it: the domain data plus the code of the one course it belongs to. */
+export type PlanEvent = CourseEvent & { code: string };
+
 /** The editor field an issue points at; `null` when the correction is a missing or excess entry rather than a value. */
 export type PublicationIssueField = "startDate" | "endDate" | "semester";
 

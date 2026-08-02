@@ -101,15 +101,21 @@ function adjustPublishedPhaseNeighbours(
   }
 }
 
+/**
+ * The selected courses in the order they were selected. `IN` returns them in whatever order the table yields, while
+ * the caller puts the course actually being edited first and its transfer targets behind it — and the refusals name a
+ * course by its code. Keeping the order therefore decides which course a rejected selection reports first.
+ */
 function requireCourses(sqlite: Database.Database, rawIds: string[]): CourseRow[] {
   const ids = [...new Set(rawIds.map((id) => id.trim()).filter(Boolean))];
   if (!ids.length) throw new FieldError("courseIds", "Wählen Sie mindestens einen Kurs für die Kursphase.");
   const placeholders = ids.map(() => "?").join(", ");
-  const courses = sqlite.prepare(`SELECT course.id, course.code, program.semesters, course.study_start AS studyStart, course.study_end AS studyEnd
+  const rows = sqlite.prepare(`SELECT course.id, course.code, program.semesters, course.study_start AS studyStart, course.study_end AS studyEnd
       , course.published_at AS publishedAt
     FROM courses course JOIN programs program ON program.id = course.program_id WHERE course.id IN (${placeholders})`).all(...ids) as CourseRow[];
-  if (courses.length !== ids.length) throw new FieldError("courseIds", "Ein ausgewählter Kurs wurde nicht gefunden.");
-  return courses;
+  if (rows.length !== ids.length) throw new FieldError("courseIds", "Ein ausgewählter Kurs wurde nicht gefunden.");
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  return ids.map((id) => byId.get(id)!);
 }
 
 function requireCourseOfPhase(sqlite: Database.Database, phaseId: string): CourseRow {

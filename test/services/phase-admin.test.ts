@@ -130,6 +130,18 @@ describe("createCoursePhases", () => {
     expect(() => create(sqlite, {}, ["course", "kurz"])).toThrow("Studienzeitraums von TIF26B");
     expect(sqlite.prepare("SELECT count(*) AS count FROM course_phases").get()).toEqual({ count: 0 });
   });
+
+  /* A transfer sends the edited course first and its targets behind it, and a refusal names a course by its code. The
+     selection is therefore walked in the order it arrived rather than in the one the table happens to return. */
+  it("walks the selection in the order it was given, so a refusal names the first course it applies to", () => {
+    const sqlite = database();
+    sqlite.exec(`INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, published_at, updated_at, updated_by_account_id) VALUES
+      ('kurz-a', 'program', 'TIF26B', 'tif26b', '2026-10-01', '2026-11-30', NULL, '2026-01-01T00:00:00.000Z', 'editor'),
+      ('kurz-b', 'program', 'TIF26C', 'tif26c', '2026-10-01', '2026-11-30', NULL, '2026-01-01T00:00:00.000Z', 'editor');`);
+
+    expect(() => create(sqlite, {}, ["kurz-a", "kurz-b"])).toThrow("Studienzeitraums von TIF26B");
+    expect(() => create(sqlite, {}, ["kurz-b", "kurz-a"])).toThrow("Studienzeitraums von TIF26C");
+  });
 });
 
 describe("updateCoursePhase", () => {

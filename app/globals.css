@@ -201,6 +201,14 @@ p[role="status"] { margin: 0; color: var(--success); }
 .plan-detail section { margin-top: 2rem; }
 
 .plan-detail .workspace-panel { margin-top: 0; padding: 2.25rem 0 1rem; }
+/* On the plan page a panel of the editor ranks with the sections beside it, so its heading carries their weight —
+   without it the editor would read as a caption under the last section rather than as a part of its own. Scoped like
+   the rule above it: the same class carries the publication controls of the course page, where the headings of the
+   page settle the weight of every section alike. */
+.plan-detail .workspace-panel h2 { margin: 0 0 .5rem; font-size: clamp(1.3rem, 2.5vw, 1.6rem); font-weight: 800; letter-spacing: -.015em; }
+.plan-detail .workspace-panel h3 { margin: 1.75rem 0 .35rem; font-size: 1.1rem; font-weight: 700; }
+/* Open points are counted in the line above them, so they are set as the list they are rather than as loose lines. */
+.issue-list { margin: .4rem 0 0; padding-left: 1.25rem; list-style: disc; }
 
 /* Overview and matrix are the two blocks of one section and carry the same weight: the eyebrow above them names the
    subject, and each block opens with its own heading and a note on what it shows. */
@@ -280,6 +288,9 @@ p[role="status"] { margin: 0; color: var(--success); }
    and a longer duration inside a cell cannot widen its own column. The heading is centred like the cells below it,
    while the columns of text to its left keep their left edge. */
 .matrix-course { width: 10%; min-width: 8.5rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; text-align: center; }
+/* The column of the course a page is about. It is marked at its heading rather than down its cells: the plan below is
+   read across the columns, and a tinted lane would compete with the phase fills that carry the actual statement. */
+.matrix-course[data-primary] { border-bottom: .2rem solid var(--red); }
 .matrix-duration { color: var(--gray-strong); }
 .matrix tbody th { font-weight: 400; }
 /* The semester heading names its whole row group, so it sits centred over the rows it spans and keeps the weight of a
@@ -428,6 +439,23 @@ p[role="status"] { margin: 0; color: var(--success); }
   .course-filter { grid-template-columns: minmax(0, 1fr); }
   .course-filter__label, .course-filter__options { grid-column: 1; }
 }
+
+/* The comparison switch reads like the course filter of the matrix — label, options, hint — but its options are links
+   to pages of their own rather than checkboxes, so the current one is marked instead of ticked. */
+.comparison-switch { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: .3rem .6rem; margin-top: 1.5rem; }
+.comparison-switch__label { grid-column: 1; margin: 0; font-weight: 700; font-size: .9rem; }
+.comparison-switch__options { grid-column: 2; display: flex; flex-wrap: wrap; gap: .35rem; margin: 0; padding: 0; list-style: none; }
+.comparison-switch__options a { display: block; min-height: 2.25rem; padding: .45rem .7rem; border: 1px solid var(--field-border); background: #fff; color: inherit; font-size: .9rem; text-decoration: none; }
+.comparison-switch__options a:hover { background: var(--surface); }
+.comparison-switch__options a[aria-current] { border-color: var(--red); background: var(--red); color: #fff; font-weight: 700; }
+@media (forced-colors: active) { .comparison-switch__options a[aria-current] { border-width: .2rem; } }
+.comparison-switch__hint { grid-column: 1 / -1; margin: 0; color: var(--gray-strong); font-size: .85rem; }
+@media (max-width: 40rem) {
+  .comparison-switch { grid-template-columns: minmax(0, 1fr); }
+  .comparison-switch__label, .comparison-switch__options { grid-column: 1; }
+}
+/* Both ways into a course stand in one cell, side by side where there is room and below one another where there is not. */
+.course-actions { display: flex; flex-wrap: wrap; gap: .2rem .9rem; }
 
 .account-form { display: grid; gap: .6rem; max-width: 38rem; margin: 1rem 0 0; }
 .account-form > label { font-weight: 700; font-size: .9rem; }

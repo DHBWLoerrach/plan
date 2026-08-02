@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, request as playwrightRequest, test, type Locator, type Page } from "@playwright/test";
 
 const password = "Ein-sicheres-Testpasswort1!";
 /** The window Better Auth counts sign-ins of one address in, plus the second it takes to expire. */
@@ -96,7 +96,7 @@ test("creates a course smartly and lands on a complete planning state", async ({
   const courseId = new URL(page.url()).pathname.split("/").pop();
 
   // What was written is read back where the course progression is shown: complete, and therefore publishable.
-  await page.goto(`/intern/kurse/zuschnitt?year=2027&courseId=${courseId}`);
+  await page.goto(`/intern/kurse/${courseId}/plan`);
   await expect(page.getByText("Planungsstand ist vollständig.")).toBeVisible();
 });
 
@@ -113,6 +113,57 @@ test("opens on the own areas and keeps foreign courses read-only, confirming wit
   await page.goto("/intern/kurse/e2e-foreign-course");
   await expect(page.getByText(/lesen, aber nicht bearbeiten/u)).toBeVisible();
   await expect(page.getByRole("button", { name: "Kurs veröffentlichen" })).toHaveCount(0);
+
+  /* The comparison is switched inside the running page rather than loaded fresh: the matrix keeps its column
+     selection across that navigation, so a course newly brought in has to arrive shown instead of hidden. The foreign
+     course is the one the widened comparison adds, and no test renames it. */
+  await page.goto("/intern/kurse/e2e-course/plan");
+  const foreignColumn = page.getByRole("columnheader", { name: /FRM26E2E/u });
+  await expect(foreignColumn).toHaveCount(0);
+  await page.getByRole("link", { name: "Jahrgang", exact: true }).click();
+  await expect(page).toHaveURL(/vergleich=jahrgang/u);
+  await expect(foreignColumn.first()).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: /FRM26E2E/u })).toBeChecked();
+
+  /* A server action is a public endpoint: whoever holds its identifier reaches it without ever passing the page whose
+     permission check would have stopped them. The captured request is therefore replayed without the session cookie,
+     and must then say nothing about the course inventory. The transfer target does not exist, so the attempt is
+     refused either way and leaves nothing behind — only the refusal itself differs. */
+  let captured: { url: string; headers: Record<string, string>; body: string | null } | null = null;
+  page.on("request", (request) => {
+    if (request.method() === "POST" && request.headers()["next-action"]) {
+      captured = { url: request.url(), headers: request.headers(), body: request.postData() };
+    }
+  });
+  const eventForm = page.locator("form").filter({ has: page.getByLabel("Titel") }).first();
+  await eventForm.getByLabel("Titel").fill("Sondierung");
+  await eventForm.getByLabel("Kategorie").selectOption("EXAM");
+  await eventForm.getByLabel("Startdatum").fill("2027-05-05");
+  await eventForm.evaluate((node) => {
+    const smuggled = document.createElement("input");
+    smuggled.type = "hidden";
+    smuggled.name = "transferCourseId";
+    smuggled.value = "kein-kurs";
+    node.append(smuggled);
+  });
+  const review = eventForm.getByRole("button", { name: "Termin prüfen" });
+  if (await review.count()) await review.click();
+  await eventForm.getByRole("button", { name: "Termin speichern" }).click();
+  // The message of the form itself: the route announcer of Next.js carries the same role.
+  await expect(eventForm.getByRole("alert")).toContainText("nicht gefunden");
+
+  expect(captured, "keine Server-Action-Anfrage aufgezeichnet").not.toBeNull();
+  const { url, headers, body } = captured!;
+  const anonymous = await playwrightRequest.newContext();
+  const withoutSession = { ...headers };
+  delete withoutSession.cookie;
+  // Playwright sets the length of the body it actually sends; a copied one would contradict it.
+  delete withoutSession["content-length"];
+  const replay = await anonymous.post(url, { headers: withoutSession, data: body ?? "" });
+  const answer = await replay.text();
+  await anonymous.dispose();
+  expect(answer).toContain("Ihre Sitzung ist nicht mehr gültig");
+  expect(answer).not.toContain("nicht gefunden");
 
   await page.goto("/intern/kurse/e2e-course");
   const correction = page.getByRole("button", { name: "Änderung prüfen" });

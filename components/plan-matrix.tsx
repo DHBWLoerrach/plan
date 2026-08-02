@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, type MouseEvent } from "react";
+import { Fragment, useId, useState, type MouseEvent } from "react";
 
 import { PlanTimeline } from "@/components/plan-timeline";
 import { formatCalendarPeriod, formatPeriodDuration } from "@/lib/domain/calendar-format";
@@ -75,11 +75,24 @@ function PhaseCell({ cell, group, headers, rowSpan = 1, duration }: { cell: stri
 /**
  * `workInProgressCourseIds` names the courses whose planning state is not the published one. Only the internal views
  * pass it: a published course is never in progress, so the public matrix leaves it out (ADR 0012).
+ *
+ * `primaryCourseId` names the one course a view is about while the others merely stand beside it for comparison. Its
+ * column is marked and cannot be hidden — a comparison without its subject would compare nothing. A public cut names
+ * no such course: there all columns rank equally.
  */
-export function PlanMatrix({ courses, phases, events, workInProgressCourseIds = [] }: { courses: CoursePlan[]; phases: CoursePhase[]; events: CourseEvent[]; workInProgressCourseIds?: string[] }) {
+export function PlanMatrix({ courses, phases, events, workInProgressCourseIds = [], primaryCourseId }: { courses: CoursePlan[]; phases: CoursePhase[]; events: CourseEvent[]; workInProgressCourseIds?: string[]; primaryCourseId?: string }) {
   const inProgress = new Set(workInProgressCourseIds);
   const columnLabel = (course: { id: string; code: string }) => inProgress.has(course.id) ? `${course.code} (${workInProgressLabel})` : course.code;
-  const [visibleCourseIds, setVisibleCourseIds] = useState(() => new Set(courses.map((course) => course.id)));
+  /**
+   * The shown columns, kept together with the courses that selection was made over. Switching the comparison replaces
+   * the courses without remounting the matrix, so a selection made over the previous set would leave every newly
+   * arriving course hidden and unticked — the switch would appear to have done nothing. The selection is therefore
+   * renewed whenever the courses themselves change, which is the one moment the reader asked for other columns.
+   */
+  const courseKey = JSON.stringify(courses.map((course) => course.id));
+  const [shown, setShown] = useState(() => ({ courseKey, ids: new Set(courses.map((course) => course.id)) }));
+  if (shown.courseKey !== courseKey) setShown({ courseKey, ids: new Set(courses.map((course) => course.id)) });
+  const visibleCourseIds = shown.ids;
   const [status, setStatus] = useState({ message: "", announcement: 0 });
   const matrixHeadingId = useId();
   const filterLabelId = useId();
@@ -116,20 +129,22 @@ export function PlanMatrix({ courses, phases, events, workInProgressCourseIds = 
   function toggleCourse(course: CoursePlan) {
     const next = new Set(visibleCourseIds);
     if (next.has(course.id)) next.delete(course.id); else next.add(course.id);
-    setVisibleCourseIds(next);
+    setShown({ courseKey, ids: next });
     announce(`${course.code} ${next.has(course.id) ? "eingeblendet" : "ausgeblendet"}. ${next.size} von ${courses.length} Kursen sichtbar.`);
   }
 
   /**
-   * Reducing the columns must not empty the matrix, so the last visible course carries the refusal itself instead of
-   * accepting the click and undoing it: the checkbox is marked as disabled, keeps its focus and names the rule through
-   * the hint of the filter. Preventing the default of the click covers the pointer and the space key alike, because a
-   * checkbox is activated by a click event either way. React derives its change event from that same click and fires
-   * it regardless, so the change handler has to stand down on its own as well.
+   * Reducing the columns must not empty the matrix nor remove the course a view is about, so the affected course
+   * carries the refusal itself instead of accepting the click and undoing it: the checkbox is marked as disabled,
+   * keeps its focus and names the rule through the hint of the filter. Preventing the default of the click covers the
+   * pointer and the space key alike, because a checkbox is activated by a click event either way. React derives its
+   * change event from that same click and fires it regardless, so the change handler has to stand down on its own as well.
    */
   function refuseHiding(event: MouseEvent<HTMLInputElement>, course: CoursePlan) {
     event.preventDefault();
-    announce(`${course.code} bleibt sichtbar: Mindestens ein Kurs muss in der Planmatrix angezeigt werden.`);
+    announce(course.id === primaryCourseId
+      ? `${course.code} bleibt sichtbar: Der bearbeitete Kurs wird in der Planmatrix immer angezeigt.`
+      : `${course.code} bleibt sichtbar: Mindestens ein Kurs muss in der Planmatrix angezeigt werden.`);
   }
 
   return <>
@@ -154,7 +169,7 @@ export function PlanMatrix({ courses, phases, events, workInProgressCourseIds = 
       <div className="plan-block plan-overview" aria-hidden="true">
         <h3>Überblick</h3>
         {/* The overview always draws the whole year group, so a course hidden in the matrix keeps its lane here. */}
-        <p className="plan-block__note">Die Übersicht zeigt unabhängig von der Auswahl alle Kurse des Jahrgangs.</p>
+        <p className="plan-block__note">Die Übersicht zeigt unabhängig von der Auswahl alle Kurse dieser Darstellung.</p>
         <PlanTimeline courses={courses} phases={phases} />
       </div>
       <div className="plan-block">
@@ -172,7 +187,7 @@ export function PlanMatrix({ courses, phases, events, workInProgressCourseIds = 
               <p id={filterLabelId} className="course-filter__label">Sichtbare Kurse:</p>
               <div className="course-filter__options">{courses.map((course) => {
                 const checked = visibleCourseIds.has(course.id);
-                const locked = checked && visibleCourseIds.size === 1;
+                const locked = checked && (visibleCourseIds.size === 1 || course.id === primaryCourseId);
                 return <label key={course.id} data-locked={locked ? "" : undefined}>
                   <input
                     type="checkbox"
@@ -188,7 +203,9 @@ export function PlanMatrix({ courses, phases, events, workInProgressCourseIds = 
               })}</div>
               {/* The rule stands whether or not it currently bites, so the line is always there and the filter never
                   changes height under the pointer. */}
-              <p id={filterHintId} className="course-filter__hint">Mindestens ein Kurs muss sichtbar bleiben.</p>
+              <p id={filterHintId} className="course-filter__hint">{primaryCourseId
+                ? "Der bearbeitete Kurs bleibt sichtbar; mindestens ein Kurs muss angezeigt werden."
+                : "Mindestens ein Kurs muss sichtbar bleiben."}</p>
             </div>
           </div>
           {/* A zero width space alternates with every announcement, so a repeated message still changes the text of
@@ -203,10 +220,16 @@ export function PlanMatrix({ courses, phases, events, workInProgressCourseIds = 
                 {/* The column measures the row, a merged phase cell states its own length: the heading says which of
                     the two a duration belongs to. */}
                 <th scope="col" rowSpan={2}>Semester</th><th scope="col" rowSpan={2}>Zeitraum</th><th scope="col" rowSpan={2}>Dauer des Abschnitts</th>
+                {/* The edited course is set in bold within its column heading, which may hold several codes once a
+                    compared course shares its whole progression. The mark is repeated in words for assistive
+                    technology, which never sees the weight (BARRIEREFREIHEIT.md). */}
                 {visibleCourseGroups.map((group) => <th key={group.courses.map((course) => course.id).join("-")} className="matrix-course" scope="colgroup"
-                  colSpan={group.courses.length > 1 ? group.courses.length : undefined}>{group.courses.map(columnLabel).join(" · ")}</th>)}
+                  data-primary={group.courses.some((course) => course.id === primaryCourseId) ? "" : undefined}
+                  colSpan={group.courses.length > 1 ? group.courses.length : undefined}>{group.courses.map((course, index) => <Fragment key={course.id}>
+                    {index ? " · " : ""}{course.id === primaryCourseId ? <strong>{columnLabel(course)}</strong> : columnLabel(course)}
+                  </Fragment>)}</th>)}
               </tr><tr>{visibleCourseGroups.flatMap((group) => group.courses.map((course) => <th key={course.id} className="sr-only"
-                id={`matrix-course-${course.id}`} scope="col">{columnLabel(course)}</th>))}</tr></thead>
+                id={`matrix-course-${course.id}`} scope="col">{columnLabel(course)}{course.id === primaryCourseId ? " (bearbeiteter Kurs)" : ""}</th>))}</tr></thead>
               {semesterRows.map((rows, semesterIndex) => {
                 const semester = semesterIndex + 1;
                 const blocks = buildPhaseBlocks(rows, visibleCourseGroups, semester);

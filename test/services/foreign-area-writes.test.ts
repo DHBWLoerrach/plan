@@ -2,9 +2,8 @@ import Database from "better-sqlite3";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { deleteCourse, updateCourse } from "@/lib/services/course-admin";
-import { deleteCourseEvents, deleteCoursePhases, updateCourseEvents, updateCoursePhases } from "@/lib/services/cut-editor";
-import { createCourseEvent } from "@/lib/services/event-admin";
-import { createCoursePhases } from "@/lib/services/phase-admin";
+import { createCourseEvent, deleteCourseEvent, updateCourseEvent } from "@/lib/services/event-admin";
+import { createCoursePhases, deleteCoursePhase, updateCoursePhase } from "@/lib/services/phase-admin";
 import { publishCourse, withdrawCourse } from "@/lib/services/publication";
 import { applySchema } from "@/test/schema";
 
@@ -43,23 +42,17 @@ describe("course phases of a foreign area", () => {
     const sqlite = database();
     expect(() => createCoursePhases(sqlite, { accountId: "editor", courseIds: ["course-wwi"], ...phase })).toThrow(refused);
     const [phaseId] = createCoursePhases(sqlite, { accountId: "admin", courseIds: ["course-wwi"], ...phase });
-    expect(() => updateCoursePhases(sqlite, { accountId: "editor", phaseIds: [phaseId], ...phase, type: "PRACTICE" })).toThrow(refused);
-    expect(() => deleteCoursePhases(sqlite, { accountId: "editor", phaseIds: [phaseId] })).toThrow(refused);
+    expect(() => updateCoursePhase(sqlite, { accountId: "editor", phaseId, ...phase, type: "PRACTICE" })).toThrow(refused);
+    expect(() => deleteCoursePhase(sqlite, { accountId: "editor", phaseId })).toThrow(refused);
     expect(sqlite.prepare("SELECT phase_type AS type FROM course_phases WHERE id = ?").get(phaseId)).toEqual({ type: "THEORY" });
   });
 
-  it("refuses a joint creation as a whole and leaves the own course untouched", () => {
+  /* A transfer sends the edited course and its targets as one selection, so a foreign target has to take the whole
+     creation down with it rather than quietly writing the own course alone. */
+  it("refuses a transfer reaching into a foreign area as a whole and leaves the own course untouched", () => {
     const sqlite = database();
     expect(() => createCoursePhases(sqlite, { accountId: "editor", courseIds: ["course-tif", "course-wwi"], ...phase })).toThrow(refused);
     expect(sqlite.prepare("SELECT count(*) AS count FROM course_phases").get()).toEqual({ count: 0 });
-  });
-
-  it("refuses a joint change over a summarised row that reaches into a foreign area", () => {
-    const sqlite = database();
-    const [ownPhaseId] = createCoursePhases(sqlite, { accountId: "editor", courseIds: ["course-tif"], ...phase });
-    const [foreignPhaseId] = createCoursePhases(sqlite, { accountId: "admin", courseIds: ["course-wwi"], ...phase });
-    expect(() => updateCoursePhases(sqlite, { accountId: "editor", phaseIds: [ownPhaseId, foreignPhaseId], ...phase, type: "PRACTICE" })).toThrow(refused);
-    expect(sqlite.prepare("SELECT count(*) AS count FROM course_phases WHERE phase_type = 'PRACTICE'").get()).toEqual({ count: 0 });
   });
 });
 
@@ -68,8 +61,8 @@ describe("events of a foreign area", () => {
     const sqlite = database();
     expect(() => createCourseEvent(sqlite, { accountId: "editor", courseIds: ["course-wwi"], ...event })).toThrow(refused);
     const [eventId] = createCourseEvent(sqlite, { accountId: "admin", courseIds: ["course-wwi"], ...event });
-    expect(() => updateCourseEvents(sqlite, { accountId: "editor", eventIds: [eventId], ...event, title: "Nachholprüfung" })).toThrow(refused);
-    expect(() => deleteCourseEvents(sqlite, { accountId: "editor", eventIds: [eventId] })).toThrow(refused);
+    expect(() => updateCourseEvent(sqlite, { accountId: "editor", eventId, ...event, title: "Nachholprüfung" })).toThrow(refused);
+    expect(() => deleteCourseEvent(sqlite, { accountId: "editor", eventId })).toThrow(refused);
     expect(sqlite.prepare("SELECT title FROM course_events WHERE id = ?").get(eventId)).toEqual({ title: "Prüfung" });
   });
 });

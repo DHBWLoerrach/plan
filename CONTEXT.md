@@ -55,8 +55,14 @@ _Avoid_: Blockphase, Phase, Urlaubsphase
 **Blockplan**: Die veröffentlichte Darstellung von Kursverlauf und Terminen der Kurse eines Zuschnitts. Ein Blockplan ist ein Erzeugnis, keine eigene Entitätsart; seine Daten trägt immer der Kurs.
 _Avoid_: Blockplan als eigenständiges Planungs- oder Veröffentlichungsobjekt
 
-**Zuschnitt**: Die Auswahl von Kursen genau eines Jahrgangs, über die eine Ansicht oder ein Blockplan gebildet wird — ein einzelner Kurs, der ganze Jahrgang oder ein Studiengang beziehungsweise ein Bereich darin.
-_Avoid_: Zuschnitt über mehrere Jahrgänge
+**Zuschnitt**: Die Auswahl von Kursen genau eines Jahrgangs, über die eine öffentliche Ansicht — ein Blockplan — gebildet und adressiert wird: ein einzelner Kurs, der ganze Jahrgang oder ein Studiengang beziehungsweise ein Bereich darin.
+_Avoid_: Zuschnitt über mehrere Jahrgänge, Zuschnitt als interner Bearbeitungsgegenstand
+
+**Vergleich**: Die Kurse desselben Jahrgangs, die bei der internen Betrachtung oder Bearbeitung eines Kurses nur lesend neben ihm dargestellt werden. Sein Umfang — Studiengang, Bereich oder ganzer Jahrgang — wird bei jedem Aufruf gewählt und nicht gespeichert; bearbeitet wird ausschließlich der Kurs, um den es geht.
+_Avoid_: gemeinsame Bearbeitung mehrerer Kurse, interner Zuschnitt
+
+**Übertragung**: Das gleichzeitige Anlegen derselben Kursphase oder desselben Termins beim bearbeiteten Kurs und bei ausgewählten Kursen seines Vergleichs. Es entstehen eigenständige Angaben je Kurs; spätere Änderungen wirken nur auf den jeweiligen Kurs.
+_Avoid_: geteilte Kursphase, gemeinsamer Termin, Synchronisation
 
 **Gegenüberstellung**: Eine Darstellung mehrerer Kurse nebeneinander, in der übereinstimmende Kursphasen und Termine zu einer Zeile zusammengefasst werden und jede Abweichung sie auftrennt.
 _Avoid_: Abgleich, Konfliktprüfung, Synchronisationswarnung

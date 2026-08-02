@@ -2,10 +2,11 @@ import "server-only";
 
 import type Database from "better-sqlite3";
 
+import type { ComparisonScope } from "@/lib/domain/course-comparison";
 import { matchesCodePrefix, normalizeCodePrefix } from "@/lib/domain/course-code";
 import { courseStanding, type CourseStanding, type StandingPhase } from "@/lib/domain/course-progress";
 import { areaAccessLabel, courseStatus, publicationStateLabels, workInProgressLabel, type CourseStatus, type PublicationState } from "@/lib/domain/course-status";
-import { type CoursePlan, type CourseEvent, type CoursePhase } from "@/lib/domain/publication";
+import { type CoursePlan, type PlanEvent, type PlanPhase } from "@/lib/domain/publication";
 
 import { manageableAreas } from "../data";
 
@@ -20,12 +21,13 @@ export type InternalCourse = CourseMarking & { id: string; code: string; program
 export type LabeledOption = { id: string; label: string };
 /** A study program to choose from. It carries its number of semesters, from which a smart creation derives study end and phase count. */
 export type ProgramOption = LabeledOption & { semesters: number };
-export type CutCourse = CoursePlan & CourseMarking & { areaId: string; areaName: string };
+/** A course as the plan page shows it, whether it is the edited one or one it is compared with. */
+export type PlanCourse = CoursePlan & CourseMarking & { areaId: string; areaName: string; program: string };
 /** A course on the overview. It carries no `editable`: the overview reads the own areas only, so all of them are. */
 export type OverviewCourse = CourseStatus & CourseStanding & { id: string; code: string };
 export type OverviewYear = { year: string; courses: OverviewCourse[] };
 export type OverviewProgram = { id: string; name: string; abbreviation: string; areaName: string; years: OverviewYear[] };
-export type CourseCutData = { year: string; courses: CutCourse[]; phases: (CoursePhase & { id: string })[]; events: (CourseEvent & { affectedCourseCodes: string[] })[] };
+export type CoursePlanData = { course: PlanCourse; scope: ComparisonScope; comparison: PlanCourse[]; phases: PlanPhase[]; events: PlanEvent[] };
 export type CourseSort = "code" | "program" | "area" | "studyPeriod" | "publication" | "access";
 export type CourseSortDirection = "asc" | "desc";
 export function isCourseSort(value: string | null): value is CourseSort {
@@ -169,22 +171,53 @@ export function programOptions(sqlite: Database.Database, account: AccountScope,
   return rows.map((program) => ({ id: program.id, label: `${programLabel(program)} (${program.areaName})`, semesters: program.semesters }));
 }
 
-type CutCourseRow = MarkingColumns & CoursePlan & { areaName: string };
+type PlanCourseRow = MarkingColumns & CoursePlan & { areaName: string; program: string; programId: string };
 
-/** A cut may hold courses of foreign areas: comparing them side by side is the point of reading system wide (ADR 0011). */
-export function courseCutData(sqlite: Database.Database, account: AccountScope, input: { year: string; courseIds: string[] }): CourseCutData | null {
-  const courseIds = [...new Set(input.courseIds.map((id) => id.trim()).filter(Boolean))];
-  if (!/^\d{4}$/u.test(input.year) || !courseIds.length) return null;
-  const placeholders = courseIds.map(() => "?").join(", ");
-  const rows = sqlite.prepare(`SELECT course.id, course.code, course.study_start AS studyStart, course.study_end AS studyEnd, program.semesters,
-      program.area_id AS areaId, area.name AS areaName, course.published_at AS publishedAt
-    FROM courses course JOIN programs program ON program.id = course.program_id JOIN areas area ON area.id = program.area_id
-    WHERE course.id IN (${placeholders}) AND substr(course.study_start, 1, 4) = ? ORDER BY course.code COLLATE NOCASE`).all(...courseIds, input.year) as CutCourseRow[];
-  if (rows.length !== courseIds.length) return null;
+const planCourseColumns = `course.id, course.code, course.study_start AS studyStart, course.study_end AS studyEnd,
+  program.semesters, program.id AS programId, program.name AS program, program.area_id AS areaId, area.name AS areaName,
+  course.published_at AS publishedAt
+  FROM courses course JOIN programs program ON program.id = course.program_id JOIN areas area ON area.id = program.area_id`;
+
+/**
+ * The courses that stand beside an edited one, always within its year (ADR 0010). They may belong to foreign areas:
+ * seeing them is the point of reading system wide, writing to them stays refused (ADR 0011).
+ */
+function comparisonCourseRows(sqlite: Database.Database, course: PlanCourseRow, scope: ComparisonScope): PlanCourseRow[] {
+  if (scope === "none") return [];
+  const restriction = scope === "program" ? "AND course.program_id = ?" : scope === "area" ? "AND program.area_id = ?" : "";
+  const parameters = scope === "program" ? [course.programId] : scope === "area" ? [course.areaId] : [];
+  return sqlite.prepare(`SELECT ${planCourseColumns}
+    WHERE course.id <> ? AND substr(course.study_start, 1, 4) = substr(?, 1, 4) ${restriction}
+    ORDER BY course.code COLLATE NOCASE`).all(course.id, course.studyStart, ...parameters) as PlanCourseRow[];
+}
+
+/**
+ * One course with its saved plan and the courses its comparison currently shows. The edited course and the compared
+ * ones are read apart on purpose: only the first is ever written to, while the others exist so that a deviation is
+ * seen while it is being made. Phases and events cover all of them, because the matrix draws every column.
+ */
+export function coursePlanData(sqlite: Database.Database, account: AccountScope, courseId: string, scope: ComparisonScope): CoursePlanData | null {
+  const row = sqlite.prepare(`SELECT ${planCourseColumns} WHERE course.id = ?`).get(courseId) as PlanCourseRow | undefined;
+  if (!row) return null;
   const editableAreas = editableAreaIds(sqlite, account);
-  const courses = rows.map((row) => markCourse(row, editableAreas));
-  const phases = sqlite.prepare(`SELECT id, course_id AS courseId, semester, phase_type AS type, start_date AS startDate, end_date AS endDate FROM course_phases WHERE course_id IN (${placeholders}) ORDER BY semester, start_date, id`).all(...courseIds) as CourseCutData["phases"];
-  const events = sqlite.prepare(`SELECT event.id, event.course_id AS courseId, event.title, event.description, event.category, event.start_date AS startDate, event.end_date AS endDate, event.provisional, course.code
-    FROM course_events event JOIN courses course ON course.id = event.course_id WHERE event.course_id IN (${placeholders}) ORDER BY event.start_date, event.title COLLATE NOCASE, event.id`).all(...courseIds) as (Omit<CourseEvent, "courseIds" | "provisional"> & { courseId: string; code: string; provisional: number })[];
-  return { year: input.year, courses, phases, events: events.map(({ courseId, code, provisional, ...event }) => ({ ...event, provisional: Boolean(provisional), courseIds: [courseId], affectedCourseCodes: [code] })) };
+  const course = markCourse(row, editableAreas);
+  const comparison = comparisonCourseRows(sqlite, row, scope).map((candidate) => markCourse(candidate, editableAreas));
+  const ids = [course.id, ...comparison.map((candidate) => candidate.id)];
+  const placeholders = ids.map(() => "?").join(", ");
+  const phases = sqlite.prepare(`SELECT phase.id, phase.course_id AS courseId, phase.semester, phase.phase_type AS type,
+      phase.start_date AS startDate, phase.end_date AS endDate, course.code
+    FROM course_phases phase JOIN courses course ON course.id = phase.course_id
+    WHERE phase.course_id IN (${placeholders}) ORDER BY phase.semester, phase.start_date, phase.id`).all(...ids) as PlanPhase[];
+  const events = sqlite.prepare(`SELECT event.id, event.course_id AS courseId, event.title, event.description, event.category,
+      event.start_date AS startDate, event.end_date AS endDate, event.provisional, course.code
+    FROM course_events event JOIN courses course ON course.id = event.course_id
+    WHERE event.course_id IN (${placeholders}) ORDER BY event.start_date, event.title COLLATE NOCASE, event.id`)
+    .all(...ids) as (Omit<PlanEvent, "courseIds" | "provisional"> & { courseId: string; provisional: number })[];
+  return {
+    course,
+    scope,
+    comparison,
+    phases,
+    events: events.map(({ courseId: eventCourseId, provisional, ...event }) => ({ ...event, provisional: Boolean(provisional), courseIds: [eventCourseId] })),
+  };
 }
