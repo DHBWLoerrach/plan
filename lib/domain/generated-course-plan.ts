@@ -1,5 +1,5 @@
 /**
- * The generated course progression of a smartly created course: a study period proposed from the course code and a
+ * The generated course progression of a generated course progression: a study period proposed from the course code and a
  * course progression that fills it completely, alternating theory and practice with two course phases per semester.
  * Everything here is pure — the form previews with it and the creation writes from it.
  */
@@ -43,7 +43,7 @@ export function courseCodeYear(code: string, today: string): number | undefined 
 }
 
 /**
- * The study start a smart creation proposes: the first of October of the year in the course code, and without one the
+ * The study start the generation proposes: the first of October of the year in the course code, and without one the
  * next first of October from today onwards. It is a proposal and stays editable.
  */
 export function proposedStudyStart(code: string, today: string): string {
@@ -112,7 +112,7 @@ function nominalEnds(studyStart: string, studyEnd: string, count: number): strin
 }
 
 /**
- * The course progression a smart creation generates: it covers the study period without gap or overlap, alternates the
+ * The course progression the generation produces: it covers the study period without gap or overlap, alternates the
  * phase types starting from the chosen one and assigns two phases to each semester in turn. Every boundary inside the
  * period falls on a Sunday, so the following phase begins on a Monday; study start and study end stay untouched,
  * because they are anchored to dates rather than to weekdays.

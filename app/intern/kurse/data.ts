@@ -19,7 +19,7 @@ export type CourseListData = { programs: LabeledOption[]; years: { year: string 
 export type InternalCourse = CourseMarking & { id: string; code: string; programId: string; program: string; areaId: string; areaName: string; studyStart: string; studyEnd: string; publishedAt: string | null };
 /** An entry of a select: the value it submits and the text it shows. */
 export type LabeledOption = { id: string; label: string };
-/** A study program to choose from. It carries its number of semesters, from which a smart creation derives study end and phase count. */
+/** A study program to choose from. It carries its number of semesters, from which a generated progression derives study end and phase count. */
 export type ProgramOption = LabeledOption & { semesters: number };
 /** A course as the plan page shows it, whether it is the edited one or one it is compared with. */
 export type PlanCourse = CoursePlan & CourseMarking & { areaId: string; areaName: string; program: string };

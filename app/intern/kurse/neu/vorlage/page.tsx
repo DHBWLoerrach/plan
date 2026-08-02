@@ -27,7 +27,7 @@ export default async function NewCourseFromTemplatePage({ searchParams }: PagePr
 
   return <SiteShell nav={<InternalNav account={account} current="kurse" />}><section className="search-panel narrow-panel" aria-labelledby="new-course-heading">
     <p className="eyebrow">Kurs anlegen</p>
-    <h1 id="new-course-heading">Aus Vorlage anlegen</h1>
+    <h1 id="new-course-heading">Aus Vorlage übernehmen</h1>
     <p>Eine Übernahme kopiert Kursverlauf und Termine der Vorlage einmalig und versetzt sie um ganze Wochen; danach besteht zwischen Vorlage und neuem Kurs keine Verbindung.</p>
 
     <form method="get" className="filter-grid" aria-label="Vorlage wählen">

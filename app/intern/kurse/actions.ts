@@ -34,7 +34,7 @@ function adoptionInput(formData: FormData) {
 }
 
 /**
- * The generated course progression of a smart creation. The form serializes what it previewed — including any boundary
+ * The generated course progression as the form submits it. The form serializes what it previewed — including any boundary
  * corrected by hand — as one field; the service checks it against the study period before writing it.
  */
 function planInput(formData: FormData) {
@@ -81,7 +81,7 @@ export async function createCourseAction(_: CourseFormState, formData: FormData)
 }
 
 /** Creating a course with a generated course progression — the other way, and the one that leaves a complete plan behind. */
-export async function createSmartCourseAction(_: CourseFormState, formData: FormData): Promise<CourseFormState> {
+export async function createGeneratedCourseAction(_: CourseFormState, formData: FormData): Promise<CourseFormState> {
   let courseId: string;
   try {
     courseId = createCourse(sqlite, { accountId: await requireAccountId(), ...courseInput(formData), plan: planInput(formData) });

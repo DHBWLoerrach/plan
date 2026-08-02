@@ -58,16 +58,16 @@ test("edits, publishes and publicly reads a course", async ({ page }) => {
 });
 
 /**
- * The smart way into a new course, from the choice of the way to the written course progression. The course code
+ * The generating way into a new course, from the choice of the way to the written course progression. The course code
  * carries a four-digit year, so the proposed study period is the same one whenever this test runs.
  */
-test("creates a course smartly and lands on a complete planning state", async ({ page }) => {
+test("creates a course with a generated progression and lands on a complete planning state", async ({ page }) => {
   await signIn(page, "editor@test.invalid");
   await page.goto("/intern/kurse/neu");
-  await page.getByRole("link", { name: "Kurs smart anlegen" }).click();
-  await expect(page).toHaveURL(/\/intern\/kurse\/neu\/smart$/u);
+  await page.getByRole("link", { name: "Kursverlauf erzeugen" }).click();
+  await expect(page).toHaveURL(/\/intern\/kurse\/neu\/erzeugt$/u);
 
-  await page.getByLabel("Kurskennung").fill("E2E2027SMART");
+  await page.getByLabel("Kurskennung").fill("E2E2027GEN");
   await page.getByLabel("Studiengang").selectOption("program-own");
   await expect(page.getByLabel("Studienbeginn")).toHaveValue("2027-10-01");
   await expect(page.getByLabel("Studienende")).toHaveValue("2030-09-30");

@@ -10,11 +10,11 @@ export type CoursePlanInput = { semester: unknown; type: unknown; startDate: unk
 type CheckedPhase = { semester: number; type: PhaseType; startDate: string; endDate: string };
 
 /**
- * Writes the generated course progression of a smart creation. It runs inside the transaction of the creation, so a
+ * Writes the generated course progression of a new course. It runs inside the transaction of the creation, so a
  * course and its progression are written together or not at all.
  *
- * The form may adjust the generated phases before saving, so what arrives is checked here rather than trusted: a smart
- * creation promises a gapless progression over the whole study period, and that promise is kept by the server.
+ * The form may adjust the generated phases before saving, so what arrives is checked here rather than trusted: the
+ * generation promises a gapless progression over the whole study period, and that promise is kept by the server.
  */
 export function writeCoursePlan(sqlite: Database.Database, input: {
   courseId: string;

@@ -484,15 +484,15 @@ p[role="status"] { margin: 0; color: var(--success); }
 .path-card[data-only-way] { box-shadow: 0 0 0 2px var(--red); }
 @media (max-width: 760px) { .path-choice { grid-template-columns: minmax(0, 1fr); } }
 
-/* The smart creation is a sequence of cards rather than one column of fields: study period, starting phase and the
+/* The generating creation is a sequence of cards rather than one column of fields: study period, starting phase and the
    generated progression each answer a question of their own, and the progression below them follows every answer. */
-.smart-form { display: grid; gap: 0; margin-top: 1.5rem; }
-.smart-form .editor-card { max-width: 52rem; }
-.smart-form .editor-card h2 { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; margin: 0; font-size: 1.15rem; font-weight: 800; }
-.smart-form .editor-card > p { margin: .35rem 0 .9rem; color: var(--gray); font-size: .92rem; }
-.smart-form .account-form { margin: 0; max-width: none; }
-.smart-form > [role="alert"] { margin-top: 1.25rem; }
-.smart-form > .button { justify-self: start; margin-top: 1.5rem; }
+.generated-form { display: grid; gap: 0; margin-top: 1.5rem; }
+.generated-form .editor-card { max-width: 52rem; }
+.generated-form .editor-card h2 { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; margin: 0; font-size: 1.15rem; font-weight: 800; }
+.generated-form .editor-card > p { margin: .35rem 0 .9rem; color: var(--gray); font-size: .92rem; }
+.generated-form .account-form { margin: 0; max-width: none; }
+.generated-form > [role="alert"] { margin-top: 1.25rem; }
+.generated-form > .button { justify-self: start; margin-top: 1.5rem; }
 /* What the application proposes is marked as a proposal, in the neutral tone of a state — not in red, which on this
    page belongs to the theory phase and to the actions. */
 .proposal-tag { padding: .1rem .5rem; background: var(--surface); border: 1px solid var(--line); color: var(--gray-strong); font-size: .75rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }

@@ -2,7 +2,7 @@
 
 import { useActionState, useId, useMemo, useState } from "react";
 
-import { type CourseFormState, createSmartCourseAction } from "@/app/intern/kurse/actions";
+import { type CourseFormState, createGeneratedCourseAction } from "@/app/intern/kurse/actions";
 import { isCalendarDay, plusDays } from "@/lib/domain/calendar-day";
 import { formatCalendarPeriod, formatPeriodDuration, weekdayName } from "@/lib/domain/calendar-format";
 import { courseCodeYear, generateCoursePlan, type PlannedPhase, proposedStudyEnd, proposedStudyStart } from "@/lib/domain/generated-course-plan";
@@ -29,15 +29,15 @@ function PeriodField({ label, name, value, hint, onChange }: { label: string; na
 }
 
 /**
- * Creating a course with a generated course progression — the smart way of the two.
+ * Creating a course with a generated course progression — the second of the two ways.
  *
  * Everything shown is derived during rendering: the study period from the course code and the study program, the
  * course progression from the study period and the starting phase. Adjusted phases are therefore kept together with
  * the state they were adjusted in, and any change to that state returns the progression to the generated one. What is
  * written is checked again on the server from the same rules.
  */
-export function SmartCourseForm({ programs, today }: { programs: Program[]; today: string }) {
-  const [state, formAction, isPending] = useActionState<CourseFormState, FormData>(createSmartCourseAction, {});
+export function GeneratedCourseForm({ programs, today }: { programs: Program[]; today: string }) {
+  const [state, formAction, isPending] = useActionState<CourseFormState, FormData>(createGeneratedCourseAction, {});
   const [code, setCode] = useState("");
   const [programId, setProgramId] = useState(programs.length === 1 ? programs[0].id : "");
   const [startType, setStartType] = useState<PhaseType>("THEORY");
@@ -96,7 +96,7 @@ export function SmartCourseForm({ programs, today }: { programs: Program[]; toda
     : studyStartEdit === null ? "nächster 1. Oktober" : "selbst gesetzt";
   const endHint = studyEndEdit === null ? `${semesters} Semester ab Studienbeginn` : "selbst gesetzt";
 
-  return <form action={formAction} className="smart-form">
+  return <form action={formAction} className="generated-form">
     <div className="editor-card">
       <h2>Kursangaben</h2>
       <div className="account-form">
