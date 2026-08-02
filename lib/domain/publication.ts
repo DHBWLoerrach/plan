@@ -60,8 +60,8 @@ export interface MatrixRow {
 }
 
 /**
- * The semester an event belongs to for one affected course: the semester of the course phase covering its start day
- * (FACHLICHE_REGELN.md). An event spanning a semester change therefore belongs to the semester of its beginning.
+ * The semester an event belongs to for one affected course: the semester of the course phase covering its start day.
+ * An event spanning a semester change therefore belongs to the semester of its beginning.
  * In an incomplete unpublished course such a phase may be missing; the semester is then not derivable and stays `null`.
  */
 export function deriveEventSemester(phases: CoursePhase[], courseId: string, startDate: string): number | null {

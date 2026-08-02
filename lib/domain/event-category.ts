@@ -1,6 +1,6 @@
 export type EventCategory = "REGISTRATION" | "SUBMISSION" | "PRESENTATION" | "EXAM" | "OTHER";
 
-/** The five categories of an examination-relevant event with their German labels (CONTEXT.md, FACHLICHE_REGELN.md). */
+/** The five categories of an examination-relevant event with their German labels. */
 export const eventCategories: { value: EventCategory; label: string }[] = [
   { value: "REGISTRATION", label: "Anmeldung" },
   { value: "SUBMISSION", label: "Abgabe" },

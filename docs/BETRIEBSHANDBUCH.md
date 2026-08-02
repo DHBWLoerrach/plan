@@ -1,8 +1,9 @@
 # Betriebshandbuch
 
-Ausführbare Betriebswege der Anwendung. Die begründenden Entscheidungen stehen in
-[Architektur und Betrieb](ARCHITEKTUR_UND_BETRIEB.md); dieses Dokument beschreibt nur, welche
-Befehle in welcher Reihenfolge auszuführen sind.
+Ausführbare Betriebswege der Anwendung. Den extern bereitzustellenden Rahmen beschreibt
+[Architektur und Betrieb](ARCHITEKTUR_UND_BETRIEB.md); dieses Dokument legt fest, welche Befehle in
+welcher Reihenfolge auszuführen sind. Ob die Befehle und Prüfungen technisch weiterhin so
+funktionieren, sichern die zugehörigen Skripte und Tests ab.
 
 Alle Befehle laufen im Anwendungscontainer. Die Beispiele verwenden `docker compose exec app`;
 mit `docker exec <container>` gilt dasselbe.
@@ -17,8 +18,8 @@ mit `docker exec <container>` gilt dasselbe.
 | `TRUSTED_PROXY_IPS` | Nur nötig, wenn Traefik `X-Forwarded-For` anhängt statt überschreibt: kommagetrennte Adressen oder CIDR-Bereiche der Proxys, so eng wie möglich. |
 
 Die Anwendung setzt Content-Security-Policy, `X-Content-Type-Options`, `Referrer-Policy` und
-`Permissions-Policy` selbst; am Proxy ist dafür nichts zu konfigurieren. Was Traefik zu leisten hat,
-steht in [Architektur und Betrieb](ARCHITEKTUR_UND_BETRIEB.md#betrieb-backups-und-datenschutz).
+`Permissions-Policy` selbst; am Proxy ist dafür nichts zu konfigurieren. Die Systemgrenze zu
+Traefik steht in [Architektur und Betrieb](ARCHITEKTUR_UND_BETRIEB.md#systemgrenze).
 
 Server Actions vergleichen die Origin der Anfrage mit dem von Traefik gesetzten
 `X-Forwarded-Host`. Weil Traefik ausschließlich die produktive Domäne auf den Container leitet, ist

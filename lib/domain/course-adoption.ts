@@ -24,7 +24,7 @@ export type CourseAdoption = {
  * The rounding settles a conflict of two anchors. A study period is anchored to dates — 1 October to 30 September —
  * while course phases are anchored to weekdays, because theory blocks start on a Monday and end on a Friday or Sunday.
  * A shift cannot preserve both. Rounding keeps the weekdays and lets the borders of the study period miss by up to
- * three days; those few phases are cut, which is two corrections instead of forty (FACHLICHE_REGELN.md).
+ * three days; those few phases are cut, which is two corrections instead of forty.
  */
 export function adoptionShiftDays(templateStudyStart: string, studyStart: string): number {
   const difference = inclusiveDays(templateStudyStart, studyStart) - 1;
@@ -56,7 +56,7 @@ export function planAdoption(template: AdoptionTemplate, target: AdoptionTarget)
     else phases.push({ ...shifted, startDate, endDate, truncated: startDate !== shifted.startDate || endDate !== shifted.endDate });
   }
   // Events are shifted but never cut: one outside the study period is a publication rule and stays allowed in the
-  // planning state until publication names it (FACHLICHE_REGELN.md).
+  // planning state until publication names it.
   const events = (target.withEvents ? template.events : []).map((event) => ({
     ...event,
     startDate: plusDays(event.startDate, shiftDays),

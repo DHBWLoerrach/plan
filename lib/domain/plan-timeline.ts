@@ -37,7 +37,7 @@ export interface PlanTimeline {
   lanes: TimelineLane[];
   /**
    * The semester bounds of every lane where they agree, so the diagram draws one band instead of repeating it. The
-   * bounds of the same semester may differ between the courses of a block plan (FACHLICHE_REGELN.md), and where they
+   * bounds of the same semester may differ between the courses of a block plan (ADR 0006), and where they
    * do this stays `null` and every lane keeps its own band.
    */
   sharedSemesters: TimelineSemester[] | null;
@@ -154,7 +154,7 @@ function sharedSemesters(lanes: TimelineLane[]): TimelineSemester[] | null {
 
 /**
  * Where each semester of one lane begins and ends. The bounds belong to the lane rather than to the diagram, because
- * the same semester may cover different periods in different courses (FACHLICHE_REGELN.md); one band across all lanes
+ * the same semester may cover different periods in different courses (ADR 0006); one band across all lanes
  * would claim a shared schedule that the block plan does not guarantee.
  */
 function laneSemesters(phases: CoursePhase[], span: (from: string, to: string) => TimelineSpan): TimelineSemester[] {

@@ -1,6 +1,6 @@
 # Barrierefreiheit und responsive Nutzung
 
-Für sämtliche öffentlichen und internen Oberflächen des neu entwickelten MVP ist WCAG 2.2 AA verbindliches Abnahmekriterium. Die rechtliche Einordnung nach EN 301 549 und der darin referenzierten WCAG 2.1 bleibt davon unberührt.
+Für sämtliche öffentlichen und internen Oberflächen der Anwendung ist WCAG 2.2 AA verbindliches Abnahmekriterium. Die rechtliche Einordnung nach EN 301 549 und der darin referenzierten WCAG 2.1 bleibt davon unberührt.
 
 Vor Go-live wird mit der zuständigen DHBW-Stelle geklärt, ob Erklärung zur Barrierefreiheit und Rückmeldeweg zentral oder in der Anwendung bereitgestellt werden; Geltungsbereich, Verantwortlichkeit, Rückmeldekanal und Aktualisierungsprozess sind dabei verbindlich festzulegen. Die rechtlichen Pflichtinformationen insgesamt behandelt [Architektur und Betrieb](ARCHITEKTUR_UND_BETRIEB.md); barrierefreiheitsseitig gilt, dass sie in allen Ansichten an einer konsistenten Stelle per Tastatur und Screenreader erreichbar sind.
 

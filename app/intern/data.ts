@@ -6,7 +6,7 @@ export type AreaOption = { id: string; name: string };
 
 /**
  * The areas the account may manage: every area for system administration, otherwise exactly the assigned ones. It is
- * the scope every internal view decides what may be written against (FACHLICHE_REGELN.md).
+ * the scope every internal view decides what may be written against (ADR 0011).
  */
 export function manageableAreas(sqlite: Database.Database, account: { id: string; systemAdmin: boolean }): AreaOption[] {
   return sqlite.prepare(`SELECT id, name FROM areas

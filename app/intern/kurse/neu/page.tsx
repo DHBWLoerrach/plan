@@ -8,7 +8,7 @@ import { getActiveAccount, managesAnyArea } from "@/lib/internal-auth";
 
 /**
  * The way into a new course. There are exactly two, and they are chosen before anything is entered: a course is either
- * adopted from an existing one or planned from scratch (FACHLICHE_REGELN.md). Keeping the choice on a page of its own
+ * adopted from an existing one or planned from scratch. Keeping the choice on a page of its own
  * is what keeps the two apart — each way then asks only for what it needs, and neither carries a field of the other.
  */
 export default async function NewCoursePage() {

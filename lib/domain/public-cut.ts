@@ -1,7 +1,7 @@
 /**
  * The cut a public view is formed over: a single course, a whole year of studies or a program or area within it.
  * A cut is bound to exactly one year, because the plan matrix compares semesters over one shared time axis and the
- * same semester of two years lies years apart (MVP-SPEZIFIKATION.md). It carries no id of its own: it addresses
+ * same semester of two years lies years apart (ADR 0010). It carries no id of its own: it addresses
  * itself through the current designations of its published courses.
  */
 export type PublicCut =

@@ -1,10 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 /**
- * Sets the nonce-based Content Security Policy and the remaining security headers of
- * `docs/ARCHITEKTUR_UND_BETRIEB.md`. Every response carries its own nonce, so pages must render
- * dynamically; Next.js reads the policy from the forwarded request headers and applies the nonce to
- * its own scripts. Traefik adds HSTS in front of the application.
+ * Sets the nonce-based Content Security Policy and the remaining application-owned security headers.
+ * Every response carries its own nonce, so pages must render dynamically; Next.js reads the policy
+ * from the forwarded request headers and applies the nonce to its own scripts. Traefik adds HSTS in
+ * front of the application.
  */
 export function proxy(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");

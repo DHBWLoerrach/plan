@@ -87,8 +87,7 @@ export function PlanMatrix({ courses, phases, events, workInProgressCourseIds = 
   const visibleCourses = courses.filter((course) => visibleCourseIds.has(course.id));
   const visibleCourseGroups = groupComparableCourses(visibleCourses, phases);
   const courseCodes = new Map(courses.map((course) => [course.id, course.code]));
-  // Every course of a block plan carries the same number of semesters (FACHLICHE_REGELN.md); hiding columns therefore
-  // never removes a semester table.
+  // Derive the semester tables from the full cut, so hiding course columns never removes a semester table.
   const semesters = Math.max(...courses.map((course) => course.semesters), 0);
   const semesterRows = Array.from({ length: semesters }, (_, index) => {
     const rows = buildSemesterMatrix(visibleCourses, phases, index + 1);

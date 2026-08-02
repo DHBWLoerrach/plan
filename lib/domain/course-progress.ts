@@ -1,7 +1,7 @@
 /**
  * Where a course stands on a given day. The internal overview reads it for every course at once, so it is derived
  * here rather than in the view: the planning state of a course may hold gaps — that its phases meet without one is a
- * Veröffentlichungsregel, not a Strukturregel (FACHLICHE_REGELN.md) — and a day may therefore fall into no phase at
+ * Veröffentlichungsregel, not a Strukturregel — and a day may therefore fall into no phase at
  * all, before the first or after the last.
  */
 import { formatCalendarDay } from "@/lib/domain/calendar-format";

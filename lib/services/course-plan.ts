@@ -11,7 +11,7 @@ type CheckedPhase = { semester: number; type: PhaseType; startDate: string; endD
 
 /**
  * Writes the generated course progression of a smart creation. It runs inside the transaction of the creation, so a
- * course and its progression are written together or not at all (FACHLICHE_REGELN.md).
+ * course and its progression are written together or not at all.
  *
  * The form may adjust the generated phases before saving, so what arrives is checked here rather than trusted: a smart
  * creation promises a gapless progression over the whole study period, and that promise is kept by the server.

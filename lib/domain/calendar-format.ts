@@ -56,7 +56,7 @@ export function formatCompactDuration(startDate: string, endDate: string): strin
   return parts.join(" + ");
 }
 
-/** An inclusive period; a period of a single day collapses to that day (FACHLICHE_REGELN.md). */
+/** An inclusive period; a period of a single day collapses to that day. */
 export function formatCalendarPeriod(startDate: string, endDate: string, options?: { weekday?: boolean }): string {
   const start = formatCalendarDay(startDate, options);
   const end = formatCalendarDay(endDate, options);

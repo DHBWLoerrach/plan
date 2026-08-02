@@ -36,7 +36,7 @@ function templateEvents(sqlite: Database.Database, courseId: string): TemplateEv
 
 /**
  * Copies the planning state of the template into the newly created course. It runs inside the transaction of the
- * creation, so a course and its adoption are written together or not at all (FACHLICHE_REGELN.md). Afterwards the two
+ * creation, so a course and its adoption are written together or not at all. Afterwards the two
  * courses share nothing: no link, no reconciliation and no common change.
  */
 export function adoptIntoCourse(sqlite: Database.Database, input: {

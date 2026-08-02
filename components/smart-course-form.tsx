@@ -29,7 +29,7 @@ function PeriodField({ label, name, value, hint, onChange }: { label: string; na
 }
 
 /**
- * Creating a course with a generated course progression — the smart way of the two (FACHLICHE_REGELN.md).
+ * Creating a course with a generated course progression — the smart way of the two.
  *
  * Everything shown is derived during rendering: the study period from the course code and the study program, the
  * course progression from the study period and the starting phase. Adjusted phases are therefore kept together with

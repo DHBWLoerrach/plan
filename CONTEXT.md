@@ -1,6 +1,6 @@
 # Blockplanung
 
-Dieses Glossar legt die kanonische Sprache für die Planung und Veröffentlichung der Blockpläne fest. Verbindliche Invarianten, Lebenszyklen und Rechte stehen in [`docs/FACHLICHE_REGELN.md`](docs/FACHLICHE_REGELN.md).
+Dieses Glossar legt ausschließlich die kanonische Sprache für die Planung und Veröffentlichung der Blockpläne fest. Der aktuelle fachliche Ist-Stand wird durch Code, Datenbankschema und Tests bestimmt; Gründe für grundlegende Entscheidungen stehen in den [`ADR`](docs/adr/).
 
 ## Planung
 

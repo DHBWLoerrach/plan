@@ -1,8 +1,8 @@
 # Auftrag für KI-Agents: Kurse aus PDFs als Planungsstand importieren
 
-Dieses Dokument ist ein Auftragstext, kein Bestandteil der Anwendung. Der Import aus PDFs ist ausdrücklich [nicht Teil des MVP](MVP-SPEZIFIKATION.md); die Ersterfassung über die Anwendung erfolgt manuell. Der Auftrag dient allein der einmaligen Übernahme bestehender Blockplan-PDFs in eine leere Datenbank.
+Dieses Dokument ist ein eigenständiger Auftragstext und kein Bestandteil der Anwendung. Der Import aus PDFs ist keine Anwendungsfunktion; der Auftrag dient allein der einmaligen Übernahme bestehender Blockplan-PDFs in eine leere Datenbank.
 
-Er ist absichtlich eigenständig und wiederholt deshalb die fachlichen Regeln, statt zu verweisen: Er kann zusammen mit einem oder mehreren Blockplan-PDFs an einen KI-Agenten gegeben werden, der weder dieses Projekt noch dessen Quellcode kennt. Maßgeblich bleiben [`FACHLICHE_REGELN.md`](FACHLICHE_REGELN.md) und [`../CONTEXT.md`](../CONTEXT.md); ändern sich die Regeln dort, ist der Auftragstext nachzuziehen.
+Er ist absichtlich eigenständig und wiederholt deshalb Zielschema und Importregeln: Er kann zusammen mit einem oder mehreren Blockplan-PDFs an einen KI-Agenten gegeben werden, der weder dieses Projekt noch dessen Quellcode kennt. Für Begriffe bleibt [`../CONTEXT.md`](../CONTEXT.md) maßgeblich. Vor einer Verwendung muss das Zielschema mit den aktuellen Migrationen und die Regeln mit dem ausführbaren Anwendungscode abgeglichen werden; relevante Änderungen sind hier nachzuziehen.
 
 Der Agent erzeugt ausschließlich nicht veröffentlichte Kurse mit ihrem **Planungsstand** — Kursverlauf und prüfungsrelevante Termine. Er darf keinen Veröffentlichungszeitpunkt setzen und keine Tabellen oder Stammdaten verändern.
 

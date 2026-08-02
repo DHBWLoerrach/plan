@@ -1,10 +1,10 @@
 # Seed-Daten: Bereiche und Studiengänge
 
-Inhaltliche Vorlage für den versionierten Seed des ersten Deployments (Mechanismus: [Architektur und Betrieb](ARCHITEKTUR_UND_BETRIEB.md)). Die Schreibweisen sind verbindlich abgestimmt; spätere Ergänzungen und Umbenennungen erfolgen ausschließlich als versionierte Datenmigration.
+Verbindlicher Inhalt des initialen Seeds. Der ausführbare Mechanismus steht im Seed-Code und seinen Tests; den Ablauf des ersten Deployments beschreibt das [Betriebshandbuch](BETRIEBSHANDBUCH.md#erstes-deployment). Änderungen an dieser Liste werden gemeinsam mit der dafür nötigen Code- oder Datenmigration versioniert.
 
 Eigenständige Studiengänge ohne gemeinsames Studienzentrum bilden je einen eigenen Bereich mit der Studiengangsbezeichnung als Bereichsbezeichnung. Das hält die Rechtevergabe präzise; ein internes Konto kann mehreren Bereichen zugeordnet werden.
 
-Bewusste Abgrenzung: Der Studiengang BWL – International Business (in English) ist nicht enthalten, weil er laut [DHBW Lörrach im Oktober 2024 eingestellt wurde](https://dhbw-loerrach.de/internationalbusiness/dokumente-links); auslaufende Bestandskurse begründen keinen neuen MVP-Stammdatensatz. [Data Science und Künstliche Intelligenz](https://dhbw-loerrach.de/data-science/studieninhalte) ist dagegen ein Studiengang mit zwei Studienrichtungen und wird deshalb genau einmal geführt.
+Bewusste Abgrenzung: Der Studiengang BWL – International Business (in English) ist nicht enthalten, weil er laut [DHBW Lörrach im Oktober 2024 eingestellt wurde](https://dhbw-loerrach.de/internationalbusiness/dokumente-links); auslaufende Bestandskurse begründen keinen Eintrag im initialen Stammdatensatz. [Data Science und Künstliche Intelligenz](https://dhbw-loerrach.de/data-science/studieninhalte) ist dagegen ein Studiengang mit zwei Studienrichtungen und wird deshalb genau einmal geführt.
 
 | Bereich | Studiengang | Kürzel | Semester |
 | --- | --- | --- | ---: |

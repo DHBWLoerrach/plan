@@ -12,8 +12,8 @@ import { getActiveAccount, managesAnyArea } from "@/lib/internal-auth";
 import { programOptions } from "../../data";
 
 /**
- * The second of the two ways: the new course gets a course progression generated from its study period alone
- * (FACHLICHE_REGELN.md). „Today“ is determined on the server, so the proposed study start does not depend on the
+ * The second of the two ways: the new course gets a course progression generated from its study period alone.
+ * „Today“ is determined on the server, so the proposed study start does not depend on the
  * time zone of the browser.
  */
 export default async function NewSmartCoursePage() {

@@ -14,22 +14,15 @@ seine technischen Artefakte behalten den Namen `dhbw-mgmt`.
 
 ## Stand
 
-Implementierung und Dokumentation folgen demselben fachlichen Schnitt: Planungs-
-und Veröffentlichungseinheit ist der Kurs, der Blockplan ist die veröffentlichte
-Darstellung eines Zuschnitts (siehe
+Planungs- und Veröffentlichungseinheit ist der Kurs, der Blockplan ist die
+veröffentlichte Darstellung eines Zuschnitts (siehe
 [ADR 0010](docs/adr/0010-kurs-als-planungs-und-veroeffentlichungseinheit.md) und
 [ADR 0011](docs/adr/0011-systemweite-leseeinsicht-in-kurse.md)).
 
-Umgesetzt sind (Next.js 16, React 19, TypeScript, Tailwind CSS 4, SQLite über
-Drizzle, Better Auth) die öffentliche Suche mit URL-basierten Filtern und die
-öffentlichen Zuschnittansichten, der Zuschnitt-Editor mit Gegenüberstellung,
-Vorschau, Veröffentlichung und Zurücknahme je Kurs, die Kursverwaltung
-einschließlich der Anlage als Übernahme aus einer Vorlage, die systemweite
-Leseeinsicht auf Kurse aller Bereiche bei bereichsgebundenem Schreibrecht, die
-Kontenverwaltung mit Passwortlinks sowie die Kommandozeilenbefehle für das
-initiale Systemadministrationskonto und den Notfall-Passwort-Reset.
-Nonce-basierte CSP, Security-Header, Origin-Prüfung und der Betriebsweg aus
-Sicherung, Migration und Wiederherstellung sind umgesetzt und getestet.
+Der aktuelle Funktions- und Regelumfang wird nicht zusätzlich in einem
+Spezifikationsdokument nacherzählt. Maßgeblich sind Anwendungscode,
+Datenbankschema und automatisierte Tests. [`CONTEXT.md`](CONTEXT.md) legt die
+Domänensprache fest, die [`ADR`](docs/adr/) erklären grundlegende Entscheidungen.
 
 Offen ist die Datenschutzerklärung: Der Footer verweist auf die allgemeinen
 DHBW-Hinweise, während [`docs/ARCHITEKTUR_UND_BETRIEB.md`](docs/ARCHITEKTUR_UND_BETRIEB.md)
@@ -38,7 +31,7 @@ produktives Deployment hat noch nicht stattgefunden.
 
 ## Ausblick
 
-Nach dem MVP soll die Anwendung über die Blockplanung hinaus wachsen — etwa um
+Nach der Blockplanung soll die Anwendung um weitere Themen des Studienbetriebs wachsen — etwa um
 Studienverlauf und Curricula, Vorlesungsplanung und Dozierendenmanagement. Diese
 Bereiche sind bewusst noch nicht spezifiziert; die kanonische Domänensprache in
 [`CONTEXT.md`](CONTEXT.md) umfasst ausschließlich die Blockplanung. Dass
@@ -48,11 +41,11 @@ Themen später ohne Bruch an ihm andocken können.
 ## Dokumentation
 
 - [`CONTEXT.md`](CONTEXT.md) — kanonische Domänensprache
-- [`docs/FACHLICHE_REGELN.md`](docs/FACHLICHE_REGELN.md) — Invarianten, Lebenszyklen und Berechtigungen
-- [`docs/MVP-SPEZIFIKATION.md`](docs/MVP-SPEZIFIKATION.md) — Zielumfang, Rollen, Ansichten
-- [`docs/ARCHITEKTUR_UND_BETRIEB.md`](docs/ARCHITEKTUR_UND_BETRIEB.md) — Anwendungsschnitt, Auth, Datenhaltung, Betrieb
+- [`docs/ARCHITEKTUR_UND_BETRIEB.md`](docs/ARCHITEKTUR_UND_BETRIEB.md) — Systemgrenzen und externer Betriebsrahmen
 - [`docs/BETRIEBSHANDBUCH.md`](docs/BETRIEBSHANDBUCH.md) — Sicherung, Migration, Wiederherstellung und Notfallbefehle
+- [`docs/OEFFENTLICHE_API.md`](docs/OEFFENTLICHE_API.md) — externer Vertrag der öffentlichen API
 - [`docs/BARRIEREFREIHEIT.md`](docs/BARRIEREFREIHEIT.md) — verbindliche Gestaltungs- und Abnahmekriterien
+- [`docs/SEED-DATEN.md`](docs/SEED-DATEN.md) — verbindlicher initialer Stammdatensatz
 - [`docs/adr/`](docs/adr/) — Architekturentscheidungen mit Begründung
 
 ## Entwicklung

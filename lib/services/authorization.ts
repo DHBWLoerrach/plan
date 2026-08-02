@@ -14,7 +14,7 @@ export function assertCourseEditPermission(sqlite: Database.Database, accountId:
 
 /**
  * Ensures the account may write to every one of the given courses, as a joint creation for several selected courses
- * requires (FACHLICHE_REGELN.md). An empty selection is refused: an empty round of questions must not pass for consent.
+ * requires (ADRs 0006 and 0011). An empty selection is refused: an empty round of questions must not pass for consent.
  */
 export function assertCoursesEditPermission(sqlite: Database.Database, accountId: string, courseIds: string[]) {
   if (!courseIds.length) throw new Error("Sie sind nicht zur Bearbeitung berechtigt.");

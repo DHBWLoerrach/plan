@@ -13,7 +13,7 @@ export function isCalendarDay(value: string): boolean {
 }
 
 /**
- * Normalizes a calendar day: trimmed and a valid Gregorian day in `YYYY-MM-DD` (FACHLICHE_REGELN.md). Calendar days
+ * Normalizes a calendar day: trimmed and a valid Gregorian day in `YYYY-MM-DD`. Calendar days
  * are timezone-free, so the value is compared against its own UTC round trip instead of being parsed locally.
  */
 export function normalizeCalendarDay(value: string, label: string): string {
@@ -34,7 +34,7 @@ export function normalizeCalendarDayField<TField extends string>(value: string, 
 
 /**
  * The reference day every view reckons „today“ from: the current calendar day in Europe/Berlin, determined on the
- * server and independent of the server or browser time zone (MVP-SPEZIFIKATION.md). The public search groups its
+ * server and independent of the server or browser time zone. The public search groups its
  * results by it, the internal overview reads where a course stands from it.
  */
 export function berlinCalendarDay(now: Date = new Date()): string {

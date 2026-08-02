@@ -12,7 +12,7 @@ import { adoptionTemplateChoices, readAdoptionTemplate } from "@/lib/services/co
 import { searchParam } from "../../../search-params";
 import { programOptions } from "../../data";
 
-/** The first of the two ways: the new course copies the planning state of an existing one (FACHLICHE_REGELN.md). */
+/** The first of the two ways: the new course copies the planning state of an existing one. */
 export default async function NewCourseFromTemplatePage({ searchParams }: PageProps<"/intern/kurse/neu/vorlage">) {
   await connection();
   const account = await getActiveAccount();

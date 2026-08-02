@@ -8,7 +8,7 @@ export type InternalSection = "home" | "kurse" | "konten";
  * The internal main navigation: courses for area editing, accounts for system administration. The own
  * account page is not listed here, because the account menu in the header already leads there next to signing out.
  * Entries the account may not use stay hidden — which never replaces the permission check on the target page and in
- * every server operation (MVP-SPEZIFIKATION.md).
+ * every server operation.
  */
 export function InternalNav({ account, current }: { account: ActiveAccount; current?: InternalSection }) {
   const entries: { section: InternalSection; href: string; label: string }[] = [{ section: "home", href: "/intern", label: "Übersicht" }];

@@ -1,7 +1,7 @@
 /**
  * The generated course progression of a smartly created course: a study period proposed from the course code and a
- * course progression that fills it completely, alternating theory and practice with two course phases per semester
- * (FACHLICHE_REGELN.md). Everything here is pure — the form previews with it and the creation writes from it.
+ * course progression that fills it completely, alternating theory and practice with two course phases per semester.
+ * Everything here is pure — the form previews with it and the creation writes from it.
  */
 import { inclusiveDays, plusDays, plusMonths, weekdayIndex } from "@/lib/domain/calendar-day";
 import type { PhaseType } from "@/lib/domain/phase-type";

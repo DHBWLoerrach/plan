@@ -1,127 +1,63 @@
-# Architektur und Betrieb
+# Architektur und Betriebsrahmen
 
-## Anwendung und Datenhaltung
+Dieses Dokument hält nur Systemgrenzen und betriebliche Annahmen fest, die nicht zuverlässig aus
+dem Repository ausführbar hervorgehen. Der aktuelle technische Ist-Stand steht in Code,
+Konfiguration, Datenbankschema und Tests. Begründungen grundlegender Entscheidungen stehen in den
+[`ADR`](adr/), konkrete Betriebsbefehle im [Betriebshandbuch](BETRIEBSHANDBUCH.md).
 
-Die Anwendung trägt den Produktnamen **DHBW Lörrach Plan**; ihre produktive
-Basis-URL ist [`https://plan.apps.szi.dhbw-loerrach.de`.](https://plan.apps.szi.dhbw-loerrach.de.) Das MVP ist ein modularer
-Next.js-Monolith in einem Docker-Container. Öffentliche Ansichten, interner Editor,
-Fachlogik, lokale Anmeldung und Datenzugriff sind eine Anwendung, aber klar
-getrennte Module. Neben den öffentlichen Ansichten stellt das MVP eine versionierte,
-schreibgeschützte REST-API für die veröffentlichten Kursphasen bereit; ihr Vertrag
-steht in [`OEFFENTLICHE_API.md`](OEFFENTLICHE_API.md).
+## Systemgrenze
 
-Die Anwendung greift serverseitig über `better-sqlite3` und explizite SQL-Abfragen auf SQLite zu. Versionierte SQL-Migrationen definieren das vollständige Datenbankschema. Tabellen stehen darin einheitlich im englischen Plural; Spalten, Indizes und Constraints verwenden englisches `snake_case`. TypeScript-Eigenschaften bleiben idiomatisch in `camelCase`. Drizzle ORM bildet insbesondere die `camelCase`-Felder von Better Auth auf die `snake_case`-Spalten ab und wird ausschließlich als Datenbankadapter und Tabellenmodell für Better Auth verwendet. Der Produktions-Build legt keine Datenbank an und migriert keine: Er sammelt nur die Routen, rendert keine Seite mit Fachdaten vor und darf deshalb keine Datei ins Image schreiben, die später die auf dem Volume verdecken würde. Die Anwendung läuft vorerst in genau einer Instanz. Datenbank und Bereitstellungsmodell werden erst neu bewertet, wenn mehrere Instanzen oder deutlich mehr gleichzeitige Schreibvorgänge tatsächlich erforderlich werden.
+Die Anwendung wird als eine Next.js-Anwendung mit einer persistenten SQLite-Datenbank betrieben.
+Öffentliche Seiten und die schreibgeschützte öffentliche API sind ohne Anmeldung erreichbar;
+Planung und Administration liegen hinter der internen Anmeldung. Die API besitzt mit
+[`OEFFENTLICHE_API.md`](OEFFENTLICHE_API.md) einen eigenen externen Vertrag.
 
-Die produktive Datenbank verwendet `PRAGMA journal_mode=WAL` und verifiziert diesen persistenten Modus beim Anwendungsstart. Jede geöffnete Verbindung aktiviert `PRAGMA foreign_keys=ON` und `PRAGMA busy_timeout=5000`. WAL erlaubt parallele Lesezugriffe, serialisiert Schreibvorgänge jedoch weiterhin; deshalb bleiben Schreibtransaktionen kurz. Ein nach Ablauf des Timeouts verbleibendes `SQLITE_BUSY` wird als vorübergehender, strukturierter Konflikt behandelt und nicht unbegrenzt wiederholt.
+Für die SQLite-Datei darf es nur eine schreibende Anwendungsinstanz geben. Horizontale Skalierung
+oder mehrere nebenläufig schreibende Container erfordern deshalb zuvor eine neue Datenbank- und
+Bereitstellungsentscheidung. Die Anwendung versendet keine E-Mails und betreibt keinen eigenen
+Scheduler.
 
-Kurse und weitere langlebige Entitäten erhalten unveränderliche, nicht aus Bezeichnungen abgeleitete IDs. Die Datenbank aktiviert Fremdschlüssel und eindeutige Constraints. Referenzierte oder bereits veröffentlichte Stammdaten werden nicht kaskadierend gelöscht; die Anwendungslogik setzt die Lösch- und Referenzregeln aus [`FACHLICHE_REGELN.md`](FACHLICHE_REGELN.md) durch.
-
-Fachliche Datumswerte werden als ISO-Kalendertage `YYYY-MM-DD` ohne UTC-Konvertierung gespeichert. Vergleiche für Lückenlosigkeit und Studienzeiträume erfolgen auf Kalendertagen, nicht auf UTC-Zeitstempeln.
-
-Zeitpunkte werden nach Eigentümerschaft der Tabelle unterschiedlich gespeichert: Die von Better Auth verwalteten Tabellen `users`, `accounts`, `sessions` und `verifications` halten sie als `INTEGER` in Epoch-Millisekunden, weil Better Auth diese Spalten selbst schreibt und liest und das Tabellenmodell in `lib/db/auth-schema.ts` sie entsprechend als `timestamp_ms` abbildet. Alle anwendungseigenen Tabellen speichern Zeitpunkte dagegen als `TEXT` im ISO-8601-UTC-Format aus `Date.prototype.toISOString()`. Dieses Format ist bei fester Breite lexikographisch chronologisch sortierbar, bleibt in Backups und Dumps unmittelbar lesbar und passt zu den ohnehin als Text abgelegten Kalendertagen derselben Zeile. `courses.updated_at` und `courses.published_at` folgen dieser Regel auch deshalb, weil ihre Werte beim Veröffentlichen unverändert als zuletzt gesehener Datenstand zurückgegeben und rein textuell verglichen werden.
-
-Texte werden vor der Validierung nach den [fachlichen Regeln](FACHLICHE_REGELN.md#textnormalisierung-und-eindeutigkeit) normalisiert. Bereichsbezeichnung und Kurskennung besitzen dafür einen kanonischen Vergleichsschlüssel mit eindeutigem Datenbank-Constraint, weil die SQLite-Kollation `NOCASE` Unicode nicht vollständig abdeckt. Dienstliche E-Mail-Adressen werden vor jedem Anwendungsschreibzugriff kleingeschrieben. E-Mail und Studiengangskürzel besitzen zusätzlich einen `UNIQUE`-Constraint mit `NOCASE`; er schützt auch direkte SQL-Zugriffe bei der für diese Werte üblichen ASCII-Groß-/Kleinschreibung, während die Anwendungsnormalisierung für darüber hinausgehendes Unicode maßgeblich bleibt.
-
-Jede schreibende Fachoperation erhält einen serverseitigen `AuthorizationContext` aus Konto, Rollen und Bereichen und prüft die Berechtigung selbst. Routen und Oberfläche ergänzen diese Prüfung, sind aber keine alleinige Sicherheitsgrenze. Der interne Editor verwendet Server Actions; sie rufen ausschließlich die Fachlogik auf. Die Anmeldung und die übrigen Better-Auth-Endpunkte laufen über den von Better Auth vorausgesetzten Auth-Route-Handler.
-
-Die Fachvalidierung liegt in einer gemeinsamen serverseitigen Regelbibliothek. Jede Regel ist dort entsprechend [`FACHLICHE_REGELN.md`](FACHLICHE_REGELN.md) als Struktur- oder Veröffentlichungsregel gekennzeichnet: Strukturregeln werden bei jedem Schreibvorgang durchgesetzt, Veröffentlichungsregeln beim Veröffentlichen und nach jeder Änderung eines veröffentlichten Kurses. Die Gesamtprüfung läuft in derselben SQLite-Transaktion wie die Änderung; ein Verstoß rollt sie vollständig zurück.
-
-Alle Seiten mit Fachdaten werden im MVP dynamisch gerendert und lesen unmittelbar aus SQLite; ein Next.js-Daten- oder Seiten-Cache wird dafür nicht aktiviert. Seiten ohne ohnehin verwendete Request-Time-API markieren den Beginn des Datenzugriffs mit `connection()`, damit Next.js sie nicht beim Build vorab rendert. Das verhindert veraltete öffentliche Kursdaten und benutzerspezifische Cache-Lecks ohne zusätzliche Invalidierungsinfrastruktur. Unveränderliche Build- und statische Assets verwenden weiterhin die Standard-Caches von Next.js.
-
-Das Schema speichert jeden Kurs, jede Kursphase und jeden prüfungsrelevanten Termin genau einmal. `courses.published_at` ist `NULL`, solange der Kurs nicht öffentlich sichtbar ist; andernfalls enthält es den Beginn der aktuellen Veröffentlichung. Öffentliche Listen, Filter, Ansichten und API lesen dieselben Tabellen wie der interne Editor und filtern auf diesen Zeitpunkt. `courses.normalized_code` ist systemweit eindeutig und dient zugleich der öffentlichen Kurssuche; das ebenfalls eindeutige Studiengangskürzel adressiert Studiengangszuschnitte und ist der URL-Wert des Studiengangsfilters. Zuschnitte über mehrere Kurse werden zur Laufzeit gebildet und nirgends gespeichert (siehe [ADR 0012](adr/0012-veroeffentlichung-als-sichtbarkeit-des-kurses.md)).
-
-Veröffentlichen setzt nach vollständiger Prüfung ausschließlich `published_at`; Zurücknehmen setzt es auf `NULL`. Es gibt keine Snapshot-Tabellen, veröffentlichten Zeilenidentitäten oder dauerhafte Markierung einer früheren Veröffentlichung. Das Löschen eines Kurses wird abgelehnt, solange `published_at` gesetzt ist.
-
-Kurse besitzen keinen allgemeinen Versionszähler. Jeder Kurs speichert in `updated_at` den Zeitpunkt seiner letzten Änderung und verweist über `updated_by_account_id` auf das zuletzt ändernde interne Konto. Die Angaben dienen der Änderungsanzeige und als pragmatische Aktualitätsprüfung vor der ersten Veröffentlichung; normale Speicheraktionen vergleichen sie nicht. Ein Kurs ist genau dann „in Arbeit“, wenn `published_at` nicht gesetzt ist.
-
-Der Editor speichert jede Anlage, Änderung und Löschung ausdrücklich als einzelne Server Action; ein Autosave existiert nicht. Eine Action schreibt ausschließlich die konkret bearbeitete Planangabe. Die gemeinsame Anlage für mehrere Kurse erzeugt innerhalb einer Transaktion je Kurs eine eigenständige Kursphase beziehungsweise einen eigenständigen Termin mit gleichen Ausgangsangaben und aktualisiert die Änderungsangaben jedes betroffenen Kurses. Bei veröffentlichten Kursen zeigt die Oberfläche vor dem Speichern die betroffenen Werte und die unmittelbare öffentliche Wirkung. Serverseitig wird der vollständige resultierende Kurs geprüft.
-
-Die Zusammenfassung übereinstimmender Kursphasen und Termine mehrerer Kurse ist eine Leseoperation der Darstellungsschicht. Sie gruppiert nach den in [`MVP-SPEZIFIKATION.md`](MVP-SPEZIFIKATION.md) festgelegten Schlüsseln, schreibt nichts und legt keine Beziehung an; eine Schreiboperation über eine zusammengefasste Zeile löst sich vor dem Aufruf der Fachlogik wieder in die einzelnen betroffenen Zeilen auf.
-
-Die Übernahme aus einer Vorlage ist eine zusammengesetzte Operation: Kursanlage, Verschiebung aller übernommenen Kalendertage um dasselbe Vielfache von sieben Tagen, Kürzung überstehender Kursphasen auf den Studienzeitraum und das Schreiben der Kopien laufen in einer Transaktion. Die Berechtigung wird gegen den Bereich des **neuen** Kurses geprüft; die Vorlage wird nur gelesen und darf in jedem Bereich liegen (siehe [ADR 0011](adr/0011-systemweite-leseeinsicht-in-kurse.md)). Es entsteht keine Referenz zwischen Vorlage und neuem Kurs.
-
-Die Bearbeitung eines Kurses prüft gegen den aktuellen Datenbankstand, dass der geänderte Studienzeitraum alle erfassten Kursphasen weiterhin umfasst und ein geänderter Studiengang genug Semester besitzt, und aktualisiert die Änderungsangaben des Kurses. Für normale Kurs- und Planangaben gilt einheitlich Last-write-wins.
-
-Interne Konten prüfen bei ihren seltenen administrativen Änderungen Eindeutigkeiten, Abhängigkeiten und Zustandsvoraussetzungen innerhalb der Transaktion erneut gegen den aktuellen Datenbankstand.
-
-Veröffentlichen übermittelt den zuletzt gesehenen Wert von `updated_at` und `published_at`. Stimmen Datenstand oder Sichtbarkeit nicht mehr überein, schreibt die Operation nichts und lädt die aktuelle Vorschau. Zurücknehmen adressiert den konkret angezeigten Wert von `published_at` und wird abgelehnt, wenn dieser nicht mehr aktuell ist. Beide Vorgänge betreffen genau einen Kurs.
-
-Über `updated_at` und `updated_by_account_id` am Kurs hinaus speichert die Anwendung keine fachlichen oder administrativen Änderungsereignisse, alten und neuen Werte oder gesonderten Sicherheitsereignisse und besitzt keine Auditoberfläche (siehe [ADR 0005](adr/0005-keine-auditspur-im-mvp.md)). Technische Logs dienen ausschließlich Betrieb und Fehlerdiagnose und sind keine Auditspur. Eine später eingeführte Protokollierung beginnt ab ihrem Einführungsstichtag und rekonstruiert keine früheren Änderungen.
-
-## Authentifizierung und Sitzungen
-
-Der Benutzer-Datensatz von Better Auth ist zugleich das interne Konto und besitzt die unveränderliche ID, auf die Rolle, Bereichszuordnungen und die Angabe zum zuletzt ändernden Konto eines Kurses verweisen; eine zweite 1:1-Kontotabelle existiert nicht. Das von Better Auth verlangte Namensfeld spiegelt im MVP lediglich die dienstliche E-Mail-Adresse und wird nicht angezeigt. Die lokale E-Mail-/Passwort-Anmeldung ist nur ein vorübergehendes Anmeldeverfahren für dieses Konto. Beim späteren Keycloak-Wechsel wird die externe Identität über `issuer` und `subject`, niemals allein über die E-Mail-Adresse, derselben Benutzer-ID zugeordnet; lokale Passwortdaten und Passwortlinks können danach ohne fachliche Migration entfallen (siehe [ADR 0003](adr/0003-authentifizierung-vom-internen-konto-trennen.md)).
-
-Der Wechsel erfolgt zu einem geplanten Umschalttermin und nicht als dauerhafter Parallelbetrieb. Nach der Zuordnung der Keycloak-Identitäten wird die lokale Anmeldung systemweit deaktiviert. Lokale Passwortdaten bleiben nur für ein kurzes technisches Rückwegfenster erhalten und werden danach gelöscht. Das MVP enthält noch keine Keycloak-spezifischen Felder, Synchronisation oder OIDC-Flows; diese kommen erst mit der späteren Integration als eigene Datenbankmigration hinzu.
-
-Für die Übergangszeit bis Keycloak/OIDC dient Better Auth mit Drizzle-/SQLite-Adapter. Selbstregistrierung und Self-Service-Reset für vergessene Passwörter sind deaktiviert; die authentifizierte Passwortänderung ist verfügbar. Better Auth übernimmt Passwort-Hashing, Sitzungsverwaltung und das Rate-Limit mit seinen eingebauten Mechanismen; die Anwendung implementiert dafür keine eigene Kryptografie und keine zusätzlichen Anmeldezähler. Die eigene Passwortlink- und Passwortänderungslogik verwaltet deren Hash, Kontostatus und den für Reset oder Sperrung notwendigen atomaren Widerruf lokaler Zugangsdaten und Sitzungen; beim Passwortwechsel bleibt die aktuelle Sitzung erhalten.
-
-- Passwörter sind mindestens 15 und höchstens 128 Unicode-Codepoints lang. Passwortmanager und Einfügen sind zulässig. Es gibt keine Zeichenklassen, Wechselpflicht oder lokale Passwortsperrliste; das MVP beansprucht damit keine formale Konformität zu NIST SP 800-63B.
-- Better Auth speichert Passwörter mit seinem standardmäßigen `scrypt`-Verfahren. Die Anwendung konfiguriert keinen eigenen Passwort-Hasher.
-- Anmeldungen erfolgen über den öffentlichen Better-Auth-Route-Handler, damit dessen eingebautes Rate-Limit greift. Das Limit ist in allen Umgebungen aktiv und behält die eingebauten Fenster und Höchstwerte; eigene Anmeldezähler gibt es nicht. Es verwendet flüchtige Arbeitsspeicherschlüssel; Traefik setzt die dafür ausgewerteten weitergeleiteten IP-Header vertrauenswürdig, und der Anwendungscontainer ist nicht direkt öffentlich erreichbar.
-- Ausgewertet wird ausschließlich `X-Forwarded-For`. Überschreibt der Proxy den Header, genügt das ohne weitere Konfiguration. Hängt er stattdessen an, benennt `TRUSTED_PROXY_IPS` die Adressen oder CIDR-Bereiche der Proxys — kommagetrennt und so eng wie möglich, keinen breiten privaten Bereich, der auch Clients umfasst. Bleibt eine mehrgliedrige Kette unkonfiguriert, ist sie nicht auflösbar und alle Clients teilen sich einen Zähler.
-- Passwortlinks sind zufällig, einmal verwendbar, serverseitig nur gehasht gespeichert und sieben Tage gültig. Jeder Hash ist in der Datenbank eindeutig, sodass ein Token höchstens ein Konto adressiert. Die Links werden ausschließlich für Konten mit ausstehender Passwortvergabe erzeugt; eine Neuausstellung macht den vorherigen Link ungültig. Dieser Ablauf ist kein eingebauter Better-Auth-Flow, sondern eigene Anwendungslogik: kryptografisch zufälliges Token erzeugen, nur den Hash speichern, Zustände prüfen; das eigentliche Passwort wird mit dem Better-Auth-Hasher gespeichert.
-- Das erste Systemadministrationskonto wird ausschließlich im laufenden Anwendungscontainer eingerichtet: `npm run bootstrap:admin -- --email <dienstliche-e-mail>`. Der Befehl verlangt die bereits migrierte, vorhandene SQLite-Datei in `DATABASE_URL`, ein mindestens 32 Zeichen langes `BETTER_AUTH_SECRET` und die öffentliche Basis-URL in `BETTER_AUTH_URL`. Er prüft alle vorhandenen Migrationen sowie SQLite- und Fremdschlüsselintegrität, bricht ab, sobald bereits ein internes Konto besteht, und schreibt bei Erfolg ausschließlich den vollständigen Passwortlink auf die Standardausgabe. Das Betriebsteam kopiert ihn unmittelbar und gibt ihn manuell weiter; der Token wird weder gespeichert noch geloggt. Es gibt keinen HTTP-Endpunkt zum Bootstrap.
-- Ein Passwortlink wird unmittelbar nach seiner Erzeugung genau einmal vollständig angezeigt, kopiert und manuell weitergegeben. Da nur der Token-Hash gespeichert wird, kann ein verlassener Link nicht erneut angezeigt, sondern nur durch einen neuen ersetzt werden.
-- Das Token steht ausschließlich im URL-Fragment des Passwortlinks. Die Zielseite liest es einmalig, entfernt das Fragment sofort aus der sichtbaren URL und sendet das Token nur im Body der Passwortvergabe an den Server. Dadurch erreicht es weder den Request-Pfad noch Proxy- oder Anwendungszugriffslogs.
-- Aktive Mitarbeitende ändern ihr Passwort über eine eigene Kontoseite. Die serverseitige Operation prüft das bisherige Passwort mit Better Auth, speichert das neue Passwort mit dessen Hasher und widerruft alle anderen Sitzungen, während die aktuelle Sitzung erhalten bleibt. Erstmalige Vergabe und das Zurücksetzen eines vergessenen Passworts verwenden weiterhin einen ausgegebenen Passwortlink.
-- Eine Sitzung endet fest sieben Tage nach der Anmeldung und bleibt bis dahin auch über Browser-Neustarts hinweg gültig. Better Auth wird dafür ohne Sitzungsverlängerung und ohne Cookie-Cache betrieben. Es gibt weder eine zusätzliche Inaktivitätsgrenze noch eine Ablaufwarnung. Jede geschützte Fachoperation prüft die Sitzung direkt in der Datenbank.
-- Die Sitzung weist ausschließlich die interne Konto-ID nach. Kontostatus, Rolle und Bereichszuordnungen werden für jede geschützte Fachoperation aktuell aus der Datenbank geladen und nie im Sitzungskontext zwischengespeichert.
-- Der Sitzungsdatensatz speichert die bei der Anmeldung ermittelte IP-Adresse und den User-Agent bis zum Ablauf oder Widerruf der Sitzung, längstens sieben Tage. Beide Angaben werden weder in eine Historie übernommen noch darüber hinaus für Nutzungsanalyse verwendet.
-- Logout beendet die aktuelle Sitzung. Eine Kontosperrung oder ein Passwort-Reset macht alle Sitzungen des Kontos sofort ungültig.
-- Die administrative Änderung der E-Mail-Adresse aktualisiert ausschließlich die Anmeldeadresse desselben internen Kontos. Kontozustand, Passwort, Sitzungen und offene Passwortlinks bleiben erhalten; die Anwendung bietet keine Übertragung eines Kontos auf eine andere Person.
-- Eine gesonderte Funktion „Angemeldet bleiben“ gibt es nicht. Das Sitzungscookie gilt einheitlich sieben Tage und nutzt HTTPS, `HttpOnly`, `Secure` sowie `SameSite=Lax`. Anmeldetokens liegen nie im Browser-Speicher.
+Die vorgesehene produktive Basis-URL ist
+`https://plan.apps.szi.dhbw-loerrach.de`. TLS-Terminierung, HSTS und die Weiterleitung an den
+Anwendungscontainer übernimmt Traefik. Der Container ist nicht unmittelbar öffentlich erreichbar.
+Traefik überschreibt eingehende Forwarding-Header oder seine Adressen werden über
+`TRUSTED_PROXY_IPS` eng begrenzt. Die konkrete Container-, Proxy- und Healthcheck-Konfiguration
+liegt außerhalb dieses Repositorys und muss vor dem Go-live bereitgestellt und geprüft werden.
 
 ## Betrieb, Backups und Datenschutz
 
-Die Anwendung wird auf vorhandenen DHBW-VPS als zusätzlicher Docker-Container hinter der bestehenden Traefik-Instanz betrieben. Die SQLite-Datei liegt auf einem persistenten Volume bzw. Host-Mount außerhalb des beschreibbaren Container-Dateisystems.
+Das Betriebsteam stellt ein persistentes Volume für die SQLite-Datei bereit. Ein externer Host-Cron
+oder systemd-Timer stößt täglich die im [Betriebshandbuch](BETRIEBSHANDBUCH.md) beschriebene,
+integritätsgeprüfte Sicherung an. Der Snapshot wird verschlüsselt an ein vom Anwendungsserver
+getrenntes DHBW-Backupziel übertragen und dort 30 Tage aufbewahrt. Konfiguration und benötigte
+langlebige Geheimnisse werden getrennt verschlüsselt gesichert.
 
-Das App-Team der DHBW Lörrach verantwortet Domain, TLS, Deployment, Container- und Systemupdates, Monitoring und die Erstreaktion bei Störungen. Der Mindestbetrieb besteht aus Container-Healthcheck, HTTP-Erreichbarkeitsprüfung, zentralen Fehlerlogs sowie einem dokumentierten Update- und Eskalationsweg.
+Bei erfolgreicher täglicher Sicherung beträgt der maximale planmäßige Datenverlust 24 Stunden; ein
+formales RPO, RTO oder Verfügbarkeits-SLA wird nicht zugesagt. Vor dem Go-live werden Verantwortung,
+Backupziel und Eskalationsweg benannt und eine Wiederherstellung erfolgreich erprobt. Migrationen
+und Wiederherstellungen erfolgen bei gestoppter Anwendung nach dem Betriebshandbuch. Erreichbarkeit,
+Fehler und auffällige Antwortzeiten werden mit den vorhandenen Betriebswerkzeugen überwacht;
+wiederkehrende `SQLITE_BUSY`-Fehler lösen eine Neubewertung der Architektur aus.
 
-Traefik überschreibt `X-Forwarded-For`, `X-Forwarded-Host` und `X-Forwarded-Proto`; der Container ist ausschließlich aus dem Proxy-Netz erreichbar. Next.js Server Actions und Better Auth vertrauen nur der konfigurierten produktiven Origin, ohne Wildcards. Die Origin-/Host-Prüfung wird hinter Traefik in einem Integrationstest verifiziert.
-
-Eine nonce-basierte Content Security Policy nach dem Next.js-Self-Hosting-Muster sowie `frame-ancestors 'none'`, `object-src 'none'`, `base-uri 'self'` und `form-action 'self'` begrenzen ausführbare und einbettbare Inhalte. Traefik setzt zusätzlich HSTS; die Anwendung setzt mindestens `X-Content-Type-Options: nosniff`, eine restriktive `Referrer-Policy` und eine auf tatsächlich benötigte Browserfunktionen begrenzte `Permissions-Policy`.
-
-Ein CLI-Befehl im Anwendungscontainer erzeugt über die SQLite Online Backup API einen konsistenten Datenbank-Snapshot und prüft ihn mit `PRAGMA integrity_check`. Die konkreten Befehle und ihre Reihenfolge stehen im [Betriebshandbuch](BETRIEBSHANDBUCH.md). Ein Host-Cron beziehungsweise systemd-Timer ruft den Befehl täglich auf; die Anwendung enthält keinen eigenen Scheduler. Der geprüfte Snapshot wird verschlüsselt an ein vom VPS getrenntes DHBW-Backupziel übertragen und dort 30 Tage aufbewahrt. Anwendungs-Konfiguration und benötigte langlebige Geheimnisse werden getrennt verschlüsselt gesichert.
-
-Bei erfolgreicher täglicher Sicherung beträgt der maximale planmäßige Datenverlust 24 Stunden; ein formales RPO, RTO oder Verfügbarkeits-SLA wird für das MVP nicht zugesagt. Eine Wiederherstellung erfolgt nur bei gestoppter Anwendung: Die Datenbankintegrität wird geprüft, Snapshot und passende Konfiguration werden eingespielt und anschließend das dazu passende Container-Image gestartet. Vor dem Go-live wird eine Wiederherstellung erfolgreich erprobt. Die Verantwortung für Backup, Wiederherstellung und Ziel wird vor dem Deployment benannt.
-
-Die Anwendung verarbeitet dienstliche E-Mail-Adressen, Rollen und Bereichszuordnungen, Kontostatus, Passwort-Hashes, gehashte Passwortlink-Tokens, Sitzungen sowie Konto-ID und Zeitpunkt der letzten Änderung eines Kurses. Sitzungsdatensätze enthalten IP-Adresse und User-Agent bis zu ihrem Ablauf oder Widerruf, längstens sieben Tage. Zur Abwehr automatisierter Anmeldeversuche verarbeitet Better Auth IP-Adressen zusätzlich in flüchtigen Arbeitsspeicherzählern; eine darüber hinausgehende dauerhafte IP- oder User-Agent-Historie und eine Nutzungsanalyse existieren nicht. Die Anwendung verarbeitet keine Studierendendaten. Gesperrte Konten bleiben für die Dauer des MVP-Testbetriebs erhalten; das MVP enthält keinen automatischen Anonymisierungs- oder Löschlauf. Eine weitergehende Aufbewahrungsregel wird vor einem Regelbetrieb mit der zuständigen DHBW-Stelle festgelegt.
+Die Anwendung verarbeitet dienstliche E-Mail-Adressen, Rollen und Bereichszuordnungen,
+Kontostatus, Passwort-Hashes, gehashte Passwortlink-Tokens, Sitzungen sowie Konto-ID und Zeitpunkt
+der letzten Änderung eines Kurses. Sitzungsdatensätze können IP-Adresse und User-Agent bis zu ihrem
+Ablauf oder Widerruf enthalten. Für das Rate-Limit können IP-Adressen zusätzlich flüchtig
+verarbeitet werden. Die Anwendung verarbeitet keine Studierendendaten und führt keine
+Nutzungsanalyse. Für gesperrte Konten gibt es keinen automatischen Anonymisierungs- oder
+Löschlauf; eine Aufbewahrungsregel muss vor einem Regelbetrieb mit der zuständigen DHBW-Stelle
+festgelegt werden.
 
 ## Rechtliche Pflichtinformationen
 
-Impressum, Datenschutzhinweise und Erklärung zur Barrierefreiheit sind aus allen öffentlichen und internen Ansichten leicht erreichbar. Vor Go-live bestätigt das App-Team mit der zuständigen DHBW-Stelle, ob die zentralen DHBW-Seiten die Anwendung vollständig abdecken. Andernfalls erhält die Anwendung ergänzende Hinweise.
+Impressum, Datenschutzhinweise und Erklärung zur Barrierefreiheit müssen aus allen öffentlichen
+und internen Ansichten leicht erreichbar sein. Vor dem Go-live bestätigt das App-Team mit der
+zuständigen DHBW-Stelle, ob die zentralen DHBW-Seiten die Anwendung vollständig abdecken.
+Andernfalls erhält die Anwendung ergänzende Hinweise.
 
-Die Datenschutzhinweise müssen insbesondere die lokale Kontoverwaltung, technisch notwendige Sitzungscookies, Passwortlinks, Rollen- und Bereichszuordnungen, die Zuordnung der letzten Kursänderung zu einem internen Konto, die kurzzeitige Speicherung von IP-Adresse und User-Agent in Sitzungsdatensätzen, die flüchtige IP-Verarbeitung für das Rate-Limit, Zwecke, Rechtsgrundlagen, Empfänger, Speicherfristen sowie Betroffenenrechte und Kontaktstellen beschreiben. Ein bloßer Verweis auf allgemeine DHBW-Hinweise genügt nur, wenn diese Verarbeitungen dort tatsächlich erfasst sind.
-
-Beim ersten Deployment führt das App-Team im Anwendungscontainer einen Initialisierungsbefehl mit der dienstlichen E-Mail-Adresse des ersten Systemadministrationskontos aus. Der Befehl funktioniert ausschließlich, solange noch kein internes Konto existiert. Er legt das Konto mit ausstehender Passwortvergabe an und gibt den einmal verwendbaren Passwortlink unmittelbar im Terminal aus; Link und Token erscheinen nicht in Anwendungslogs. Ein öffentlicher Bootstrap-Endpunkt, ein Bootstrap-Geheimnis und eine dauerhafte Bootstrap-Marke existieren nicht.
-
-Bereiche und Studiengänge werden beim ersten Deployment aus einem versionierten Seed angelegt; die verbindlichen Inhalte stehen in [`SEED-DATEN.md`](SEED-DATEN.md). Das MVP besitzt dafür keine Administrationsoberfläche und keine Stilllegungs- oder Löschzustände. Der Seed ist die versionierte Fassung dieser Stammdaten und wird bei jedem Anwendungsstart angewandt: Spätere Ergänzungen und Umbenennungen erfolgen dadurch, dass die Seed-Liste im Code geändert wird; spontane Änderungen direkt in der Produktivdatenbank sind kein vorgesehener Betriebsweg. Der Seed adressiert jede Zeile über ihren fachlichen Schlüssel — den normalisierten Bereichsnamen, das Kürzel des Studiengangs — und nicht über ihre Position in der Liste, damit ein nachträglich eingefügter Eintrag eine bestehende Datenbank genauso erreicht wie eine frische und eine geänderte Bezeichnung die vorhandene Zeile korrigiert, statt verworfen zu werden. Die IDs benennen die Zeile, zu der sie gehören — `area-technik`, `program-tif` —, damit eine Abfrage in der Datenbank lesbar bleibt; sie werden beim Anlegen vergeben und danach nicht mehr angefasst, weil Kurse und Bereichszuordnungen auf sie zeigen. Nach einer Umbenennung trägt eine ID also weiterhin die alte Bezeichnung; das ist eine veraltete Lesart eines unveränderten Werts und kein Grund, eine neue zu vergeben. Die systemweite Eindeutigkeit der aktuellen Bezeichnungen und Kürzel bleibt gewahrt. Was der Seed nicht tut, ist zurücknehmen: Ein aus der Liste entfernter Eintrag bleibt bestehen, weil Kurse auf ihn zeigen können; ebenso bleibt die Semesterzahl eines Studiengangs unangetastet, weil Kursphasen gegen sie gezählt werden. Beides ist eine versionierte Datenmigration, die entscheiden muss, was mit den betroffenen Kursen geschieht. Historische Veröffentlichungsbezeichner müssen nicht reserviert werden, weil keine veröffentlichten Kopien oder Fassungen fortbestehen.
-
-Für den Verlust des einzigen administrativen Zugangs existiert ein gesonderter Notfallbefehl im Anwendungscontainer: `npm run reset:admin-password -- --email <dienstliche-e-mail>`. Er verlangt dieselben Umgebungsvariablen wie der Initialisierungsbefehl und darf ausschließlich das Passwort eines bestehenden Systemadministrationskontos zurücksetzen, beendet dessen Sitzungen und gibt einen neuen Passwortlink im Terminal aus. Er legt weder Konten noch Rechte an: Eine unbekannte E-Mail-Adresse und ein Konto ohne Systemadministration werden abgewiesen, ein gesperrtes Konto wird zuerst in der Anwendung freigegeben. Wie beim Initialisierungsbefehl erscheint der Token weder in Anwendungslogs noch in der Datenbank.
-
-Nach der erstmaligen Passwortvergabe erzwingt die Fachlogik bei jeder Änderung über die Anwendung, dass mindestens ein aktives Systemadministrationskonto erhalten bleibt. Sperrung, Passwort-Reset oder Rechteänderung des letzten aktiven Systemadministrationskontos werden atomar abgelehnt; ein Wechsel setzt ein zuvor aktiviertes Ersatzkonto voraus. Ausschließlich der Notfallbefehl darf diesen Zustand vorübergehend verletzen, indem er das letzte Systemadministrationskonto auf „Passwortvergabe ausstehend“ setzt.
-
-## Migration und Rückweg
-
-Unmittelbar vor jeder produktiven Datenbankmigration stoppt das App-Team die Anwendung — einen gesonderten Wartungsmodus gibt es nicht; ohne SLA ist die kurze Downtime akzeptabel — und erstellt mit demselben Online-Backup- und Integritätsverfahren eine konsistente, datierte Sicherung der SQLite-Datenbank sowie der zugehörigen Konfiguration. Danach werden die versionierten Migrationen aus dem neuen Container-Image ausgeführt — es enthält sie, das laufende Image kennt sie noch nicht — und mit Healthcheck, Datenbankprüfung und einem fachlichen Smoke-Test verifiziert. Der Anwendungsstart migriert produktiv nicht selbst, sondern bricht bei ausstehenden Migrationen ab; so bleibt die Sicherung aus dem vorigen Schritt garantiert vor der Schemaänderung.
-
-Schlägt die Migration oder Prüfung fehl, wird nicht mit der neuen Version weitergearbeitet: Das App-Team stellt die unmittelbar zuvor gesicherte SQLite-Datei und Konfiguration wieder her und startet das vorherige Container-Image. Backup, Migrationsversion, Prüfergebnis und ein gegebenenfalls ausgeführter Rückweg werden dokumentiert.
-
-## Tests
-
-Es gibt keine separate Test- oder Staging-Anwendung. Migrationen werden mit Testdaten geprüft; produktive Daten und Konten bleiben davon ausgeschlossen.
-
-Vitest prüft Fachvalidierung, Rechte, Veröffentlichungslogik einschließlich Aktualitätsprüfung und öffentlicher Kurs-Eindeutigkeit, unmittelbare Korrekturen veröffentlichter Kurse mit atomarer Validierung, die Verschiebung und Kürzung bei der Übernahme aus einer Vorlage, Last-write-wins bei normalen Änderungen, Kontozustände, Passwortlinks, Passwortänderung, Sitzungsablauf und -widerruf, Referenzintegrität, Migrationen und Transaktionen gegen temporäres SQLite. Playwright bleibt auf drei Browser-Smoke-Flows begrenzt: Passwort setzen und anmelden; einen Kurs bearbeiten, veröffentlichen und öffentlich lesen; Rechtebegrenzung und Tastaturbedienbarkeit. Passwortänderung, administrativer Passwort-Reset, Zurücknahme und Nebenläufigkeitsfälle werden nicht zusätzlich als vollständige Browserabläufe wiederholt. Ein Integrationstest verifiziert das Rate-Limit und die vertrauenswürdige IP-Weitergabe hinter Traefik. Vor jedem Deployment müssen Typprüfung, Linting, Tests und Produktions-Build erfolgreich sein.
-
-Das MVP besitzt keine reproduzierbare Lasttest-Suite und keine Antwortzeit-Abnahmegrenzen. Der Betrieb beobachtet Erreichbarkeit, Fehler und auffällige Antwortzeiten mit den vorhandenen Betriebswerkzeugen. Regelmäßig schlechte Antwortzeiten oder `SQLITE_BUSY`-Fehler lösen eine Neubewertung von Datenbank- und Bereitstellungsarchitektur aus.
-
-## Quellen
-
-- [DSGVO](https://eur-lex.europa.eu/legal-content/DE/TXT/?uri=CELEX:32016R0679) — Artikel 5 (Grundsätze) und Artikel 13 (Informationspflichten)
-- [Digitale-Dienste-Gesetz, § 5](https://www.gesetze-im-internet.de/ddg/__5.html) — Impressumspflicht
-- [DHBW Datenschutz](https://www.dhbw.de/datenschutz) und [DHBW-Impressum](https://www.dhbw.de/impressum/)
-- NIST SP 800-63B: [Passwörter](https://pages.nist.gov/800-63-4/sp800-63b.html) und [Sitzungen](https://pages.nist.gov/800-63-4/sp800-63b/session/)
-- Better Auth: [Next.js-Integration](https://www.better-auth.com/docs/integrations/next), [E-Mail und Passwort](https://www.better-auth.com/docs/authentication/email-password), [Sitzungen](https://www.better-auth.com/docs/concepts/session-management) und [Rate-Limit](https://www.better-auth.com/docs/concepts/rate-limit)
-- Next.js: [`connection()`](https://nextjs.org/docs/app/api-reference/functions/connection), [Content Security Policy](https://nextjs.org/docs/app/guides/content-security-policy) und [Datensicherheit](https://nextjs.org/docs/app/guides/data-security)
-- SQLite: [Write-Ahead Logging](https://www.sqlite.org/wal.html), [Online Backup API](https://www.sqlite.org/backup.html) und [PRAGMA `busy_timeout`/`integrity_check`](https://www.sqlite.org/pragma.html)
+Die Datenschutzhinweise müssen insbesondere lokale Kontoverwaltung, technisch notwendige
+Sitzungscookies, Passwortlinks, Rollen- und Bereichszuordnungen, die Zuordnung der letzten
+Kursänderung zu einem internen Konto, die Verarbeitung von IP-Adresse und User-Agent, Zwecke,
+Rechtsgrundlagen, Empfänger, Speicherfristen, Betroffenenrechte und Kontaktstellen beschreiben.
+Ein bloßer Verweis auf allgemeine DHBW-Hinweise genügt nur, wenn diese Verarbeitungen dort
+tatsächlich erfasst sind.

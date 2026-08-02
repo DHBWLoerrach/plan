@@ -34,7 +34,7 @@ function CourseFields({ programs, course, period }: { programs: Program[]; cours
   </>;
 }
 
-/** How the preview names the shift: whole weeks, in the direction the new study start lies (FACHLICHE_REGELN.md). */
+/** How the preview names the shift: whole weeks, in the direction the new study start lies. */
 function shiftSentence(weeks: number): string {
   if (weeks === 0) return "Die Verschiebung ist null: Vorlage und neuer Kurs beginnen in derselben Woche.";
   const direction = weeks > 0 ? "später" : "früher";

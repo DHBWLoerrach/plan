@@ -15,7 +15,7 @@ const filterLabels: Record<(typeof filterKeys)[number], string> = {
 };
 
 /**
- * The options come exclusively from the current master data of published courses (MVP-SPEZIFIKATION.md). A value
+ * The options come exclusively from the current master data of published courses. A value
  * taken from the URL that no published course carries any more is not offered as a further choice but marked as such, so that
  * the shown state still matches the shared link.
  */
@@ -72,7 +72,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
     ? `Aktive Filter: ${activeFilters.map((filter) => `${filter.label} ${filter.value}`).join(", ")}.`
     : "Keine Filter gesetzt.";
   // Resetting filters and going back or forward are client-side navigations that keep the form fields mounted; the key
-  // remounts them, so the shown filters always match the URL (MVP-SPEZIFIKATION.md).
+  // remounts them, so the shown filters always match the URL.
   const formKey = filterKeys.map((key) => filters[key] ?? "").join("\u0000");
 
   return <SiteShell>

@@ -165,8 +165,7 @@ describe("buildSemesterMatrix", () => {
   });
 
   it("keeps the maximal periods of the courses that a reduced course selection still shows", () => {
-    // The public detail view may hide course columns; the rows then follow the visible courses alone
-    // (MVP-SPEZIFIKATION.md).
+    // The public detail view may hide course columns; the rows then follow the visible courses alone.
     expect(buildSemesterMatrix([courses[0]], completePhases, 1)).toEqual([
       { startDate: "2026-10-01", endDate: "2026-12-31", cells: ["Theorie"] },
     ]);

@@ -1,14 +1,14 @@
-# Projektentscheidungen
+# Quellen der Wahrheit
 
-Jedes Dokument ist für genau eine Art von Entscheidung maßgeblich. Andere Dokumente beschreiben nur die für ihre Perspektive sichtbaren Folgen und verweisen für Details auf die jeweilige Quelle.
+Für jede Art von Information gibt es genau eine maßgebliche Quelle. Aktuelles ausführbares Verhalten, fachliche Invarianten und technische Details stehen in Code, Datenbankschema und automatisierten Tests. Dokumentation wiederholt diesen Ist-Stand nicht.
 
-- [`../CONTEXT.md`](../CONTEXT.md): kanonische Domänensprache ohne Implementierungsdetails.
-- [Fachliche Regeln](FACHLICHE_REGELN.md): normative Invarianten, Lebenszyklen und Berechtigungen.
-- [MVP-Spezifikation](MVP-SPEZIFIKATION.md): Produktumfang, sichtbares Verhalten, Oberflächen und bewusst ausgeklammerte Funktionen.
-- [Architektur und Betrieb](ARCHITEKTUR_UND_BETRIEB.md): technische und betriebliche Entscheidungen, Sicherheit, Migration und Teststrategie.
+- [`../CONTEXT.md`](../CONTEXT.md): kanonische Domänensprache ohne Verhaltensspezifikation.
+- [`adr/`](adr/): Gründe, Alternativen und Konsequenzen grundlegender Entscheidungen. ADRs erklären ihre historische Entscheidung und sind keine vollständige Beschreibung des aktuellen Systems.
+- [Architektur und Betriebsrahmen](ARCHITEKTUR_UND_BETRIEB.md): Systemgrenzen und externe Betriebs-, Datenschutz- und Deploymentannahmen, die nicht im Repository durchsetzbar sind.
 - [Betriebshandbuch](BETRIEBSHANDBUCH.md): ausführbare Betriebswege für Sicherung, Migration, Wiederherstellung und Notfälle.
 - [Öffentliche API](OEFFENTLICHE_API.md): versionierter, schreibgeschützter Vertrag für veröffentlichte Kursphasen.
 - [Seed-Daten](SEED-DATEN.md): verbindliche Bereiche und Studiengänge für den initialen Seed.
 - [Barrierefreiheit](BARRIEREFREIHEIT.md): verbindliche Gestaltungs- und Abnahmekriterien der Barrierefreiheit.
-- [KI-Agent-Kursimport](KI_AGENT_KURSIMPORT.md): eigenständiger Auftragstext, mit dem ein KI-Agent Kurse aus Blockplan-PDFs als SQL-Planungsstand erzeugt. Betriebliche Hilfe außerhalb der Anwendung, kein MVP-Funktionsumfang.
-- [`adr/`](adr/): Begründungen schwer reversibler Entscheidungen und verworfene Alternativen.
+- [KI-Agent-Kursimport](KI_AGENT_KURSIMPORT.md): eigenständiger, außerhalb der Anwendung verwendbarer Importvertrag für einen KI-Agenten. Sein absichtlich wiederholtes Zielschema muss bei relevanten Schemaänderungen mitgeändert werden.
+
+Eine separate Produkt- oder MVP-Spezifikation gibt es nicht mehr. Oberflächen, Routen und aktueller Funktionsumfang werden aus Anwendung und Tests abgelesen. Eine neue Dokumentdatei ist nur sinnvoll, wenn sie einen externen Vertrag, einen menschlichen Ablauf, kanonische Sprache oder die Begründung einer Entscheidung besitzt. Geplante Arbeit und noch nicht umgesetzte Anforderungen werden nicht als Beschreibung des Repositorys dokumentiert.

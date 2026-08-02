@@ -17,11 +17,12 @@ type ProgramRow = { id: string; areaId: string; semesters: number };
 type CourseRow = { id: string; programId: string };
 
 /**
- * Creates a course: as an adoption from a template, or with a generated course progression of its own. The permission
+ * Creates a course, optionally adopting a template or writing a generated course progression. The permission
  * is decided on the area of the **new** course; the template is only read and may belong to any area
- * (FACHLICHE_REGELN.md). Creation and progression share this one transaction.
+ * (ADR 0011). Creation and progression share this one transaction.
  *
- * The two ways are exclusive, as they are in the interface: a course is created either from a template or smartly.
+ * Adoption and a generated progression are mutually exclusive. TODO: Require exactly one; the service currently
+ * still accepts a creation with neither.
  */
 export function createCourse(sqlite: Database.Database, input: { accountId: string; adoption?: AdoptionInput; plan?: CoursePlanInput[]; now?: Date } & CourseInput): string {
   if (input.adoption && input.plan) throw new Error("Ein Kurs wird entweder aus einer Vorlage oder mit einem erzeugten Studienplan angelegt.");
