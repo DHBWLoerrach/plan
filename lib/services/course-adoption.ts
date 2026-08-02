@@ -9,6 +9,8 @@ export type AdoptionTemplateCourse = AdoptionTemplate & { id: string; code: stri
 export type AdoptionInput = { templateCourseId: string; withPhases: boolean; withEvents: boolean };
 /** An entry of the template select: the course it stands for and the text that decides the choice. */
 export type AdoptionTemplateChoice = { id: string; label: string };
+/** Whose study programs decide which templates can be adopted at all. */
+export type AdoptionAccount = { id: string; systemAdmin: boolean };
 
 /**
  * Reads a template with everything an adoption copies. Any existing course may be a template, whatever its area and
@@ -60,13 +62,17 @@ export function adoptIntoCourse(sqlite: Database.Database, input: {
 }
 
 /**
- * Every course as a possible template, whatever its area and study program: the adoption worth having is usually the
- * one across areas, and a template is only ever read (ADR 0011). The label carries what decides the choice — study
- * program, year and the number of semesters an adoption has to match.
+ * The courses this account can actually adopt from. Area and study program do not narrow it — the adoption worth
+ * having is usually the one across areas, and a template is only ever read (ADR 0011). The number of semesters does:
+ * an adoption requires template and target to agree on it, so a template no study program of this account matches
+ * could only ever lead into a refusal after it was chosen. The label carries what decides the choice.
  */
-export function adoptionTemplateChoices(sqlite: Database.Database): AdoptionTemplateChoice[] {
+export function adoptionTemplateChoices(sqlite: Database.Database, account: AdoptionAccount): AdoptionTemplateChoice[] {
   const rows = sqlite.prepare(`SELECT course.id, course.code, program.abbreviation, program.semesters, area.name AS areaName, substr(course.study_start, 1, 4) AS year
     FROM courses course JOIN programs program ON program.id = course.program_id JOIN areas area ON area.id = program.area_id
-    ORDER BY area.name COLLATE NOCASE, course.code COLLATE NOCASE`).all() as { id: string; code: string; abbreviation: string; semesters: number; areaName: string; year: string }[];
+    WHERE program.semesters IN (SELECT target.semesters FROM programs target
+      WHERE ? = 1 OR target.area_id IN (SELECT area_id FROM area_assignments WHERE user_id = ?))
+    ORDER BY area.name COLLATE NOCASE, course.code COLLATE NOCASE`)
+    .all(account.systemAdmin ? 1 : 0, account.id) as { id: string; code: string; abbreviation: string; semesters: number; areaName: string; year: string }[];
   return rows.map((course) => ({ id: course.id, label: `${course.code} — ${course.abbreviation}, Jahrgang ${course.year}, ${course.semesters} Semester (${course.areaName})` }));
 }

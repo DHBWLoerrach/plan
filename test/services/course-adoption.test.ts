@@ -122,12 +122,44 @@ describe("readAdoptionTemplate", () => {
 });
 
 describe("adoptionTemplateChoices", () => {
-  it("offers every course of every area, named by what decides the choice", () => {
+  const editor = { id: "editor", systemAdmin: false };
+
+  /**
+   * A course over seven semesters, and an editor whose only study program has six: the one constellation in which a
+   * template exists that this account can never adopt from.
+   */
+  function withSevenSemesterCourse(sqlite: Database.Database) {
+    sqlite.exec(`
+      INSERT INTO users VALUES ('editor-w', 'Editor Wirtschaft', 'editor-w@test', 0, NULL, 'AREA_EDITOR', 0, 'ACTIVE', 0, 0);
+      INSERT INTO area_assignments VALUES ('editor-w', 'area-wirtschaft');
+      INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, published_at, updated_at, updated_by_account_id)
+        VALUES ('seven', 'prog-tif7', 'TIF7-25A', 'tif7-25a', '2025-10-01', '2029-03-31', NULL, '2026-01-01T00:00:00.000Z', 'editor');`);
+  }
+
+  it("offers courses of every area, named by what decides the choice", () => {
     const sqlite = database();
     createCourse(sqlite, newCourse);
-    expect(adoptionTemplateChoices(sqlite)).toEqual([
+    expect(adoptionTemplateChoices(sqlite, editor)).toEqual([
       { id: expect.any(String), label: "TIF26A — TIF, Jahrgang 2026, 6 Semester (Technik)" },
       { id: "template", label: "WWI25A — WWI, Jahrgang 2025, 6 Semester (Wirtschaft)" },
     ]);
+  });
+
+  it("leaves out a template no study program of the account could match", () => {
+    const sqlite = database();
+    withSevenSemesterCourse(sqlite);
+    expect(adoptionTemplateChoices(sqlite, { id: "editor-w", systemAdmin: false }).map((choice) => choice.id)).toEqual(["template"]);
+  });
+
+  it("offers a template matching any one of the study programs of the account, not only the first", () => {
+    const sqlite = database();
+    withSevenSemesterCourse(sqlite);
+    expect(adoptionTemplateChoices(sqlite, editor).map((choice) => choice.id)).toEqual(["seven", "template"]);
+  });
+
+  it("offers every course to the system administration, whose study programs are all of them", () => {
+    const sqlite = database();
+    withSevenSemesterCourse(sqlite);
+    expect(adoptionTemplateChoices(sqlite, { id: "admin", systemAdmin: true }).map((choice) => choice.id)).toEqual(["seven", "template"]);
   });
 });

@@ -20,9 +20,10 @@ export default async function NewCourseFromTemplatePage({ searchParams }: PagePr
   if (!managesAnyArea(account)) redirect("/intern");
   const requestedTemplate = searchParam(await searchParams, "vorlage");
   const template = requestedTemplate ? readAdoptionTemplate(sqlite, requestedTemplate) : undefined;
-  // An adoption requires template and target to agree on the number of semesters, so only those are offered.
+  // An adoption requires template and target to agree on the number of semesters, so only those are offered — on both
+  // sides of the choice, which is why the template list is narrowed by the same rule.
   const programs = programOptions(sqlite, account, template?.semesters);
-  const templates = adoptionTemplateChoices(sqlite);
+  const templates = adoptionTemplateChoices(sqlite, account);
 
   return <SiteShell nav={<InternalNav account={account} current="kurse" />}><section className="search-panel narrow-panel" aria-labelledby="new-course-heading">
     <p className="eyebrow">Kurs anlegen</p>
@@ -45,7 +46,7 @@ export default async function NewCourseFromTemplatePage({ searchParams }: PagePr
         : <p className="empty-note">Ihnen ist kein Studiengang mit {template.semesters} Semestern zugeordnet. Eine Übernahme setzt dieselbe Anzahl Semester voraus wie die Vorlage.</p>
       : <p className="empty-note">{templates.length
         ? "Wählen Sie zuerst die Vorlage. Danach werden die Angaben des neuen Kurses erfasst."
-        : "Es besteht noch kein Kurs, der als Vorlage dienen könnte. Legen Sie den ersten Kurs eines Jahrgangs smart an."}</p>}
+        : "Es besteht kein Kurs, der Ihnen als Vorlage dienen könnte: Eine Übernahme setzt eine Vorlage mit ebenso vielen Semestern voraus, wie einer Ihrer Studiengänge hat. Legen Sie den Kurs mit einem erzeugten Kursverlauf an."}</p>}
 
     <p><Link className="text-link" href="/intern/kurse/neu">Zurück zur Auswahl</Link></p>
   </section></SiteShell>;

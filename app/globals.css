@@ -477,6 +477,11 @@ p[role="status"] { margin: 0; color: var(--success); }
 .path-card h2 a::after { content: ""; position: absolute; inset: 0; }
 .path-card p { margin: 0; font-size: .95rem; }
 .path-card__note { color: var(--gray); font-size: .87rem; }
+/* A way without a template leads nowhere: the card stays readable, so the way remains explained, but it is visibly not
+   a way to take — and the way that is left says so in its own note. */
+.path-card[aria-disabled] { background: var(--surface); border-top-color: var(--line); }
+.path-card[aria-disabled] h2 { color: var(--gray); }
+.path-card[data-only-way] { box-shadow: 0 0 0 2px var(--red); }
 @media (max-width: 760px) { .path-choice { grid-template-columns: minmax(0, 1fr); } }
 
 /* The smart creation is a sequence of cards rather than one column of fields: study period, starting phase and the
