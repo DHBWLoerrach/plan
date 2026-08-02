@@ -196,7 +196,14 @@ export function GeneratedCourseForm({ programs, today }: { programs: Program[]; 
     </div>
 
     <input type="hidden" name="plan" value={JSON.stringify(phases)} />
-    {state.error ? <p role="alert">{state.error}</p> : null}
-    <button className="button" type="submit" disabled={isPending || !phases.length}>{isPending ? "Kurs wird angelegt …" : "Kurs mit Studienplan anlegen"}</button>
+    {/* The progression stays whole above; what follows the reading is the action that writes it, together with the
+        summary of what it would write. Neither repeats a decision — both only make the last one reachable. */}
+    <div className="generated-form__actions">
+      {state.error ? <p role="alert">{state.error}</p> : null}
+      <p className="generated-form__summary">{phases.length
+        ? `${code.trim() || "Kurs"} · ${semesters} Semester · ${phases.length} Kursphasen · ${formatCalendarPeriod(studyStart, studyEnd)}`
+        : "Noch kein vollständiger Kursverlauf."}</p>
+      <button className="button" type="submit" disabled={isPending || !phases.length}>{isPending ? "Kurs wird angelegt …" : "Kurs mit Studienplan anlegen"}</button>
+    </div>
   </form>;
 }

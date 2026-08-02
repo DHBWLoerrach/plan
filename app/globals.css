@@ -505,8 +505,14 @@ p[role="status"] { margin: 0; color: var(--success); }
 .generated-form .editor-card h2 { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; margin: 0; font-size: 1.15rem; font-weight: 800; }
 .generated-form .editor-card > p { margin: .35rem 0 .9rem; color: var(--gray); font-size: .92rem; }
 .generated-form .account-form { margin: 0; max-width: none; }
-.generated-form > [role="alert"] { margin-top: 1.25rem; }
-.generated-form > .button { justify-self: start; margin-top: 1.5rem; }
+/* Twelve course phases put the action that writes them far below the fold. The progression stays whole — it is what
+   has to be seen before saving — so the action follows the reading instead and holds the lower edge, with the summary
+   of what it would write beside it. */
+.generated-form__actions { position: sticky; bottom: 0; z-index: 1; display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 1.25rem; margin-top: 1.5rem; padding: .9rem 0; background: var(--surface); border-top: 1px solid var(--line); }
+.generated-form__actions > [role="alert"] { flex-basis: 100%; }
+.generated-form__summary { margin: 0; color: var(--gray-strong); font-size: .92rem; }
+.generated-form__actions .button { margin-left: auto; }
+@media (max-width: 560px) { .generated-form__actions .button { margin-left: 0; width: 100%; } }
 /* What the application proposes is marked as a proposal, in the neutral tone of a state — not in red, which on this
    page belongs to the theory phase and to the actions. */
 .proposal-tag { padding: .1rem .5rem; background: var(--surface); border: 1px solid var(--line); color: var(--gray-strong); font-size: .75rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
