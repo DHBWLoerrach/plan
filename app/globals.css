@@ -472,9 +472,19 @@ p[role="status"] { margin: 0; color: var(--success); }
 .path-card { position: relative; display: flex; flex-direction: column; gap: .6rem; padding: 1.35rem; background: #fff; border: 1px solid var(--line); border-top: 4px solid var(--red); }
 .path-card h2 { margin: 0; font-size: 1.25rem; font-weight: 800; }
 .path-card h2 a { color: var(--red); text-decoration: none; }
-.path-card h2 a:hover { text-decoration: underline; text-underline-offset: .2em; }
 /* The whole card leads into its way, so the link inside the heading spans it; the heading keeps the accessible name. */
-.path-card h2 a::after { content: ""; position: absolute; inset: 0; }
+.path-card h2 a::before { content: ""; position: absolute; inset: 0; }
+/* The arrow is what says the card is an action rather than a description; under the pointer it moves the way it points.
+   A button would say the same, but it cannot live inside the overlay that makes the card clickable. It is marked
+   aria-hidden in the markup rather than drawn from CSS content, so it stays out of the name of the link. */
+.path-card__arrow { display: inline-block; margin-left: .3rem; transition: translate .12s ease-out; }
+/* What is clickable is the card, so hover and focus have to show the card — an outline on the link alone would enclose
+   the few words of the heading and leave the rest of the target unmarked. */
+.path-card:has(a:hover) { border-color: var(--gray); }
+.path-card:has(a:hover) h2 a { text-decoration: underline; text-underline-offset: .2em; }
+.path-card:has(a:hover) .path-card__arrow { translate: .2rem 0; }
+.path-card:has(a:focus-visible) { outline: 3px solid #1a1a1a; outline-offset: 2px; }
+.path-card h2 a:focus-visible { outline: none; }
 .path-card p { margin: 0; font-size: .95rem; }
 .path-card__note { color: var(--gray); font-size: .87rem; }
 /* A way without a template leads nowhere: the card stays readable, so the way remains explained, but it is visibly not

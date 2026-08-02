@@ -31,7 +31,7 @@ export default async function NewCoursePage() {
     <ul className="path-choice">
       <li className="path-card" aria-disabled={templates ? undefined : true}>
         <h2>{templates
-          ? <Link href="/intern/kurse/neu/vorlage">Aus Vorlage übernehmen</Link>
+          ? <Link href="/intern/kurse/neu/vorlage">Aus Vorlage übernehmen<span className="path-card__arrow" aria-hidden="true">→</span></Link>
           : "Aus Vorlage übernehmen"}</h2>
         <p>Kursverlauf und Termine eines bestehenden Kurses werden einmalig kopiert und um ganze Wochen versetzt. Danach besteht zwischen Vorlage und neuem Kurs keine Verbindung.</p>
         <p className="path-card__note">{templates
@@ -39,7 +39,7 @@ export default async function NewCoursePage() {
           : "Noch keine Vorlage verfügbar: Eine Übernahme setzt einen bestehenden Kurs mit ebenso vielen Semestern voraus, wie einer Ihrer Studiengänge hat."}</p>
       </li>
       <li className="path-card" data-only-way={templates ? undefined : true}>
-        <h2><Link href="/intern/kurse/neu/erzeugt">Kursverlauf erzeugen</Link></h2>
+        <h2><Link href="/intern/kurse/neu/erzeugt">Kursverlauf erzeugen<span className="path-card__arrow" aria-hidden="true">→</span></Link></h2>
         <p>Der Studienzeitraum wird aus dem Jahrgang vorbelegt, und aus der gewählten Startphase entsteht ein lückenloser Kursverlauf: zwei Kursphasen je Semester, Theorie und Praxis im Wechsel.</p>
         <p className="path-card__note">{templates
           ? "Geeignet für den ersten Kurs eines Jahrgangs oder Studiengangs."
