@@ -33,17 +33,29 @@ export default async function NewCoursePage() {
         <h2>{templates
           ? <Link href="/intern/kurse/neu/vorlage">Aus Vorlage übernehmen<span className="path-card__arrow" aria-hidden="true">→</span></Link>
           : "Aus Vorlage übernehmen"}</h2>
-        <p>Kursverlauf und Termine eines bestehenden Kurses werden einmalig kopiert und um ganze Wochen versetzt. Danach besteht zwischen Vorlage und neuem Kurs keine Verbindung.</p>
-        <p className="path-card__note">{templates
-          ? `Geeignet, wenn ein vergleichbarer Kurs bereits geplant ist. ${templates === 1 ? "1 Kurs steht" : `${templates} Kurse stehen`} als Vorlage zur Wahl.`
-          : "Noch keine Vorlage verfügbar: Eine Übernahme setzt einen bestehenden Kurs mit ebenso vielen Semestern voraus, wie einer Ihrer Studiengänge hat."}</p>
+        <dl className="path-card__facts">
+          <dt>Übernimmt</dt>
+          <dd>Kursverlauf und Termine der Vorlage, um ganze Wochen versetzt</dd>
+          <dt>Voraussetzung</dt>
+          <dd>{templates
+            ? `Vorlage mit gleicher Semesterzahl (${templates === 1 ? "1 Kurs" : `${templates} Kurse`} zur Wahl)`
+            : "Noch keine Vorlage verfügbar — es besteht kein Kurs mit einer Semesterzahl, die einer Ihrer Studiengänge hat"}</dd>
+          <dt>Geeignet für</dt>
+          <dd>Parallelkurs oder weiteren Jahrgang</dd>
+        </dl>
       </li>
       <li className="path-card" data-only-way={templates ? undefined : true}>
         <h2><Link href="/intern/kurse/neu/erzeugt">Kursverlauf erzeugen<span className="path-card__arrow" aria-hidden="true">→</span></Link></h2>
-        <p>Der Studienzeitraum wird aus dem Jahrgang vorbelegt, und aus der gewählten Startphase entsteht ein lückenloser Kursverlauf: zwei Kursphasen je Semester, Theorie und Praxis im Wechsel.</p>
-        <p className="path-card__note">{templates
-          ? "Geeignet für den ersten Kurs eines Jahrgangs oder Studiengangs."
-          : "Solange keine Vorlage besteht, ist dies der Weg zum ersten Kurs."}</p>
+        <dl className="path-card__facts">
+          <dt>Erzeugt</dt>
+          <dd>Zwei Kursphasen je Semester, Theorie und Praxis im Wechsel</dd>
+          <dt>Voraussetzung</dt>
+          <dd>Keine — der Studienzeitraum wird aus dem Jahrgang vorbelegt</dd>
+          <dt>Geeignet für</dt>
+          <dd>{templates
+            ? "Ersten Kurs eines Jahrgangs oder Studiengangs"
+            : "Ersten Kurs eines Jahrgangs — derzeit der einzige Weg"}</dd>
+        </dl>
       </li>
     </ul>
 
