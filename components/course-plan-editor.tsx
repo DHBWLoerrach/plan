@@ -280,7 +280,8 @@ export function CoursePlanEditor({ course, comparison, phases, events }: {
             <PhaseCreateForm course={course} transferTargets={phaseTargets} />
           </>
           : <p className="empty-note">In veröffentlichten Kursen werden keine einzelnen Phasen ergänzt. Verschieben Sie stattdessen eine vorhandene Phasengrenze; angrenzende Phasen werden atomar angepasst.</p>}
-      </> : <p className="notice">Dieser Kurs gehört zum Bereich {course.areaName}, der Ihnen nicht zugeordnet ist. Sie können seinen Verlauf lesen, aber nicht ändern.</p>}
+      {/* The reason one may only read stands once, on the page around this editor; here only what it means for phases. */}
+      </> : <p className="notice">Den Verlauf dieses Kurses können Sie lesen, aber nicht ändern.</p>}
       {ownPhases.length ? <section aria-labelledby="phase-list-heading">
         <h3 id="phase-list-heading">Gespeicherte Kursphasen</h3>
         <ul className="entry-list">{ownPhases.map((phase) => <PhaseRowEditor key={phase.id} phase={phase} course={course} />)}</ul>

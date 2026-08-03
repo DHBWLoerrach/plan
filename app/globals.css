@@ -454,8 +454,6 @@ p[role="status"] { margin: 0; color: var(--success); }
   .comparison-switch { grid-template-columns: minmax(0, 1fr); }
   .comparison-switch__label, .comparison-switch__options { grid-column: 1; }
 }
-/* Both ways into a course stand in one cell, side by side where there is room and below one another where there is not. */
-.course-actions { display: flex; flex-wrap: wrap; gap: .2rem .9rem; }
 
 .account-form { display: grid; gap: .6rem; max-width: 38rem; margin: 1rem 0 0; }
 .account-form > label { font-weight: 700; font-size: .9rem; }

@@ -11,7 +11,7 @@ import { areaAccessLabel, publicationStateLabels, workInProgressLabel } from "@/
 import { getActiveAccount, managesAnyArea } from "@/lib/internal-auth";
 
 import { searchParam } from "../../../search-params";
-import { coursePlanData } from "../../data";
+import { coursePlanData, type PlanCourse } from "../../data";
 
 /**
  * The comparison is chosen anew on every visit and never stored, so it lives in the address alone. Links rather than a
@@ -32,6 +32,18 @@ function ComparisonSwitch({ courseId, scope, shown }: { courseId: string; scope:
   </div>;
 }
 
+/**
+ * What this course's state means for whoever opened it: whether it may be written to here, and whether its plan may
+ * still be incomplete. For a foreign course both are one situation and are said in one sentence — this page is the
+ * whole course, so the reason one may only read stands here rather than on a page one no longer passes (ADR 0011).
+ */
+function PlanNotice({ course }: { course: PlanCourse }) {
+  if (course.editable) {
+    return course.workInProgress ? <p className="notice">Dieser Kurs ist nicht veröffentlicht. Er darf einen unvollständigen Planungsstand enthalten.</p> : null;
+  }
+  return <p className="notice">Dieser Kurs gehört zum Bereich {course.areaName}, der Ihnen nicht zugeordnet ist: Sie können ihn lesen, aber nicht bearbeiten, löschen oder veröffentlichen{course.workInProgress ? ", und sein noch unveröffentlichter Planungsstand darf unvollständig sein" : ""}.</p>;
+}
+
 export default async function CoursePlanPage({ params, searchParams }: PageProps<"/intern/kurse/[courseId]/plan">) {
   await connection();
   const account = await getActiveAccount();
@@ -47,10 +59,13 @@ export default async function CoursePlanPage({ params, searchParams }: PageProps
   return <SiteShell nav={<InternalNav account={account} current="kurse" />}><article className="plan-detail">
     <p className="eyebrow">Interne Bearbeitung</p>
     <h1>Planungsstand {course.code}</h1>
-    <p>{course.program} · Bereich {course.areaName} · {areaAccessLabel(course.editable)} · {publicationStateLabels[course.state]}{course.workInProgress ? ` · ${workInProgressLabel}` : ""}</p>
-    {course.workInProgress ? <p className="notice">Dieser Kurs ist nicht veröffentlicht. Er darf einen unvollständigen Planungsstand enthalten.</p> : null}
+    <p>{course.program} · Bereich {course.areaName} · Studienzeitraum {course.studyStart} – {course.studyEnd} · {areaAccessLabel(course.editable)} · {publicationStateLabels[course.state]}{course.workInProgress ? ` · ${workInProgressLabel}` : ""}</p>
+    <PlanNotice course={course} />
     <ComparisonSwitch courseId={course.id} scope={scope} shown={plan.comparison.length} />
     <CoursePlanEditor course={course} comparison={plan.comparison} phases={plan.phases} events={plan.events} />
-    <p className="plan-detail__back"><Link className="text-link" href={`/intern/kurse/${course.id}`}>Zurück zum Kurs {course.code}</Link></p>
+    {/* A foreign course has no page behind this one — the course address leads back here — so the way out is the list. */}
+    <p className="plan-detail__back">{course.editable
+      ? <Link className="text-link" href={`/intern/kurse/${course.id}`}>Zurück zum Kurs {course.code}</Link>
+      : <Link className="text-link" href="/intern/kurse">Zurück zur Kursliste</Link>}</p>
   </article></SiteShell>;
 }

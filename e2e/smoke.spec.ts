@@ -145,7 +145,12 @@ test("opens on the own areas and keeps foreign courses read-only, confirming wit
   await expect(page.getByRole("link", { name: /^TIF26/u })).toBeVisible();
   await expect(page.getByText("Fremdinformatik")).toHaveCount(0);
 
-  await page.goto("/intern/kurse/e2e-foreign-course");
+  /* The list leads into a course under its own designation, and the address of a foreign course is its plan: there is
+     no page of its own left where nothing may be written. Both are walked rather than typed, so the one way the row
+     offers is the one the assertion below arrives through. */
+  await page.goto("/intern/kurse");
+  await page.getByRole("link", { name: "FRM26E2E" }).click();
+  await expect(page).toHaveURL(/\/intern\/kurse\/e2e-foreign-course\/plan$/u);
   await expect(page.getByText(/lesen, aber nicht bearbeiten/u)).toBeVisible();
   await expect(page.getByRole("button", { name: "Kurs veröffentlichen" })).toHaveCount(0);
 

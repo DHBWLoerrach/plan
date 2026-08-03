@@ -6,7 +6,6 @@ import { CourseListFilter } from "@/components/course-list-filter";
 import { InternalNav } from "@/components/internal-nav";
 import { SiteShell } from "@/components/site-shell";
 import { sqlite } from "@/lib/db";
-import { coursePlanPath } from "@/lib/domain/course-comparison";
 import { areaAccessLabel, publicationStateLabels, workInProgressLabel } from "@/lib/domain/course-status";
 import { getActiveAccount, managesAnyArea } from "@/lib/internal-auth";
 
@@ -38,25 +37,22 @@ function SortHeader({ header, currentSort, direction, filters }: { header: Sorta
 }
 
 function CourseHeaders({ sort, direction, filters }: { sort: CourseSort; direction: CourseSortDirection; filters: CourseFilters }) {
-  return <>{headers.map((header) => <SortHeader key={header.sort} header={header} currentSort={sort} direction={direction} filters={filters} />)}<th scope="col">Aktionen</th></>;
+  return <>{headers.map((header) => <SortHeader key={header.sort} header={header} currentSort={sort} direction={direction} filters={filters} />)}</>;
 }
 
 /**
- * A course row leads to the two things one does with a course: its master data and publication on the course page,
- * its progression and events on its plan page. Both are the course itself — the list never bundles several of them.
+ * A course row leads into the course under its own designation, the way the overview lists it too. There is one
+ * address per course; which page it shows — the course itself or its plan — the course decides from what may be
+ * done to it, so the row does not have to offer a choice that only one of its ways ever answers.
  */
 function CourseCells({ course }: { course: CourseListRow }) {
   return <>
-    <td>{course.code}</td>
+    <td><Link className="text-link" href={`/intern/kurse/${course.id}`}>{course.code}</Link></td>
     <td>{course.program}</td>
     <td>{course.areaName}</td>
     <td>{course.studyStart} – {course.studyEnd}</td>
     <td>{publicationStateLabels[course.state]}{course.workInProgress ? ` · ${workInProgressLabel}` : ""}</td>
     <td>{areaAccessLabel(course.editable)}</td>
-    <td className="course-actions">
-      <Link className="text-link" href={`/intern/kurse/${course.id}`}>{course.editable ? "Verwalten" : "Ansehen"}</Link>
-      <Link className="text-link" href={coursePlanPath(course.id)}>Planungsstand<span className="sr-only"> von {course.code}</span></Link>
-    </td>
   </>;
 }
 
