@@ -114,7 +114,9 @@ test("adopts the progression of an existing course into a new one", async ({ pag
   await page.getByRole("link", { name: "Aus Vorlage übernehmen" }).click();
   await expect(page).toHaveURL(/\/intern\/kurse\/neu\/vorlage$/u);
 
-  await page.locator('select[name="vorlage"]').selectOption("e2e-course");
+  /* By role and accessible name, not by a CSS selector: the enclosing label carries the texts of all options in its
+     own text content, so addressing it by its label matches nothing exactly — the computed name is plain "Vorlage". */
+  await page.getByRole("combobox", { name: "Vorlage", exact: true }).selectOption("e2e-course");
   await page.getByRole("button", { name: "Vorlage wählen" }).click();
 
   await page.getByLabel("Kurskennung").fill("E2E2027ADOPT");
