@@ -492,9 +492,10 @@ p[role="status"] { margin: 0; color: var(--success); }
 .path-card__facts dt { color: var(--gray-strong); font-size: .82rem; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; }
 .path-card__facts dd { margin: 0; font-size: .92rem; }
 /* A way without a template leads nowhere: the card stays readable, so the way remains explained, but it is visibly not
-   a way to take — and the way that is left says so in its own note. */
-.path-card[aria-disabled] { background: var(--surface); border-top-color: var(--line); }
-.path-card[aria-disabled] h2 { color: var(--gray); }
+   a way to take — and the way that is left says so in its own note. Both states are plain data attributes: what a
+   screen reader needs is in the text of the requirement, and aria-disabled means nothing on a list item. */
+.path-card[data-unavailable] { background: var(--surface); border-top-color: var(--line); }
+.path-card[data-unavailable] h2 { color: var(--gray); }
 .path-card[data-only-way] { box-shadow: 0 0 0 2px var(--red); }
 @media (max-width: 760px) { .path-choice { grid-template-columns: minmax(0, 1fr); } }
 

@@ -29,7 +29,7 @@ export default async function NewCoursePage() {
     <p>Wählen Sie, wie der Kursverlauf des neuen Kurses entsteht. Beide Wege legen denselben Kurs an; nach der Anlage sind Kursverlauf und Termine wie gewohnt einzeln bearbeitbar.</p>
 
     <ul className="path-choice">
-      <li className="path-card" aria-disabled={templates ? undefined : true}>
+      <li className="path-card" data-unavailable={templates ? undefined : true}>
         <h2>{templates
           ? <Link href="/intern/kurse/neu/vorlage">Aus Vorlage übernehmen<span className="path-card__arrow" aria-hidden="true">→</span></Link>
           : "Aus Vorlage übernehmen"}</h2>
