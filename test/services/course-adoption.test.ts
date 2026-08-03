@@ -1,6 +1,7 @@
 import Database from "better-sqlite3";
 import { afterEach, describe, expect, it } from "vitest";
 
+import { programOptions } from "@/app/intern/kurse/data";
 import { createCourse } from "@/lib/services/course-admin";
 import { adoptionTemplateChoices, readAdoptionTemplate } from "@/lib/services/course-adoption";
 import { applySchema } from "@/test/schema";
@@ -161,5 +162,27 @@ describe("adoptionTemplateChoices", () => {
     const sqlite = database();
     withSevenSemesterCourse(sqlite);
     expect(adoptionTemplateChoices(sqlite, { id: "admin", systemAdmin: true }).map((choice) => choice.id)).toEqual(["seven", "template"]);
+  });
+
+  /**
+   * The two sides of the choice are read by two queries that repeat the same permission rule. What holds them together
+   * is not that repetition but this: every offered template must leave a study program to adopt it into. Should one
+   * query ever narrow without the other, the choice would lead back into the refusal it was meant to prevent.
+   */
+  it.each([
+    ["an editor of six-semester study programs", { id: "editor", systemAdmin: false }],
+    ["an editor of another area", { id: "editor-w", systemAdmin: false }],
+    ["the system administration", { id: "admin", systemAdmin: true }],
+  ])("leaves every template it offers %s a study program to adopt it into", (_name, account) => {
+    const sqlite = database();
+    withSevenSemesterCourse(sqlite);
+    const offered = adoptionTemplateChoices(sqlite, account);
+    expect(offered.length).toBeGreaterThan(0);
+    for (const choice of offered) {
+      const template = readAdoptionTemplate(sqlite, choice.id);
+      if (!template) throw new Error(`offered template ${choice.label} cannot be read`);
+      expect(programOptions(sqlite, account, template.semesters).length,
+        `template ${choice.label} is offered but no study program has ${template.semesters} semesters`).toBeGreaterThan(0);
+    }
   });
 });

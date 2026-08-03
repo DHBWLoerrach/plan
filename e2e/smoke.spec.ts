@@ -100,6 +100,39 @@ test("creates a course with a generated progression and lands on a complete plan
   await expect(page.getByText("Planungsstand ist vollständig.")).toBeVisible();
 });
 
+/**
+ * The other way into a new course: the adoption. The choice page only offers it while a template exists that this
+ * account could adopt from, so the state of the card is asserted before the way is taken — a seed whose courses no
+ * longer match a study program of the editor would otherwise close the way without any test noticing.
+ */
+test("adopts the progression of an existing course into a new one", async ({ page }) => {
+  await signIn(page, "editor@test.invalid");
+  await page.goto("/intern/kurse/neu");
+  const adoption = page.getByRole("listitem").filter({ hasText: "Aus Vorlage übernehmen" });
+  await expect(adoption).not.toHaveAttribute("data-unavailable", /.*/u);
+  await expect(adoption).toContainText("Vorlage mit gleicher Semesterzahl");
+  await page.getByRole("link", { name: "Aus Vorlage übernehmen" }).click();
+  await expect(page).toHaveURL(/\/intern\/kurse\/neu\/vorlage$/u);
+
+  await page.locator('select[name="vorlage"]').selectOption("e2e-course");
+  await page.getByRole("button", { name: "Vorlage wählen" }).click();
+
+  await page.getByLabel("Kurskennung").fill("E2E2027ADOPT");
+  await page.getByLabel("Studiengang").selectOption("program-own");
+  /* A shift is rounded to whole weeks, because course phases are anchored to weekdays while a study period is anchored
+     to dates. A study start exactly 52 weeks past the one of the template is where the two agree, so the adopted
+     progression covers the new study period exactly instead of missing its borders by up to three days. */
+  await page.getByLabel("Studienbeginn").fill("2027-09-30");
+  await expect(page.getByLabel("Studienende")).toHaveValue("2030-09-29");
+  await page.getByRole("button", { name: "Kurs übernehmen und anlegen" }).click();
+  await expect(page.getByText("Der Kurs wurde angelegt.")).toBeVisible();
+  const courseId = new URL(page.url()).pathname.split("/").pop();
+
+  // The adopted progression is the one of the template, shifted — and complete, so the new course is publishable.
+  await page.goto(`/intern/kurse/${courseId}/plan`);
+  await expect(page.getByText("Planungsstand ist vollständig.")).toBeVisible();
+});
+
 /* The overview is asserted here rather than in a test of its own: every sign-in beyond the rate limit costs the suite a
    waited-out window. This test already signs in as the editor, and what the overview shows it — the own areas and
    nothing beyond them — is the same boundary its remaining steps read from the other end. */
