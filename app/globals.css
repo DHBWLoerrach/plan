@@ -479,12 +479,15 @@ p[role="status"] { margin: 0; color: var(--success); }
    aria-hidden in the markup rather than drawn from CSS content, so it stays out of the name of the link. */
 .path-card__arrow { display: inline-block; margin-left: .3rem; transition: translate .12s ease-out; }
 /* What is clickable is the card, so hover and focus have to show the card — an outline on the link alone would enclose
-   the few words of the heading and leave the rest of the target unmarked. */
+   the few words of the heading and leave the rest of the target unmarked.
+   The rule that takes the outline off the link is itself written with :has(), so a browser without :has() drops the
+   move and the removal together and the link keeps the outline every focusable element gets. Removing it outside
+   :has() would leave such a browser with no focus mark at all. */
 .path-card:has(a:hover) { border-color: var(--gray); }
 .path-card:has(a:hover) h2 a { text-decoration: underline; text-underline-offset: .2em; }
 .path-card:has(a:hover) .path-card__arrow { translate: .2rem 0; }
 .path-card:has(a:focus-visible) { outline: 3px solid #1a1a1a; outline-offset: 2px; }
-.path-card h2 a:focus-visible { outline: none; }
+.path-card:has(a:focus-visible) h2 a { outline: none; }
 /* Three facts per card, in the same order on both: what the way produces, what it requires and what it suits. Read
    across the two cards they answer the same three questions, and that is what makes the choice comparable before any
    of the prose is read. The label column sizes itself, so the answers line up within a card. */
