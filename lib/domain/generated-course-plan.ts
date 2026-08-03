@@ -1,5 +1,5 @@
 /**
- * The generated course progression of a generated course progression: a study period proposed from the course code and a
+ * The generated course progression of a course created this way: a study period proposed from the course code and a
  * course progression that fills it completely, alternating theory and practice with two course phases per semester.
  * Everything here is pure — the form previews with it and the creation writes from it.
  */
