@@ -146,6 +146,19 @@ describe("adoptionTemplateChoices", () => {
     ]);
   });
 
+  /* Being assigned an area is not the same as having a study program in it. The choice page reads both counts, and it
+     relies on this: without a study program to write into, no template can be offered either. */
+  it("offers nothing to an account whose areas carry no study program", () => {
+    const sqlite = database();
+    sqlite.exec(`
+      INSERT INTO areas VALUES ('area-leer', 'Leerer Bereich', 'leerer bereich');
+      INSERT INTO users VALUES ('editor-leer', 'Editor Leer', 'editor-leer@test', 0, NULL, 'AREA_EDITOR', 0, 'ACTIVE', 0, 0);
+      INSERT INTO area_assignments VALUES ('editor-leer', 'area-leer');`);
+    const account = { id: "editor-leer", systemAdmin: false };
+    expect(programOptions(sqlite, account)).toEqual([]);
+    expect(adoptionTemplateChoices(sqlite, account)).toEqual([]);
+  });
+
   it("leaves out a template no study program of the account could match", () => {
     const sqlite = database();
     withSevenSemesterCourse(sqlite);
