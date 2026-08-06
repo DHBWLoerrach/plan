@@ -38,10 +38,10 @@ export type OverviewCourse = CourseStanding & { id: string; code: string; state:
 export type OverviewYear = { year: string; courses: OverviewCourse[] };
 export type OverviewProgram = { id: string; name: string; abbreviation: string; areaName: string; years: OverviewYear[] };
 export type CoursePlanData = { course: PlanCourse; scope: ComparisonScope; comparison: PlanCourse[]; phases: PlanPhase[]; events: PlanEvent[] };
-export type CourseSort = "code" | "program" | "area" | "studyPeriod" | "publication";
+export type CourseSort = "code" | "program" | "studyPeriod" | "publication";
 export type CourseSortDirection = "asc" | "desc";
 export function isCourseSort(value: string | null): value is CourseSort {
-  return value !== null && ["code", "program", "area", "studyPeriod", "publication"].includes(value);
+  return value !== null && ["code", "program", "studyPeriod", "publication"].includes(value);
 }
 export function isCourseSortDirection(value: string | null): value is CourseSortDirection {
   return value === "asc" || value === "desc";
@@ -93,7 +93,6 @@ export function courseListData(sqlite: Database.Database, account: AccountScope,
   const valueOf = (course: CourseListRow): string => {
     switch (sort) {
       case "program": return course.program;
-      case "area": return course.areaName;
       case "studyPeriod": return course.studyStart;
       case "publication": return publicationStateLabels[course.state];
       default: return course.code;

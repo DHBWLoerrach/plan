@@ -16,11 +16,13 @@ import { courseListData, isCourseSort, isCourseSortDirection, type CourseListFil
 type SortableHeader = { label: string; sort: CourseSort };
 
 /* No column for write permission: the responsibility filter above the table decides it for every row at once, so a
-   column would repeat its value as often as there are rows (ADR 0011). */
+   column would repeat its value as often as there are rows (ADR 0011). No column for the area either: a study program
+   belongs to exactly one of them, so the area is a property of the value the study program column already shows and is
+   named underneath it — and only where the list stands on every area, because within the own ones it distinguishes
+   nothing. */
 const headers: SortableHeader[] = [
   { label: "Kurskennung", sort: "code" },
   { label: "Studiengang", sort: "program" },
-  { label: "Bereich", sort: "area" },
   { label: "Studienzeitraum", sort: "studyPeriod" },
   { label: "Veröffentlichung", sort: "publication" },
 ];
@@ -54,11 +56,15 @@ function CourseHeaders({ sort, direction, filters }: { sort: CourseSort; directi
  * address, and the page behind it is the whole course: it shows what may be done to it and leaves out what may not,
  * so the row leads to the same place for an own and for a foreign course.
  */
-function CourseCells({ course }: { course: CourseListRow }) {
+function CourseCells({ course, namesArea }: { course: CourseListRow; namesArea: boolean }) {
   return <>
     <td><Link className="text-link" href={`/intern/kurse/${course.id}`}>{course.code}</Link></td>
-    <td>{course.program}</td>
-    <td>{course.areaName}</td>
+    {/* The study program by its name alone: its abbreviation is what the course code beside it already begins with,
+        and the ambiguity the overview needs it for — the same name in two areas — is what the area line below
+        resolves here. An area bearing the name of its study program is left unwritten: the line would repeat the one
+        above it word for word, and its absence says the same thing. */}
+    <td>{course.program}{namesArea && course.areaName !== course.program
+      ? <span className="course-program__area">{course.areaName}</span> : null}</td>
     <td>{formatCalendarPeriod(course.studyStart, course.studyEnd)}</td>
     <td>{publicationStateLabels[course.state]}</td>
   </>;
@@ -86,7 +92,7 @@ export default async function CoursesPage({ searchParams }: PageProps<"/intern/k
     <header className="course-overview__header"><h1 id="courses-heading">Kurse</h1><Link className="button button--compact" href="/intern/kurse/neu">Kurs anlegen</Link></header>
     <CourseListFilter programs={programs} years={years} values={{ ...filters, responsibility: filters.responsibility === "all" ? "alle" : null }} />
     {courses.length ? <div className="matrix-wrap" tabIndex={0}><table className="event-table"><thead><tr><CourseHeaders sort={sort} direction={direction} filters={filters} /></tr></thead>
-      <tbody>{courses.map((course) => <tr key={course.id}><CourseCells course={course} /></tr>)}</tbody>
+      <tbody>{courses.map((course) => <tr key={course.id}><CourseCells course={course} namesArea={filters.responsibility === "all"} /></tr>)}</tbody>
     </table></div>
       : <p className="empty-note">{filters.responsibility === "own"
         ? "In Ihren Bereichen gibt es für diese Filter keine Kurse. Über die Zuständigkeit sehen Sie auch die Kurse anderer Bereiche."

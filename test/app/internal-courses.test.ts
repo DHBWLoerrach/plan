@@ -46,6 +46,14 @@ describe("courseListData", () => {
     expect(courses.map((course) => [course.code, course.editable])).toEqual([["TIF26A", true], ["WWI27A", false]]);
   });
 
+  /* The list has no column of its own for the area: it names it below the study program, so a row has to carry both. */
+  it("carries the study program and its area with every row", () => {
+    const sqlite = database();
+    const { courses } = courseListData(sqlite, editor, noFilters, "code");
+    expect(courses.map((course) => [course.program, course.areaName]))
+      .toEqual([["Informatik", "Technik"], ["Wirtschaftsinformatik", "Wirtschaft"]]);
+  });
+
   it("keeps system administration writing in every area", () => {
     const sqlite = database();
     const { courses } = courseListData(sqlite, admin, noFilters, "code");

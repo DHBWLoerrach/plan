@@ -66,7 +66,7 @@ export function CourseListFilter({ programs, years, values }: { programs: Filter
     {/* The empty value is the responsibility one opens on, so the plain list address is the own courses and only the
         wider view carries a parameter — the same way the comparison writes only its non-default scope. */}
     <label className="course-list-filter__responsibility">Zuständigkeit<select name="zustaendigkeit" value={filters.responsibility}
-      onChange={(event) => applyImmediately(changeFilter("responsibility", event.currentTarget.value))}><option value="">Eigene Bereiche</option><option value="alle">Alle Bereiche</option></select></label>
+      onChange={(event) => applyImmediately(changeFilter("responsibility", event.currentTarget.value))}><option value="">Meine Bereiche</option><option value="alle">Alle Bereiche</option></select></label>
     <label className="course-list-filter__program">Studiengang<select name="program" value={filters.program}
       onChange={(event) => applyImmediately(changeFilter("program", event.currentTarget.value))}><option value="">Alle Studiengänge</option>{programs.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label>
     <label className="course-list-filter__year">Jahrgang<select name="year" value={filters.year}
