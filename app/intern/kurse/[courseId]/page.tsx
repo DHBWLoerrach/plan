@@ -9,6 +9,7 @@ import { InternalNav } from "@/components/internal-nav";
 import { PlanEventTable, PlanMatrix } from "@/components/plan-matrix";
 import { SiteShell } from "@/components/site-shell";
 import { sqlite } from "@/lib/db";
+import { formatCalendarPeriod } from "@/lib/domain/calendar-format";
 import { comparisonScope, comparisonScopes, coursePath, type ComparisonScope } from "@/lib/domain/course-comparison";
 import { publicationStateLabels } from "@/lib/domain/course-status";
 import { validatePublication, type PlanEvent, type PlanPhase } from "@/lib/domain/publication";
@@ -74,7 +75,7 @@ export default async function CoursePage({ params, searchParams }: PageProps<"/i
   return <SiteShell nav={<InternalNav account={account} current="kurse" />}><article className="plan-detail">
     <p className="eyebrow">Interner Bereich</p>
     <h1>Kurs {course.code}</h1>
-    <p>{course.program} · Bereich {course.areaName} · Studienzeitraum {course.studyStart} – {course.studyEnd} · {publicationStateLabels[course.state]}</p>
+    <p>{course.program} · Bereich {course.areaName} · Studienzeitraum {formatCalendarPeriod(course.studyStart, course.studyEnd)} · {publicationStateLabels[course.state]}</p>
     {created ? <p role="status">Der Kurs wurde angelegt.</p> : null}
 
     {/* Everything that writes is reserved to the own areas (ADR 0011). A foreign course therefore carries neither

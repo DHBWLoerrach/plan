@@ -6,6 +6,7 @@ import { CourseListFilter } from "@/components/course-list-filter";
 import { InternalNav } from "@/components/internal-nav";
 import { SiteShell } from "@/components/site-shell";
 import { sqlite } from "@/lib/db";
+import { formatCalendarPeriod } from "@/lib/domain/calendar-format";
 import { publicationStateLabels } from "@/lib/domain/course-status";
 import { getActiveAccount, managesAnyArea } from "@/lib/internal-auth";
 
@@ -58,7 +59,7 @@ function CourseCells({ course }: { course: CourseListRow }) {
     <td><Link className="text-link" href={`/intern/kurse/${course.id}`}>{course.code}</Link></td>
     <td>{course.program}</td>
     <td>{course.areaName}</td>
-    <td>{course.studyStart} – {course.studyEnd}</td>
+    <td>{formatCalendarPeriod(course.studyStart, course.studyEnd)}</td>
     <td>{publicationStateLabels[course.state]}</td>
   </>;
 }
