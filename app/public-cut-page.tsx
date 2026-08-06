@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 
-import { PlanMatrix } from "@/components/plan-matrix";
+import { PlanEventTable, PlanMatrix } from "@/components/plan-matrix";
 import { SiteShell } from "@/components/site-shell";
 import { publicCutKindLabel, publicCutPath, publicCutTitle, relatedCuts, type PublicCut } from "@/lib/domain/public-cut";
 import { productName } from "@/lib/product";
@@ -59,7 +59,8 @@ export async function PublicCutPage({ cut }: { cut: PublicCut | null }) {
       <h2>Andere Ansichten</h2>
       <ul>{links.map((related) => <li key={publicCutPath(related)}><Link href={publicCutPath(related)}>{publicCutKindLabel(related.kind)}: {publicCutTitle(related)}</Link></li>)}</ul>
     </nav> : null}
-    <PlanMatrix courses={detail.courses} phases={detail.phases} events={detail.events} />
+    <PlanMatrix courses={detail.courses} phases={detail.phases} />
+    <PlanEventTable courses={detail.courses} phases={detail.phases} events={detail.events} />
     <p className="plan-detail__back"><Link href="/">Zurück zur öffentlichen Suche</Link></p>
   </article></SiteShell>;
 }

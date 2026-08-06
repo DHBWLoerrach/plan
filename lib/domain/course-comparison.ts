@@ -48,10 +48,12 @@ export function comparisonScopeLabel(scope: ComparisonScope): string {
 }
 
 /**
- * The address of one comparison of one course. The default scope carries no parameter, so the plain course plan
- * address stays the one that gets linked and bookmarked.
+ * The address of one course, optionally with the comparison it is seen against. A course has exactly one internal
+ * address: everything that may be done to it is done there, and a foreign course shows the same page without the
+ * parts that would write. The default scope carries no parameter, so the plain course address stays the one that gets
+ * linked and bookmarked.
  */
-export function coursePlanPath(courseId: string, scope: ComparisonScope = defaultComparisonScope): string {
-  const path = `/intern/kurse/${encodeURIComponent(courseId)}/plan`;
+export function coursePath(courseId: string, scope: ComparisonScope = defaultComparisonScope): string {
+  const path = `/intern/kurse/${encodeURIComponent(courseId)}`;
   return scope === defaultComparisonScope ? path : `${path}?vergleich=${comparisonScopeParameter(scope)}`;
 }

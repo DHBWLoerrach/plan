@@ -180,5 +180,5 @@ Falls Informationen fehlen, mehrdeutig oder regelwidrig sind, gib unter `### SQL
 
 - Ein Auftrag sollte die Kurse genau eines Jahrgangs enthalten. Für weitere Jahrgänge wird der Auftrag mit einem neuen `id_prefix` wiederholt.
 - Die Konfiguration muss nur IDs liefern; die fachlichen Bezeichnungen werden aus den PDFs übernommen.
-- Der Import erzeugt ausschließlich Planungsstände. Veröffentlicht wird anschließend in der Anwendung, je Kurs einzeln — bis dahin ist jeder importierte Kurs dort als „in Arbeit“ gekennzeichnet.
+- Der Import erzeugt ausschließlich Planungsstände. Veröffentlicht wird anschließend in der Anwendung, je Kurs einzeln — bis dahin ist jeder importierte Kurs dort als „nicht veröffentlicht“ gekennzeichnet.
 - Vor dem Einspielen sollte ein Mensch den Prüfbericht mit dem PDF vergleichen. Das Skript ist transaktional, daher wird bei einem SQL-Fehler nichts davon übernommen.

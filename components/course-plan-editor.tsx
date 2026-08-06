@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useId } from "react";
+import { useActionState, useId, type ReactNode } from "react";
 
 import {
   type PlanFormState,
@@ -10,19 +10,32 @@ import {
   deletePhaseAction,
   updateEventAction,
   updatePhaseAction,
-} from "@/app/intern/kurse/[courseId]/plan/actions";
+} from "@/app/intern/kurse/[courseId]/actions";
 // A type-only import: the module is server-only and is erased here rather than pulled into the client bundle.
 import type { PlanCourse } from "@/app/intern/kurse/data";
 import { DateField } from "@/components/date-field";
 import { ConfirmAction } from "@/components/editor-controls";
-import { PlanMatrix } from "@/components/plan-matrix";
 import { formatCalendarPeriod } from "@/lib/domain/calendar-format";
-import { areaAccessLabel, workInProgressLabel } from "@/lib/domain/course-status";
 import { eventCategories, eventCategoryLabel } from "@/lib/domain/event-category";
 import { phaseTypeLabel, phaseTypes } from "@/lib/domain/phase-type";
-import { validatePublication, type PlanEvent, type PlanPhase } from "@/lib/domain/publication";
+import { type PlanEvent, type PlanPhase } from "@/lib/domain/publication";
 import type { EventField, EventInput } from "@/lib/services/event-admin";
 import type { PhaseDetails, PhaseField, PhaseInput } from "@/lib/services/phase-admin";
+
+/**
+ * One entry of the page that rests as a line and opens into the form belonging to it. A native `details` carries the
+ * whole behaviour: it is operable by keyboard without any script of ours, states its own expanded condition to
+ * assistive technology, and `name` lets the browser keep at most one entry of a group open. Closing hides the form
+ * without unmounting it, so anything already typed is still there when it is opened again.
+ */
+function Disclosure({ group, summary, hint, children }: { group: string; summary: ReactNode; hint?: string; children: ReactNode }) {
+  return <details className="disclosure" name={group}>
+    {/* The hint is what opening does, said only where the summary itself does not already say it: an entry names
+        itself and needs „Bearbeiten“ beside it, while „Kursphase ergänzen“ is the action already. */}
+    <summary><span className="disclosure__summary">{summary}</span>{hint ? <span className="disclosure__hint">{hint}</span> : null}</summary>
+    <div className="disclosure__body">{children}</div>
+  </details>;
+}
 
 /**
  * The courses a newly captured entry may additionally be written to. They are always courses of the comparison, never
@@ -83,10 +96,8 @@ function PhaseRowEditor({ phase, course }: { phase: PlanPhase; course: PlanCours
   const ids = { semester: useId(), type: useId(), error: useId() };
   const published = course.state === "PUBLISHED";
   const values = updateState.values;
-  const header = <p><strong>Semester {phase.semester}</strong> · {phaseTypeLabel(phase.type)} · {formatCalendarPeriod(phase.startDate, phase.endDate)}</p>;
-  if (!course.editable) return <li className="editor-card">{header}</li>;
-  return <li className="editor-card">
-    {header}
+  return <li><Disclosure group={`phase-${course.id}`} hint="Bearbeiten"
+    summary={<>{phaseTypeLabel(phase.type)} · {formatCalendarPeriod(phase.startDate, phase.endDate)}</>}>
     <form action={updateAction} className="account-form">
       <input type="hidden" name="phaseId" value={phase.id} />
       {updateState.error ? <p id={ids.error} role="alert">{updateState.error}</p> : null}
@@ -121,7 +132,7 @@ function PhaseRowEditor({ phase, course }: { phase: PlanPhase; course: PlanCours
           consequence={`Die Kursphase von ${course.code} wird aus dem Planungsstand gelöscht.`}
           confirmLabel="Endgültig löschen" pendingLabel="Wird gelöscht …" isPending={deleting} danger />
       </form>}
-  </li>;
+  </Disclosure></li>;
 }
 
 function EventCreateForm({ course, transferTargets }: { course: PlanCourse; transferTargets: PlanCourse[] }) {
@@ -168,10 +179,8 @@ function EventRowEditor({ event, course }: { event: PlanEvent; course: PlanCours
   const ids = { title: useId(), category: useId(), error: useId() };
   const published = course.state === "PUBLISHED";
   const values = updateState.values;
-  const header = <p><strong>{event.title}</strong> · {eventCategoryLabel(event.category)} · {formatCalendarPeriod(event.startDate, event.endDate ?? event.startDate)}{event.provisional ? " · vorläufig" : ""}</p>;
-  if (!course.editable) return <li className="editor-card">{header}</li>;
-  return <li className="editor-card">
-    {header}
+  return <li><Disclosure group={`event-${course.id}`} hint="Bearbeiten"
+    summary={<><strong>{event.title}</strong> · {eventCategoryLabel(event.category)} · {formatCalendarPeriod(event.startDate, event.endDate ?? event.startDate)}{event.provisional ? " · vorläufig" : ""}</>}>
     <form action={updateAction} className="account-form">
       <input type="hidden" name="eventId" value={event.id} />
       {updateState.error ? <p id={ids.error} role="alert">{updateState.error}</p> : null}
@@ -204,98 +213,72 @@ function EventRowEditor({ event, course }: { event: PlanEvent; course: PlanCours
         consequence={`Der Termin von ${course.code} wird gelöscht.${published ? " Die Löschung ist nach erfolgreicher Prüfung unmittelbar öffentlich sichtbar." : ""}`}
         confirmLabel="Endgültig löschen" pendingLabel="Wird gelöscht …" isPending={deleting} danger />
     </form>
-  </li>;
-}
-
-/** The open points of one course, listed for the edited course and counted for every course it is compared with. */
-function courseIssues(course: PlanCourse, phases: PlanPhase[], events: PlanEvent[]) {
-  return validatePublication({
-    course,
-    phases: phases.filter((phase) => phase.courseId === course.id),
-    events: events.filter((event) => event.courseIds.includes(course.id)),
-  });
-}
-
-function ComparisonStanding({ course, phases, events }: { course: PlanCourse; phases: PlanPhase[]; events: PlanEvent[] }) {
-  const issues = courseIssues(course, phases, events);
-  return <li>
-    <strong>{course.code}</strong> · {course.program} · {areaAccessLabel(course.editable)}{course.workInProgress ? ` · ${workInProgressLabel}` : ""}
-    {" · "}{issues.length ? `${issues.length === 1 ? "1 offener Punkt" : `${issues.length} offene Punkte`}` : "Planungsstand ist vollständig"}
-  </li>;
+  </Disclosure></li>;
 }
 
 /**
- * One course with everything that is written to it, and beside it the courses it is compared with — read only, however
- * the account is permitted, because the comparison exists to be seen while planning and not to be planned in.
+ * The course phases of the edited course, under the same heading as the matrix that draws them: the matrix shows every
+ * course of the comparison, this list is the one course that is written to. It follows the semesters of that course
+ * rather than running through in one length, so it is divided the way the matrix is divided into row groups and a
+ * semester without a phase says so instead of being missing (BARRIEREFREIHEIT.md, „Semester-Navigation“).
  */
-export function CoursePlanEditor({ course, comparison, phases, events }: {
-  course: PlanCourse;
-  comparison: PlanCourse[];
-  phases: PlanPhase[];
-  events: PlanEvent[];
-}) {
-  const courses = [course, ...comparison];
+export function CoursePhaseEditor({ course, comparison, phases }: { course: PlanCourse; comparison: PlanCourse[]; phases: PlanPhase[] }) {
   const ownPhases = phases.filter((phase) => phase.courseId === course.id);
-  const ownEvents = events.filter((event) => event.courseIds.includes(course.id));
-  const issues = courseIssues(course, phases, events);
   /* A phase transfer is only offered where every phase valid for this course is valid for the target as well: same
      number of semesters and the same study period. Which dates are about to be entered is not known while the target
      is being offered, so the condition is on the courses rather than on the entry — a target the domain would refuse
      must not be offerable, because its refusal takes the whole transaction down, this course included. Study programs
      of the same length but a different study period do occur once the comparison reaches beyond the own study program. */
-  const phaseTargets = comparison.filter((candidate) => candidate.editable && candidate.state === "UNPUBLISHED"
+  const transferTargets = comparison.filter((candidate) => candidate.editable && candidate.state === "UNPUBLISHED"
     && candidate.semesters === course.semesters && candidate.studyStart === course.studyStart && candidate.studyEnd === course.studyEnd);
   // A course one may write to but not transfer into would otherwise simply be missing from the choices, leaving the
   // reason to be guessed. It is named instead, with the property that rules it out.
-  const excludedTargets = comparison.filter((candidate) => candidate.editable && candidate.state === "UNPUBLISHED" && !phaseTargets.includes(candidate));
-  const eventTargets = comparison.filter((candidate) => candidate.editable);
+  const excludedTargets = comparison.filter((candidate) => candidate.editable && candidate.state === "UNPUBLISHED" && !transferTargets.includes(candidate));
 
-  return <>
-    <section className="workspace-panel" aria-labelledby="standing-heading">
-      <h2 id="standing-heading">Planungsstand</h2>
-      {issues.length
-        ? <><p>{issues.length === 1 ? "1 offener Punkt:" : `${issues.length} offene Punkte:`}</p>
-          <ul className="issue-list">{issues.map((issue) => <li key={`${issue.code}-${issue.semester}-${issue.eventId}`}>{issue.message}</li>)}</ul></>
-        : <p>Planungsstand ist vollständig.</p>}
-      {comparison.length ? <>
-        <h3>Verglichene Kurse</h3>
-        <p>Diese Kurse stehen nur zum Vergleich daneben. Bearbeitet wird auf dieser Seite ausschließlich {course.code}.</p>
-        <ul className="entry-list">{comparison.map((candidate) => <ComparisonStanding key={candidate.id} course={candidate} phases={phases} events={events} />)}</ul>
-      </> : null}
-    </section>
-    <PlanMatrix courses={courses} phases={phases} events={events} primaryCourseId={course.id}
-      workInProgressCourseIds={courses.filter((candidate) => candidate.workInProgress).map((candidate) => candidate.id)} />
-    {/* The sections above show the comparison; from here on only the edited course is the subject, so its code is
-        part of every heading. */}
-    <section className="workspace-panel" aria-labelledby="phase-heading">
-      <h2 id="phase-heading">Kursphasen von {course.code}</h2>
-      {course.editable ? <>
-        <p>Jede Speicherung ist eine einzelne Operation. Es gibt kein automatisches Speichern.</p>
-        {course.state === "UNPUBLISHED"
-          ? <>
-            {/* Only where phases are actually created: a published course offers no transfer to explain a limit of. */}
-            {excludedTargets.length ? <p className="notice">
-              Nicht als Übertragungsziel wählbar: {excludedTargets.map((candidate) => candidate.code).join(", ")}. Übertragen wird nur auf Kurse mit derselben Semesterzahl und demselben Studienzeitraum, weil eine dort abgewiesene Kursphase auch diesen Kurs nicht speichern würde.
-            </p> : null}
-            <PhaseCreateForm course={course} transferTargets={phaseTargets} />
-          </>
-          : <p className="empty-note">In veröffentlichten Kursen werden keine einzelnen Phasen ergänzt. Verschieben Sie stattdessen eine vorhandene Phasengrenze; angrenzende Phasen werden atomar angepasst.</p>}
-      {/* The reason one may only read stands once, on the page around this editor; here only what it means for phases. */}
-      </> : <p className="notice">Den Verlauf dieses Kurses können Sie lesen, aber nicht ändern.</p>}
-      {ownPhases.length ? <section aria-labelledby="phase-list-heading">
-        <h3 id="phase-list-heading">Gespeicherte Kursphasen</h3>
-        <ul className="entry-list">{ownPhases.map((phase) => <PhaseRowEditor key={phase.id} phase={phase} course={course} />)}</ul>
-      </section> : <p className="empty-note">Für {course.code} ist noch keine Kursphase gespeichert.</p>}
-    </section>
-    <section className="workspace-panel" aria-labelledby="event-heading">
-      <h2 id="event-heading">Prüfungsrelevante Termine von {course.code}</h2>
-      {course.editable
-        ? <EventCreateForm course={course} transferTargets={eventTargets} />
-        : <p className="notice">Termine dieses Kurses können Sie lesen, aber nicht ändern.</p>}
-      {ownEvents.length ? <section aria-labelledby="event-list-heading">
-        <h3 id="event-list-heading">Gespeicherte Termine</h3>
-        <ul className="entry-list">{ownEvents.map((event) => <EventRowEditor key={event.id} event={event} course={course} />)}</ul>
-      </section> : <p className="empty-note">Für {course.code} ist noch kein prüfungsrelevanter Termin gespeichert.</p>}
-    </section>
-  </>;
+  return <div className="plan-block">
+    <h3>Kursphasen von {course.code}</h3>
+    <p className="plan-block__note">Jede Speicherung ist eine einzelne Operation. Es gibt kein automatisches Speichern.</p>
+    {Array.from({ length: course.semesters }, (_, index) => index + 1).map((semester) => {
+      const semesterPhases = ownPhases.filter((phase) => phase.semester === semester);
+      return <section key={semester} className="semester-group" aria-labelledby={`semester-${course.id}-${semester}`}>
+        <h4 id={`semester-${course.id}-${semester}`}>Semester {semester}</h4>
+        {semesterPhases.length
+          ? <ul className="entry-list">{semesterPhases.map((phase) => <PhaseRowEditor key={phase.id} phase={phase} course={course} />)}</ul>
+          : <p className="empty-note">Für dieses Semester ist keine Kursphase gespeichert.</p>}
+      </section>;
+    })}
+    {course.state === "UNPUBLISHED"
+      ? <div className="plan-block__create">
+        {/* Only where phases are actually created: a published course offers no transfer to explain a limit of. */}
+        {excludedTargets.length ? <p className="notice">
+          Nicht als Übertragungsziel wählbar: {excludedTargets.map((candidate) => candidate.code).join(", ")}. Übertragen wird nur auf Kurse mit derselben Semesterzahl und demselben Studienzeitraum, weil eine dort abgewiesene Kursphase auch diesen Kurs nicht speichern würde.
+        </p> : null}
+        <Disclosure group={`phase-${course.id}`} summary="Kursphase ergänzen">
+          <PhaseCreateForm course={course} transferTargets={transferTargets} />
+        </Disclosure>
+      </div>
+      : <p className="empty-note">In veröffentlichten Kursen werden keine einzelnen Phasen ergänzt. Verschieben Sie stattdessen eine vorhandene Phasengrenze; angrenzende Phasen werden atomar angepasst.</p>}
+  </div>;
+}
+
+/**
+ * The examination-relevant dates of the edited course, under the same heading as the chronological table that shows
+ * them together with those of the compared courses. Unlike course phases they hang on no semester structure, so they
+ * stand in one chronological list.
+ */
+export function CourseEventEditor({ course, comparison, events }: { course: PlanCourse; comparison: PlanCourse[]; events: PlanEvent[] }) {
+  const ownEvents = events.filter((event) => event.courseIds.includes(course.id));
+  const transferTargets = comparison.filter((candidate) => candidate.editable);
+
+  return <div className="plan-block">
+    <h3>Termine von {course.code}</h3>
+    {ownEvents.length
+      ? <ul className="entry-list">{ownEvents.map((event) => <EventRowEditor key={event.id} event={event} course={course} />)}</ul>
+      : <p className="empty-note">Für {course.code} ist noch kein prüfungsrelevanter Termin gespeichert.</p>}
+    <div className="plan-block__create">
+      <Disclosure group={`event-${course.id}`} summary="Termin erfassen">
+        <EventCreateForm course={course} transferTargets={transferTargets} />
+      </Disclosure>
+    </div>
+  </div>;
 }

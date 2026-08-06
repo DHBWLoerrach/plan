@@ -7,7 +7,7 @@ import { InternalNav } from "@/components/internal-nav";
 import { SiteShell } from "@/components/site-shell";
 import { sqlite } from "@/lib/db";
 import { berlinCalendarDay } from "@/lib/domain/calendar-day";
-import { publicationStateLabels, workInProgressLabel } from "@/lib/domain/course-status";
+import { publicationStateLabels } from "@/lib/domain/course-status";
 import { getActiveAccount, managesAnyArea } from "@/lib/internal-auth";
 
 import { overviewPrograms } from "./kurse/data";
@@ -47,10 +47,9 @@ export default async function InternalHome() {
               <span className="course-tile__standing">{course.currentPhase}</span>
               {/* A course past its last phase has nothing to announce, so the line goes rather than stating that. */}
               {course.nextPhase ? <span>{course.nextPhase}</span> : null}
-              {/* The publication state is named in words in every internal list, „in Arbeit“ beside it in the same
-                  line as in the course list; the tone only repeats what the word already says (BARRIEREFREIHEIT.md). */}
-              <span>{publicationStateLabels[course.state]}
-                {course.workInProgress ? <> · <span className="course-tile__wip">{workInProgressLabel}</span></> : null}</span>
+              {/* The publication state is named in words in every internal view, and it is the whole state a course
+                  has: there is no second data stand beside the visible one (ADR 0012, ADR 0014). */}
+              <span className={course.state === "UNPUBLISHED" ? "course-tile__unpublished" : undefined}>{publicationStateLabels[course.state]}</span>
             </li>)}</ul>
           </div>)}
         </section>)

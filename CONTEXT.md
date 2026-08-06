@@ -21,8 +21,11 @@ _Avoid_: Entwurf, Arbeitsstand, veröffentlichte Fassung
 
 **Öffentlich sichtbarer Kurs**: Ein Kurs mit gesetztem Veröffentlichungszeitpunkt. Externe Nutzende sehen seine aktuellen Angaben, Kursphasen und Termine.
 
-**Kurs in Arbeit**: Ein nicht veröffentlichter Kurs. Er darf unvollständig sein und ist in allen internen Ansichten textlich als „in Arbeit“ gekennzeichnet.
-_Avoid_: Entwurfszustand
+**Nicht veröffentlichter Kurs**: Ein Kurs ohne Veröffentlichungszeitpunkt. Er darf unvollständig sein und ist in allen internen Ansichten textlich so benannt. Ein zweiter Name für denselben Zustand existiert nicht.
+_Avoid_: Kurs in Arbeit, Entwurfszustand, Arbeitsstand
+
+**Offener Punkt**: Eine Veröffentlichungsregel, die der Planungsstand eines Kurses zurzeit verletzt. Offene Punkte werden dort genannt, wo sie wirken: bei der Veröffentlichung, die sie verhindern.
+_Avoid_: Fehler, Warnung, Vollständigkeitsbericht
 
 **Übernahme**: Die Anlage eines Kurses, dessen Kursverlauf und Termine aus einer Vorlage kopiert und dabei um ganze Wochen verschoben werden.
 _Avoid_: Klonen, Synchronisieren

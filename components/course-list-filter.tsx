@@ -6,15 +6,19 @@ import { useEffect, useRef, useState, useTransition } from "react";
 
 type FilterOption = { id: string; label: string };
 type YearOption = { year: string };
-type FilterValues = { program: string | null; year: string | null; code: string | null };
+type FilterValues = { program: string | null; year: string | null; code: string | null; responsibility: string | null };
 
 const codeFilterDelay = 300;
+/** The names of the parameters this filter owns, in the order the form offers them. */
+const filterNames = ["responsibility", "program", "year", "code"] as const;
+/** How each of them is written in the address, which is German like every other internal address of this application. */
+const parameterNames: Record<(typeof filterNames)[number], string> = { responsibility: "zustaendigkeit", program: "program", year: "year", code: "code" };
 
 export function CourseListFilter({ programs, years, values }: { programs: FilterOption[]; years: YearOption[]; values: FilterValues }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const codeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const initialValues = { program: values.program ?? "", year: values.year ?? "", code: values.code ?? "" };
+  const initialValues = { program: values.program ?? "", year: values.year ?? "", code: values.code ?? "", responsibility: values.responsibility ?? "" };
   const [filters, setFilters] = useState(initialValues);
   const filtersRef = useRef(initialValues);
   const [pending, startNavigation] = useTransition();
@@ -22,7 +26,7 @@ export function CourseListFilter({ programs, years, values }: { programs: Filter
   useEffect(() => {
     function readFiltersFromUrl() {
       const params = new URLSearchParams(window.location.search);
-      const nextValues = { program: params.get("program") ?? "", year: params.get("year") ?? "", code: params.get("code") ?? "" };
+      const nextValues = Object.fromEntries(filterNames.map((name) => [name, params.get(parameterNames[name]) ?? ""])) as typeof initialValues;
       filtersRef.current = nextValues;
       setFilters(nextValues);
     }
@@ -35,10 +39,10 @@ export function CourseListFilter({ programs, years, values }: { programs: Filter
 
   function applyFilters(nextFilters: typeof initialValues) {
     const params = new URLSearchParams(searchParams.toString());
-    for (const name of ["program", "year", "code"]) {
-      const value = nextFilters[name as keyof typeof nextFilters].trim();
-      if (value) params.set(name, value);
-      else params.delete(name);
+    for (const name of filterNames) {
+      const value = nextFilters[name].trim();
+      if (value) params.set(parameterNames[name], value);
+      else params.delete(parameterNames[name]);
     }
     const query = params.toString();
     startNavigation(() => router.replace(`/intern/kurse${query ? `?${query}` : ""}`, { scroll: false }));
@@ -59,6 +63,10 @@ export function CourseListFilter({ programs, years, values }: { programs: Filter
 
   return <form className="filter-grid course-list-filter" role="search" aria-label="Kurse filtern"
     aria-busy={pending} onSubmit={(event) => { event.preventDefault(); applyImmediately(filtersRef.current); }}>
+    {/* The empty value is the responsibility one opens on, so the plain list address is the own courses and only the
+        wider view carries a parameter — the same way the comparison writes only its non-default scope. */}
+    <label className="course-list-filter__responsibility">Zuständigkeit<select name="zustaendigkeit" value={filters.responsibility}
+      onChange={(event) => applyImmediately(changeFilter("responsibility", event.currentTarget.value))}><option value="">Eigene Bereiche</option><option value="alle">Alle Bereiche</option></select></label>
     <label className="course-list-filter__program">Studiengang<select name="program" value={filters.program}
       onChange={(event) => applyImmediately(changeFilter("program", event.currentTarget.value))}><option value="">Alle Studiengänge</option>{programs.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label>
     <label className="course-list-filter__year">Jahrgang<select name="year" value={filters.year}
@@ -71,7 +79,7 @@ export function CourseListFilter({ programs, years, values }: { programs: Filter
       }} /></label>
     <Link className="course-list-filter__reset" href="/intern/kurse" onClick={() => {
       if (codeTimer.current) clearTimeout(codeTimer.current);
-      const emptyFilters = { program: "", year: "", code: "" };
+      const emptyFilters = { program: "", year: "", code: "", responsibility: "" };
       filtersRef.current = emptyFilters;
       setFilters(emptyFilters);
     }}>Zurücksetzen</Link>

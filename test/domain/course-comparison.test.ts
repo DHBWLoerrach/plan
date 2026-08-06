@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { comparisonScope, comparisonScopeLabel, comparisonScopes, coursePlanPath, defaultComparisonScope } from "@/lib/domain/course-comparison";
+import { comparisonScope, comparisonScopeLabel, comparisonScopes, coursePath, defaultComparisonScope } from "@/lib/domain/course-comparison";
 
 describe("comparisonScope", () => {
   it("reads every offered option back from its address", () => {
@@ -22,19 +22,19 @@ describe("comparisonScope", () => {
   });
 });
 
-describe("coursePlanPath", () => {
-  it("leaves the default comparison out of the address, so the plain plan address is the one that gets linked", () => {
-    expect(coursePlanPath("course-1")).toBe("/intern/kurse/course-1/plan");
-    expect(coursePlanPath("course-1", "program")).toBe("/intern/kurse/course-1/plan");
+describe("coursePath", () => {
+  it("leaves the default comparison out of the address, so the plain course address is the one that gets linked", () => {
+    expect(coursePath("course-1")).toBe("/intern/kurse/course-1");
+    expect(coursePath("course-1", "program")).toBe("/intern/kurse/course-1");
   });
 
   it("carries every other comparison as a parameter", () => {
-    expect(coursePlanPath("course-1", "area")).toBe("/intern/kurse/course-1/plan?vergleich=bereich");
-    expect(coursePlanPath("course-1", "year")).toBe("/intern/kurse/course-1/plan?vergleich=jahrgang");
-    expect(coursePlanPath("course-1", "none")).toBe("/intern/kurse/course-1/plan?vergleich=keiner");
+    expect(coursePath("course-1", "area")).toBe("/intern/kurse/course-1?vergleich=bereich");
+    expect(coursePath("course-1", "year")).toBe("/intern/kurse/course-1?vergleich=jahrgang");
+    expect(coursePath("course-1", "none")).toBe("/intern/kurse/course-1?vergleich=keiner");
   });
 
   it("encodes the course id, because it reaches the path from a table row unchecked", () => {
-    expect(coursePlanPath("kurs/mit slash")).toBe("/intern/kurse/kurs%2Fmit%20slash/plan");
+    expect(coursePath("kurs/mit slash")).toBe("/intern/kurse/kurs%2Fmit%20slash");
   });
 });

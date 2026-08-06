@@ -58,14 +58,14 @@ export type CourseFormState = { error?: string; success?: string };
 export type CoursePublicationFormState = { error?: string };
 
 /**
- * Every internal view that presents courses or their plans. The plan pages are named by their route pattern, because a
- * course appears not only on its own plan page but as a comparison on the plan pages of its parallel courses.
+ * Every internal view that presents courses or their plans. The course page is named by its route pattern, because a
+ * course appears not only on its own page but as a comparison on the pages of its parallel courses.
  */
 function revalidateCourseViews(courseId: string) {
   revalidatePath("/intern");
   revalidatePath("/intern/kurse");
   revalidatePath(`/intern/kurse/${courseId}`);
-  revalidatePath("/intern/kurse/[courseId]/plan", "page");
+  revalidatePath("/intern/kurse/[courseId]", "page");
 }
 
 /** Creating a course as an adoption from a template — one of the two ways into a new course, never combined with the other. */

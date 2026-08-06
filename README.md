@@ -18,9 +18,13 @@ Planungs- und Veröffentlichungseinheit ist der Kurs, der Blockplan ist die
 veröffentlichte Darstellung eines Zuschnitts (siehe
 [ADR 0010](docs/adr/0010-kurs-als-planungs-und-veroeffentlichungseinheit.md) und
 [ADR 0011](docs/adr/0011-systemweite-leseeinsicht-in-kurse.md)). Intern ist der
-Kurs zugleich der Bearbeitungsgegenstand: Kursverlauf und Termine werden je Kurs
-gepflegt, während die Kurse desselben Jahrgangs nur zum Vergleich danebenstehen
+Kurs zugleich der Bearbeitungsgegenstand und hat genau eine Adresse, die alles
+trägt, was ihn betrifft; die Kurse desselben Jahrgangs stehen dort nur zum
+Vergleich daneben
 ([ADR 0013](docs/adr/0013-kurs-als-bearbeitungsgegenstand-vergleich-als-vorschau.md)).
+Sein Zustand ist allein die Veröffentlichung — eine zweite Kennzeichnung „in Arbeit“
+gibt es nicht mehr
+([ADR 0014](docs/adr/0014-in-arbeit-entfaellt.md)).
 
 Der aktuelle Funktions- und Regelumfang wird nicht zusätzlich in einem
 Spezifikationsdokument nacherzählt. Maßgeblich sind Anwendungscode,

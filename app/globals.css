@@ -139,6 +139,7 @@ p[role="status"] { margin: 0; color: var(--success); }
 .filter-grid.course-list-filter { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-top: 1rem; padding: .65rem; background: var(--surface); }
 .course-list-filter label { display: flex; align-items: center; min-width: 0; gap: .3rem; font-size: .82rem; white-space: nowrap; }
 .course-list-filter label > input, .course-list-filter label > select { width: auto; min-width: 0; flex: 1 1 auto; }
+.course-list-filter__responsibility { flex: 0 0 15rem; }
 .course-list-filter__program { flex: 0 1 21rem; }
 .course-list-filter__year { flex: 0 0 13rem; }
 .course-list-filter__code { flex: 0 0 15rem; }
@@ -288,6 +289,20 @@ p[role="status"] { margin: 0; color: var(--success); }
    and a longer duration inside a cell cannot widen its own column. The heading is centred like the cells below it,
    while the columns of text to its left keep their left edge. */
 .matrix-course { width: 10%; min-width: 8.5rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; text-align: center; }
+/* The mark of a course that is not published yet. It keeps a little distance from the designation, so it is not read
+   as the last character of the code, and stays unbold even beside the edited course. It leaves the monospace of the
+   column heading for the prose face of the sentence that resolves it below the table: the same glyph in both places,
+   raised where a footnote mark belongs, instead of a monospace asterisk sitting at half height beside the code. Its
+   own line height stays below the line of the heading, so the different face cannot grow the head. It carries the
+   weight of the heading around it and a slightly larger size, because a raised glyph of a few pixels is the whole
+   statement — it keeps the colour of the text, since red already means the edited column here. */
+.matrix-course__mark { margin-left: .15rem; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 1.2em; line-height: 1; }
+/* What that mark means, under the table and outside its scrolling region, in prose rather than in the monospace of the
+   codes it explains. It ends at the right edge of the card and stays quieter than the table, because it is read once
+   and then no longer. Quieter has a floor: it resolves a mark that appears nowhere else in words, so it keeps a text
+   size in rem that grows with the text zoom and a colour that holds 5.6:1 on white. The line under the last row of the
+   table already separates it; a border of its own would draw a second one right beneath the first. */
+.matrix-footnote { margin: 0; padding: .4rem .7rem; color: var(--gray); font-size: .78rem; text-align: right; }
 /* The column of the course a page is about. It is marked at its heading rather than down its cells: the plan below is
    read across the columns, and a tinted lane would compete with the phase fills that carry the actual statement. */
 .matrix-course[data-primary] { border-bottom: .2rem solid var(--red); }
@@ -397,8 +412,8 @@ p[role="status"] { margin: 0; color: var(--success); }
 /* Where the course stands today is what the tile is read for, so it holds body colour and a little air below it; the
    phase to come and the publication state follow as the quieter lines. */
 .course-tile .course-tile__standing { margin-bottom: .15rem; color: var(--ink); font-size: .92rem; }
-/* „In Arbeit“ is named in words like every other marking, in a tone that only repeats what the word already says. */
-.course-tile .course-tile__wip { color: var(--warning); }
+/* The state is named in words like every other marking; the tone only repeats what the word already says. */
+.course-tile .course-tile__unpublished { color: var(--warning); }
 
 /* The selection sits in the head of the matrix card and is the only thing acting there, so it may take the left edge
    of the card: label and options on one line, the hint on the next, all three starting at that edge. Every option is a
@@ -605,14 +620,41 @@ p[role="status"] { margin: 0; color: var(--success); }
 }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
 
-.entry-list { display: grid; gap: .75rem; margin: 1.25rem 0 0; padding: 0; list-style: none; }
-.entry-list > li { padding: .9rem 1rem; background: #fff; border: 1px solid var(--line); }
-.entry-list > li > p { margin: 0 0 .3rem; }
-/* A phase-section entry has nothing but its CollapsibleEditor: the entry's own box would only frame
-   the editor-card's identical white background and border a second time, with the card's margin-top
-   opening dead space before it. Drop the entry's own chrome so exactly one bordered card remains. */
-.entry-list > li:has(> .editor-card:only-child) { padding: 0; border: 0; background: none; }
-.entry-list > li:has(> .editor-card:only-child) > .editor-card { margin-top: 0; }
+.entry-list { display: grid; gap: .5rem; margin: 0; padding: 0; list-style: none; }
+.entry-list > li { background: #fff; }
+.entry-list > li > p { margin: 0; padding: .9rem 1rem; border: 1px solid var(--line); }
+
+/* An entry rests as a line and opens into the form belonging to it. The behaviour is entirely the browser's; what is
+   set here is the line, so it reads as one control rather than as a heading with a stray marker beside it. */
+.disclosure { border: 1px solid var(--line); background: #fff; }
+.disclosure > summary { display: flex; align-items: baseline; gap: .3rem .9rem; min-height: 2.75rem; padding: .75rem 1rem; cursor: pointer; list-style: none; }
+.disclosure > summary::-webkit-details-marker { display: none; }
+.disclosure > summary:hover { background: var(--surface); }
+/* Inset, because the outline of a summary flush against its own border would otherwise sit half outside the entry. */
+.disclosure > summary:focus-visible { outline: 3px solid #1a1a1a; outline-offset: -3px; }
+.disclosure__summary { flex: 1 1 auto; min-width: 0; }
+/* What opening does, where the summary does not already say it. */
+.disclosure__hint { flex: none; color: var(--red); font-size: .9rem; font-weight: 700; }
+/* Drawn rather than written: a character would be read out by assistive technology, which is already told the
+   expanded state by the element itself. */
+.disclosure > summary::after {
+  content: ""; flex: none; align-self: center; width: .5rem; height: .5rem; margin-inline-start: .1rem;
+  border-right: 2px solid var(--red); border-bottom: 2px solid var(--red); transform: rotate(45deg);
+}
+.disclosure[open] > summary::after { transform: rotate(-135deg); }
+@media (forced-colors: active) { .disclosure > summary::after { border-color: currentColor; } }
+.disclosure[open] > summary { background: var(--surface); border-bottom: 1px solid var(--line); }
+.disclosure__body { padding: 1rem; }
+.disclosure__body > .account-form { margin-top: 0; }
+
+/* The list of course phases follows the semesters of its course, the way the matrix above it is divided into row
+   groups: one order for the same subject, and a semester without a phase says so rather than being absent. */
+.semester-group { margin-top: 1.4rem; }
+.semester-group h4 { margin: 0 0 .5rem; color: var(--gray-strong); font-size: 1rem; font-weight: 700; }
+.semester-group .empty-note { margin: 0; }
+/* Creating stands apart from the entries it adds to, marked the way every editing surface of this application is. */
+.plan-block__create { margin-top: 1.5rem; }
+.plan-block__create .disclosure { border-left: 4px solid var(--red); }
 
 .field-hint { margin: 0; color: var(--gray); font-size: .85rem; }
 

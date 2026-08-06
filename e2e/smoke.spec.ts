@@ -44,12 +44,20 @@ test("sets a password from a link and signs in", async ({ page }) => {
   await expect(page).toHaveURL(/\/intern$/u);
 });
 
+/** The disclosure an entry or a form rests behind, addressed by its summary line. */
+function disclosure(page: Page, summary: string): Locator {
+  return page.locator("summary").filter({ hasText: summary });
+}
+
 test("edits, publishes and publicly reads a course", async ({ page }) => {
   await signIn(page, "admin@test.invalid");
   await page.goto("/intern/kurse/e2e-course");
+  // The course details rest closed, so the page opens as a plan and not as a stack of forms.
+  await expect(page.getByLabel("Kurskennung")).not.toBeVisible();
+  await disclosure(page, "Kursangaben ändern").click();
   await page.getByLabel("Kurskennung").fill("TIF26EDIT");
   await page.getByRole("button", { name: "Kursangaben speichern" }).click();
-  await expect(page.getByRole("status")).toContainText("Kursangaben wurden gespeichert");
+  await expect(page.getByText("Die Kursangaben wurden gespeichert.")).toBeVisible();
   await page.getByRole("button", { name: "Kurs veröffentlichen" }).click();
   await page.getByRole("button", { name: "Jetzt veröffentlichen" }).click();
 
@@ -95,8 +103,8 @@ test("creates a course with a generated progression and lands on a complete plan
   await expect(page.getByText("Der Kurs wurde angelegt.")).toBeVisible();
   const courseId = new URL(page.url()).pathname.split("/").pop();
 
-  // What was written is read back where the course progression is shown: complete, and therefore publishable.
-  await page.goto(`/intern/kurse/${courseId}/plan`);
+  // What was written is read back under the plain course address: complete, and therefore publishable.
+  await page.goto(`/intern/kurse/${courseId}`);
   await expect(page.getByText("Planungsstand ist vollständig.")).toBeVisible();
 });
 
@@ -131,7 +139,7 @@ test("adopts the progression of an existing course into a new one", async ({ pag
   const courseId = new URL(page.url()).pathname.split("/").pop();
 
   // The adopted progression is the one of the template, shifted — and complete, so the new course is publishable.
-  await page.goto(`/intern/kurse/${courseId}/plan`);
+  await page.goto(`/intern/kurse/${courseId}`);
   await expect(page.getByText("Planungsstand ist vollständig.")).toBeVisible();
 });
 
@@ -145,19 +153,25 @@ test("opens on the own areas and keeps foreign courses read-only, confirming wit
   await expect(page.getByRole("link", { name: /^TIF26/u })).toBeVisible();
   await expect(page.getByText("Fremdinformatik")).toHaveCount(0);
 
-  /* The list leads into a course under its own designation, and the address of a foreign course is its plan: there is
-     no page of its own left where nothing may be written. Both are walked rather than typed, so the one way the row
-     offers is the one the assertion below arrives through. */
+  /* The list opens on the courses this account is responsible for, and the foreign ones are asked for. The way is
+     walked rather than typed, so the one address the row offers is the one the assertions below arrive through — a
+     course has exactly one internal address, whether it may be written to or not. */
   await page.goto("/intern/kurse");
+  await expect(page.getByRole("link", { name: "FRM26E2E" })).toHaveCount(0);
+  await page.getByLabel("Zuständigkeit").selectOption("alle");
+  await expect(page).toHaveURL(/zustaendigkeit=alle/u);
   await page.getByRole("link", { name: "FRM26E2E" }).click();
-  await expect(page).toHaveURL(/\/intern\/kurse\/e2e-foreign-course\/plan$/u);
+  await expect(page).toHaveURL(/\/intern\/kurse\/e2e-foreign-course$/u);
   await expect(page.getByText(/lesen, aber nicht bearbeiten/u)).toBeVisible();
   await expect(page.getByRole("button", { name: "Kurs veröffentlichen" })).toHaveCount(0);
+  // Nothing that writes, and therefore no list that would only repeat the matrix and the chronology above it.
+  await expect(disclosure(page, "Termin erfassen")).toHaveCount(0);
+  await expect(disclosure(page, "Kursangaben ändern")).toHaveCount(0);
 
   /* The comparison is switched inside the running page rather than loaded fresh: the matrix keeps its column
      selection across that navigation, so a course newly brought in has to arrive shown instead of hidden. The foreign
      course is the one the widened comparison adds, and no test renames it. */
-  await page.goto("/intern/kurse/e2e-course/plan");
+  await page.goto("/intern/kurse/e2e-course");
   const foreignColumn = page.getByRole("columnheader", { name: /FRM26E2E/u });
   await expect(foreignColumn).toHaveCount(0);
   await page.getByRole("link", { name: "Jahrgang", exact: true }).click();
@@ -175,6 +189,7 @@ test("opens on the own areas and keeps foreign courses read-only, confirming wit
       captured = { url: request.url(), headers: request.headers(), body: request.postData() };
     }
   });
+  await disclosure(page, "Termin erfassen").click();
   const eventForm = page.locator("form").filter({ has: page.getByLabel("Titel") }).first();
   await eventForm.getByLabel("Titel").fill("Sondierung");
   await eventForm.getByLabel("Kategorie").selectOption("EXAM");
@@ -206,6 +221,7 @@ test("opens on the own areas and keeps foreign courses read-only, confirming wit
   expect(answer).not.toContain("nicht gefunden");
 
   await page.goto("/intern/kurse/e2e-course");
+  await disclosure(page, "Kursangaben ändern").click();
   const correction = page.getByRole("button", { name: "Änderung prüfen" });
   const publication = page.getByRole("button", { name: "Kurs veröffentlichen" });
   const control = await correction.count() ? correction : publication;

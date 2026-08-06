@@ -6,23 +6,15 @@ export const publicationStateLabels: Record<PublicationState, string> = {
   PUBLISHED: "Veröffentlicht",
 };
 
-/** Unpublished courses may contain incomplete intermediate planning states. */
-export const workInProgressLabel = "In Arbeit";
-
-/** How every internal view names whether a course belongs to an area this account may write in (ADR 0011). */
-export function areaAccessLabel(editable: boolean): string {
-  return editable ? "Eigener Bereich" : "Fremder Bereich — nur lesbar";
-}
-
 export function isPublicationState(value: string | null): value is PublicationState {
   return value !== null && Object.hasOwn(publicationStateLabels, value);
 }
 
-export type CourseStatus = { state: PublicationState; workInProgress: boolean };
-
-/** Publication is visibility of the current course data, represented by one nullable timestamp. */
-export function courseStatus(publishedAt: string | null): CourseStatus {
-  return publishedAt
-    ? { state: "PUBLISHED", workInProgress: false }
-    : { state: "UNPUBLISHED", workInProgress: true };
+/**
+ * Publication is visibility of the current course data, represented by one nullable timestamp. Since a course carries
+ * no second data stand beside the visible one (ADR 0012), this single state says everything there is to say about it:
+ * an unpublished course is not additionally „in Arbeit“, that was the same fact under a second name (ADR 0014).
+ */
+export function publicationState(publishedAt: string | null): PublicationState {
+  return publishedAt ? "PUBLISHED" : "UNPUBLISHED";
 }

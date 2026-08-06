@@ -29,3 +29,11 @@ Der Vergleich ist wie der öffentliche Zuschnitt an genau einen Jahrgang gebunde
 Die Gegenüberstellung übereinstimmender Kursphasen und Termine bleibt, wandert aber vollständig in die Darstellung: Die Planmatrix fasst gleiche Verläufe weiterhin zu einer Spalte zusammen, während die bearbeitbaren Listen darunter nur noch die Angaben des einen Kurses führen. Damit gibt es keine Bedienoberfläche mehr, die eine Änderung an mehreren Kursen zugleich vornimmt; die zusammenfassende Schreiblogik entfällt ersatzlos.
 
 Die Spalte des bearbeiteten Kurses ist in der Planmatrix hervorgehoben und lässt sich nicht ausblenden — ein Vergleich ohne seinen Gegenstand vergliche nichts. Bei der Wahl „Jahrgang“ kann die Matrix über alle Bereiche hinweg sehr breit werden; sie bleibt über die Kursauswahl in ihrem Kopf beherrschbar, und der voreingestellte Umfang ist der Studiengang.
+
+## Eine Adresse je Kurs
+
+Wenn der Kurs der Gegenstand ist, hat er auch genau eine interne Adresse: `/intern/kurse/{id}`. Sie trägt alles, was den Kurs betrifft — Veröffentlichung, Kursverlauf, Termine, Kursangaben und Löschung. Die zuvor getrennte Planseite entfällt, und ein Kurs aus einem nicht zugeordneten Bereich wird nicht mehr umgeleitet: Er zeigt dieselbe Seite, nur ohne alles, was schreiben würde. Damit führt jede Zeile der Kursliste in einem Schritt ans Ziel, gleich ob der Kurs bearbeitet werden darf oder nicht.
+
+Die Seite ist dabei nach ihrem Gegenstand gegliedert und nicht nach Lesen und Schreiben: Unter „Kursverlauf“ stehen Überblick, Planmatrix und die Kursphasen des bearbeiteten Kurses, unter „Prüfungsrelevante Termine“ die chronologische Gegenüberstellung und seine eigenen Termine. Die Umfangwahl des Vergleichs steht deshalb über beiden Abschnitten, während die Auswahl der sichtbaren Spalten im Kopf der Matrix bleibt — sie betrifft nur diese. Steht kein Kurs zum Vergleich daneben, entfällt die chronologische Gegenüberstellung: Sie enthielte dieselben Termine in derselben Reihenfolge wie die bearbeitbare Liste darunter.
+
+Damit die eine Seite nicht das ist, was die zwei vorher waren, ruht jede Bearbeitung: Eine gespeicherte Kursphase und ein gespeicherter Termin stehen als Zeile und öffnen ihr Formular erst auf Verlangen, ebenso das Anlegen und die Kursangaben. Der Ruhezustand der Seite ist damit eine Darstellung, kein Formularstapel.

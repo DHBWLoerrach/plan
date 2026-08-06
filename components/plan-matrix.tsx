@@ -1,10 +1,9 @@
 "use client";
 
-import { Fragment, useId, useState, type MouseEvent } from "react";
+import { Fragment, useId, useState, type MouseEvent, type ReactNode } from "react";
 
 import { PlanTimeline } from "@/components/plan-timeline";
 import { formatCalendarPeriod, formatPeriodDuration } from "@/lib/domain/calendar-format";
-import { workInProgressLabel } from "@/lib/domain/course-status";
 import { eventCategoryLabel } from "@/lib/domain/event-category";
 import { groupComparableCourses, groupComparableEvents, type ComparableCourseGroup } from "@/lib/domain/plan-comparison";
 import { phaseTypeLabel } from "@/lib/domain/phase-type";
@@ -73,16 +72,20 @@ function PhaseCell({ cell, group, headers, rowSpan = 1, duration }: { cell: stri
 }
 
 /**
- * `workInProgressCourseIds` names the courses whose planning state is not the published one. Only the internal views
- * pass it: a published course is never in progress, so the public matrix leaves it out (ADR 0012).
- *
  * `primaryCourseId` names the one course a view is about while the others merely stand beside it for comparison. Its
  * column is marked and cannot be hidden — a comparison without its subject would compare nothing. A public cut names
  * no such course: there all columns rank equally.
+ *
+ * `unpublishedCourseIds` names the courses whose column is to be marked as not yet published, so their progression is
+ * not read as settled (ADR 0011). Only the internal views pass it, and only for the courses standing beside the one
+ * being edited: a public cut shows published courses only, and the edited course states its own condition on the page
+ * around this.
+ *
+ * `children` are written into the same section below the matrix. The internal course page puts the editable phase
+ * list of its course there, so everything about course progressions stands under one heading.
  */
-export function PlanMatrix({ courses, phases, events, workInProgressCourseIds = [], primaryCourseId }: { courses: CoursePlan[]; phases: CoursePhase[]; events: CourseEvent[]; workInProgressCourseIds?: string[]; primaryCourseId?: string }) {
-  const inProgress = new Set(workInProgressCourseIds);
-  const columnLabel = (course: { id: string; code: string }) => inProgress.has(course.id) ? `${course.code} (${workInProgressLabel})` : course.code;
+export function PlanMatrix({ courses, phases, primaryCourseId, unpublishedCourseIds, children }: { courses: CoursePlan[]; phases: CoursePhase[]; primaryCourseId?: string; unpublishedCourseIds?: string[]; children?: ReactNode }) {
+  const unpublished = new Set(unpublishedCourseIds);
   /**
    * The shown columns, kept together with the courses that selection was made over. Switching the comparison replaces
    * the courses without remounting the matrix, so a selection made over the previous set would leave every newly
@@ -99,7 +102,6 @@ export function PlanMatrix({ courses, phases, events, workInProgressCourseIds = 
   const filterHintId = useId();
   const visibleCourses = courses.filter((course) => visibleCourseIds.has(course.id));
   const visibleCourseGroups = groupComparableCourses(visibleCourses, phases);
-  const courseCodes = new Map(courses.map((course) => [course.id, course.code]));
   // Derive the semester tables from the full cut, so hiding course columns never removes a semester table.
   const semesters = Math.max(...courses.map((course) => course.semesters), 0);
   const semesterRows = Array.from({ length: semesters }, (_, index) => {
@@ -147,12 +149,13 @@ export function PlanMatrix({ courses, phases, events, workInProgressCourseIds = 
       : `${course.code} bleibt sichtbar: Mindestens ein Kurs muss in der Planmatrix angezeigt werden.`);
   }
 
-  return <>
-    <section aria-labelledby="plan-heading">
+  return <section aria-labelledby="plan-heading">
       {/* Overview and matrix show the same course of study in two ways and rank equally; the section names the subject
           both of them are about. */}
       <div className="plan-section-head">
-        <h2 id="plan-heading" className="eyebrow">Studienverlauf</h2>
+        {/* „Kursverlauf“ is what CONTEXT.md calls the entirety of a course's phases; „Studienverlauf“ is reserved for
+            a later subject of the application and would name two different things across the same product. */}
+        <h2 id="plan-heading" className="eyebrow">Kursverlauf</h2>
         {/* Both views draw a phase type in the same language, so it is named once for the section and above the first
             of them — the overview would otherwise be read before anything has said what its fills mean. The legend
             explains, it does not act, so it carries no frame, no surface and no state of its own. It is hidden from
@@ -222,14 +225,24 @@ export function PlanMatrix({ courses, phases, events, workInProgressCourseIds = 
                 <th scope="col" rowSpan={2}>Semester</th><th scope="col" rowSpan={2}>Zeitraum</th><th scope="col" rowSpan={2}>Dauer des Abschnitts</th>
                 {/* The edited course is set in bold within its column heading, which may hold several codes once a
                     compared course shares its whole progression. The mark is repeated in words for assistive
-                    technology, which never sees the weight (BARRIEREFREIHEIT.md). */}
+                    technology, which never sees the weight (BARRIEREFREIHEIT.md). The publication state belongs to one
+                    course, so its mark stands directly behind the designation it speaks about — and in words for
+                    assistive technology, which reads this heading once for the whole column. */}
                 {visibleCourseGroups.map((group) => <th key={group.courses.map((course) => course.id).join("-")} className="matrix-course" scope="colgroup"
                   data-primary={group.courses.some((course) => course.id === primaryCourseId) ? "" : undefined}
-                  colSpan={group.courses.length > 1 ? group.courses.length : undefined}>{group.courses.map((course, index) => <Fragment key={course.id}>
-                    {index ? " · " : ""}{course.id === primaryCourseId ? <strong>{columnLabel(course)}</strong> : columnLabel(course)}
-                  </Fragment>)}</th>)}
-              </tr><tr>{visibleCourseGroups.flatMap((group) => group.courses.map((course) => <th key={course.id} className="sr-only"
-                id={`matrix-course-${course.id}`} scope="col">{columnLabel(course)}{course.id === primaryCourseId ? " (bearbeiteter Kurs)" : ""}</th>))}</tr></thead>
+                  colSpan={group.courses.length > 1 ? group.courses.length : undefined}>
+                  {group.courses.map((course, index) => <Fragment key={course.id}>
+                    {index ? " · " : ""}{course.id === primaryCourseId ? <strong>{course.code}</strong> : course.code}
+                    {unpublished.has(course.id) ? <>
+                      <span className="matrix-course__mark" aria-hidden="true">*</span>
+                      <span className="sr-only"> (nicht veröffentlicht)</span>
+                    </> : null}
+                  </Fragment>)}
+                </th>)}
+              </tr>{/* The per-course heading is what every cell of the column refers to, so it carries the designation
+                and nothing that would be heard again in each of its cells. */}
+              <tr>{visibleCourseGroups.flatMap((group) => group.courses.map((course) => <th key={course.id} className="sr-only"
+                id={`matrix-course-${course.id}`} scope="col">{course.code}{course.id === primaryCourseId ? " (bearbeiteter Kurs)" : ""}</th>))}</tr></thead>
               {semesterRows.map((rows, semesterIndex) => {
                 const semester = semesterIndex + 1;
                 const blocks = buildPhaseBlocks(rows, visibleCourseGroups, semester);
@@ -252,16 +265,36 @@ export function PlanMatrix({ courses, phases, events, workInProgressCourseIds = 
               })}
             </table>
           </div>
+          {/* What the mark in the column heading means, resolved below the table it appears in. Like the phase legend
+              it stays hidden from assistive technology, which is given the state in words in that heading and would
+              otherwise hear a mark explained that it never encounters. It is derived from the whole cut rather than
+              from the visible columns, so hiding a column does not move the text under the table. */}
+          {courses.some((course) => unpublished.has(course.id))
+            ? <p className="matrix-footnote" aria-hidden="true">* Nicht veröffentlicht: Der Verlauf dieses Kurses kann sich noch ändern.</p>
+            : null}
         </div>
       </div>
-    </section>
-    <section aria-labelledby="events-heading">
+      {children}
+    </section>;
+}
+
+/**
+ * The examination-relevant dates of every course a view shows, in one chronological order. It is a presentation and
+ * never an editor: where a course is edited, its own dates are listed below this under the same heading, passed in as
+ * `children`.
+ */
+export function PlanEventTable({ courses, phases, events, chronology = true, children }: { courses: CoursePlan[]; phases: CoursePhase[]; events: CourseEvent[]; chronology?: boolean; children?: ReactNode }) {
+  const courseCodes = new Map(courses.map((course) => [course.id, course.code]));
+
+  return <section aria-labelledby="events-heading">
       <div className="section-heading">
         <p className="eyebrow">Prüfungsrelevante Termine</p>
         <h2 id="events-heading">Termine</h2>
-        <p>Chronologisch über alle Semester, mit dem je betroffenem Kurs abgeleiteten Semester.</p>
+        {/* The chronology is dropped where it would repeat, entry for entry, the editable list of one course's own
+            dates below it: with nothing standing beside that course, both orders hold exactly the same dates. */}
+        {chronology ? <p>Chronologisch über alle Semester, mit dem je betroffenem Kurs abgeleiteten Semester.</p> : null}
       </div>
-      {events.length ? <div className="matrix-wrap" role="region" aria-labelledby="events-table-caption" tabIndex={0}>
+      {!chronology ? null : events.length ? <div className="matrix-wrap" role="region" aria-labelledby="events-table-caption" tabIndex={0}>
         <table className="event-table">
           <caption id="events-table-caption">Prüfungsrelevante Termine in chronologischer Reihenfolge</caption>
           <thead><tr>
@@ -286,6 +319,6 @@ export function PlanMatrix({ courses, phases, events, workInProgressCourseIds = 
           </tr>)}</tbody>
         </table>
       </div> : <p className="empty-note">Für diesen Plan sind keine prüfungsrelevanten Termine veröffentlicht.</p>}
-    </section>
-  </>;
+      {children}
+    </section>;
 }

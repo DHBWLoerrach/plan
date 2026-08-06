@@ -37,15 +37,14 @@ function rejected<TField extends string, TValues>(error: unknown, values: TValue
 }
 
 /**
- * Every page that shows a plan, because a course is compared on the plan pages of all its parallel courses and its
- * completeness is stated on its own detail page and on the overview. The dynamic pages are named by their route
- * pattern, which the Next.js guide requires for a path with a dynamic segment.
+ * Every page that shows a plan, because a course is compared on the pages of all its parallel courses and its
+ * completeness is stated on the overview. The course page is named by its route pattern, which the Next.js guide
+ * requires for a path with a dynamic segment.
  */
 function revalidatePlan() {
   revalidatePath("/intern");
   revalidatePath("/intern/kurse");
   revalidatePath("/intern/kurse/[courseId]", "page");
-  revalidatePath("/intern/kurse/[courseId]/plan", "page");
 }
 
 /**

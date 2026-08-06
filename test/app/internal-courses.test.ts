@@ -8,7 +8,7 @@ const databases: Database.Database[] = [];
 
 const editor = { id: "editor", role: "AREA_EDITOR" as const, systemAdmin: false };
 const admin = { id: "admin", role: "NONE" as const, systemAdmin: true };
-const noFilters: CourseListFilters = { program: null, year: null, code: null };
+const noFilters: CourseListFilters = { program: null, year: null, code: null, responsibility: "all" };
 
 /**
  * Two areas with one study program each. The editor is assigned to Technik only, so every read of `course-wwi` is a
@@ -73,24 +73,37 @@ describe("courseListData", () => {
     const codes = (sort: Parameters<typeof courseListData>[3], direction: Parameters<typeof courseListData>[4]) =>
       courseListData(sqlite, editor, noFilters, sort, direction).courses.map((course) => course.code);
     expect(codes("studyPeriod", "desc")).toEqual(["WWI27A", "TIF26A"]);
-    expect(codes("access", "asc")).toEqual(["TIF26A", "WWI27A"]);
     expect(codes("publication", "asc")).toEqual(["TIF26A", "WWI27A"]);
   });
 
-  it("keeps a published course settled while current data is corrected", () => {
+  /* The list opens on the courses this account is responsible for, and the wider view is asked for explicitly. The
+     narrowing follows the same marking the rows carry, so it cannot disagree with them (ADR 0011). */
+  it("stands on the own areas unless every area is asked for", () => {
+    const sqlite = database();
+    const codes = (responsibility: CourseListFilters["responsibility"]) =>
+      courseListData(sqlite, editor, { ...noFilters, responsibility }, "code").courses.map((course) => course.code);
+    expect(codes("own")).toEqual(["TIF26A"]);
+    expect(codes("all")).toEqual(["TIF26A", "WWI27A"]);
+    // System administration writes everywhere, so its own areas are all of them.
+    expect(courseListData(sqlite, admin, { ...noFilters, responsibility: "own" }, "code").courses.map((course) => course.code))
+      .toEqual(["TIF26A", "WWI27A"]);
+  });
+
+  it("marks a course with its publication state, which is its whole state", () => {
     const sqlite = database();
     publish(sqlite, "course-wwi", "2026-06-01T00:00:00.000Z");
-    const inProgress = () => Object.fromEntries(courseListData(sqlite, editor, noFilters, "code").courses.map((course) => [course.code, course.workInProgress]));
-    expect(inProgress()).toEqual({ TIF26A: true, WWI27A: false });
+    const states = () => Object.fromEntries(courseListData(sqlite, editor, noFilters, "code").courses.map((course) => [course.code, course.state]));
+    expect(states()).toEqual({ TIF26A: "UNPUBLISHED", WWI27A: "PUBLISHED" });
+    // A published course stays published while its current data is corrected: there is no second data stand (ADR 0012).
     sqlite.prepare("UPDATE courses SET updated_at = '2026-07-01T00:00:00.000Z' WHERE id = 'course-wwi'").run();
-    expect(inProgress()).toEqual({ TIF26A: true, WWI27A: false });
+    expect(states()).toEqual({ TIF26A: "UNPUBLISHED", WWI27A: "PUBLISHED" });
   });
 });
 
 describe("findInternalCourse", () => {
   it("reads a course of a foreign area but does not report it as writable", () => {
     const sqlite = database();
-    expect(findInternalCourse(sqlite, "course-wwi", editor)).toMatchObject({ code: "WWI27A", areaName: "Wirtschaft", editable: false, workInProgress: true });
+    expect(findInternalCourse(sqlite, "course-wwi", editor)).toMatchObject({ code: "WWI27A", areaName: "Wirtschaft", editable: false, state: "UNPUBLISHED" });
     expect(findInternalCourse(sqlite, "course-tif", editor)).toMatchObject({ code: "TIF26A", editable: true });
     expect(findInternalCourse(sqlite, "course-unbekannt", editor)).toBeUndefined();
   });
@@ -146,13 +159,13 @@ describe("overviewPrograms", () => {
       .toEqual([["prog-tif", "TIF", "Informatik", "Technik"], ["prog-wti", "WTI", "Informatik", "Wirtschaft"], ["prog-wwi", "WWI", "Wirtschaftsinformatik", "Wirtschaft"]]);
   });
 
-  it("marks every course with its publication state and whether it is in progress", () => {
+  it("marks every course with its publication state", () => {
     const sqlite = database();
     addEarlierCourse(sqlite);
     publish(sqlite, "course-tif25", "2026-06-01T00:00:00.000Z");
     const [program] = overviewPrograms(sqlite, editor, today);
-    expect(program.years.flatMap((year) => year.courses).map((course) => [course.code, course.state, course.workInProgress]))
-      .toEqual([["TIF25A", "PUBLISHED", false], ["TIF26A", "UNPUBLISHED", true]]);
+    expect(program.years.flatMap((year) => year.courses).map((course) => [course.code, course.state]))
+      .toEqual([["TIF25A", "PUBLISHED"], ["TIF26A", "UNPUBLISHED"]]);
   });
 
   it("reads the standing of every course from its own phases, not from those of the course beside it", () => {
