@@ -77,9 +77,8 @@ function PhaseCell({ cell, group, headers, rowSpan = 1, duration }: { cell: stri
  * no such course: there all columns rank equally.
  *
  * `unpublishedCourseIds` names the courses whose column is to be marked as not yet published, so their progression is
- * not read as settled (ADR 0011). Only the internal views pass it, and only for the courses standing beside the one
- * being edited: a public cut shows published courses only, and the edited course states its own condition on the page
- * around this.
+ * not read as settled (ADR 0011). Only the internal views pass it, and there for every such column including the one
+ * being edited — a public cut shows published courses only and marks nothing.
  *
  * `children` are written into the same section below the matrix. The internal course page puts the editable phase
  * list of its course there, so everything about course progressions stands under one heading.
@@ -270,7 +269,7 @@ export function PlanMatrix({ courses, phases, primaryCourseId, unpublishedCourse
               otherwise hear a mark explained that it never encounters. It is derived from the whole cut rather than
               from the visible columns, so hiding a column does not move the text under the table. */}
           {courses.some((course) => unpublished.has(course.id))
-            ? <p className="matrix-footnote" aria-hidden="true">* Nicht veröffentlicht: Der Verlauf dieses Kurses kann sich noch ändern.</p>
+            ? <p className="matrix-footnote" aria-hidden="true">* Nicht veröffentlicht: noch nicht öffentlich sichtbar, der Verlauf kann sich noch ändern.</p>
             : null}
         </div>
       </div>

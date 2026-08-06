@@ -38,7 +38,20 @@ describe("PlanMatrix", () => {
 
     expect(markup).toContain("TIF26B<span class=\"matrix-course__mark\" aria-hidden=\"true\">*</span>");
     expect(markup).toContain("<span class=\"sr-only\"> (nicht veröffentlicht)</span>");
-    expect(markup).toContain("* Nicht veröffentlicht: Der Verlauf dieses Kurses kann sich noch ändern.");
+    expect(markup).toContain("* Nicht veröffentlicht: noch nicht öffentlich sichtbar, der Verlauf kann sich noch ändern.");
+    // The mark follows the named courses and not the role of a column, so the edited one stays bare when unnamed.
+    expect(markup).not.toContain("TIF26A</strong><span class=\"matrix-course__mark\"");
+  });
+
+  /* The edited course is marked like any other, or a missing mark would mean „published“ beside it and „not covered
+     here“ on it. Its own designation stays set in bold within the heading. */
+  it("marks the edited course as well when it is named", () => {
+    const markup = renderToStaticMarkup(createElement(PlanMatrix, {
+      courses, phases, primaryCourseId: "course-a", unpublishedCourseIds: ["course-a", "course-b"],
+    }));
+
+    expect(markup).toContain("<strong>TIF26A</strong><span class=\"matrix-course__mark\" aria-hidden=\"true\">*</span>");
+    expect(markup.match(/matrix-course__mark/g)).toHaveLength(2);
     // Every cell of the column refers to the per-course heading, so the state is not repeated in each of them.
     expect(markup).not.toMatch(/id="matrix-course-course-b"[^>]*>[^<]*veröffentlicht/);
   });

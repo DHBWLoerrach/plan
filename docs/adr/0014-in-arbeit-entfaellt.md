@@ -11,7 +11,7 @@ Der Anlass, das aufzulösen, war die Überladung der internen Ansichten. Zwei W�
 [ADR 0011](0011-systemweite-leseeinsicht-in-kurse.md) hat die Kennzeichnung eingeführt, damit unfertige Planungen fremder Bereiche nicht als gesetzt gelesen werden. Dieser Zweck bleibt, sein Träger wechselt:
 
 - Die Kursseite eines Kurses aus einem nicht zugeordneten Bereich sagt in einem Satz, dass nur gelesen werden kann, und trägt gar keine Bedienoberfläche zum Schreiben.
-- Steht ein nicht veröffentlichter Kurs nur zum Vergleich neben einem anderen, ist seine Spalte in der Planmatrix als solche markiert — dort, wo seine Kurskennung ohnehin steht.
+- Ist ein Kurs nicht veröffentlicht, ist seine Spalte in der Planmatrix als solche markiert — dort, wo seine Kurskennung ohnehin steht. Das gilt auch für den bearbeiteten Kurs, obwohl der seinen Zustand auf derselben Seite bereits zweimal nennt: Wäre er ausgenommen, hieße eine fehlende Markierung neben ihm „veröffentlicht“ und auf ihm „hier nicht ausgewiesen“, und eine Kopfzeile, die Spalten vergleichbar machen soll, beschriftete ihre Spalten nach zwei Regeln.
 
 Beides sagt mehr als das Wort „in Arbeit“, und beides steht an genau einer Stelle statt in jeder Zeile.
 

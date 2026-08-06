@@ -61,10 +61,11 @@ export default async function CoursePage({ params, searchParams }: PageProps<"/i
   const { course, comparison, phases, events } = plan;
   const created = searchParam(raw, "angelegt") === "1";
   const courses = [course, ...comparison];
-  /* Marked in the matrix are the compared courses whose plan is not published yet, so their progression is not read as
-     settled (ADR 0011). The edited course is not among them: its own state stands in the page heading and in the
-     publication section above, and a third mention in its column would say it a third time. */
-  const unpublishedCourseIds = comparison.filter((candidate) => candidate.state === "UNPUBLISHED").map((candidate) => candidate.id);
+  /* Marked in the matrix is every course whose plan is not published yet, so no progression is read as settled
+     (ADR 0011) — the edited one included, although it names its state twice on the page around this already. One rule
+     for every column is what makes the heading readable: were the edited column exempt, a missing mark would mean
+     „published“ beside it and „not covered here“ on it. */
+  const unpublishedCourseIds = courses.filter((candidate) => candidate.state === "UNPUBLISHED").map((candidate) => candidate.id);
   /* Without a course beside it, the chronological table would hold exactly the dates the editable list below holds,
      in exactly the same order. It is kept wherever it says more than that list — and for a foreign course it says
      everything, because there is no editable list at all. */
