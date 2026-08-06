@@ -97,6 +97,21 @@ describe("courseListData", () => {
       .toEqual(["TIF26A", "WWI27A"]);
   });
 
+  /* The number the list shows itself against is the whole of the chosen responsibility, never of the database: a
+     narrowing filter shortens the list and leaves that whole standing, while widening the responsibility raises it. */
+  it("counts the courses of the chosen responsibility beside the filtered ones", () => {
+    const sqlite = database();
+    const counted = (filters: Partial<CourseListFilters>) => {
+      const { courses, totalInScope } = courseListData(sqlite, editor, { ...noFilters, ...filters }, "code");
+      return [courses.length, totalInScope];
+    };
+    expect(counted({ responsibility: "own" })).toEqual([1, 1]);
+    expect(counted({ responsibility: "all" })).toEqual([2, 2]);
+    expect(counted({ program: "prog-wwi" })).toEqual([1, 2]);
+    // A filter that matches nothing still names the whole it found nothing in.
+    expect(counted({ code: "xyz" })).toEqual([0, 2]);
+  });
+
   it("marks a course with its publication state, which is its whole state", () => {
     const sqlite = database();
     publish(sqlite, "course-wwi", "2026-06-01T00:00:00.000Z");

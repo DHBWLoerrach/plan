@@ -35,7 +35,17 @@ function filterQuery(filters: CourseListFilters): Record<string, string> {
   }).filter((entry): entry is [string, string] => Boolean(entry[1])));
 }
 
-function SortHeader({ header, currentSort, direction, filters }: { header: SortableHeader; currentSort: CourseSort; direction: CourseSortDirection; filters: CourseListFilters }) {
+/**
+ * What the list stands on, said in numbers. Where nothing narrows, the count is the whole and says so plainly; where
+ * a filter narrows, the whole is named beside the part, because the number alone would leave open how much of the
+ * responsibility it covers. The responsibility itself is not counted as narrowing — it decides what the whole is.
+ */
+function courseCountLabel(shown: number, totalInScope: number, narrowed: boolean): string {
+  if (!narrowed) return `${totalInScope} ${totalInScope === 1 ? "Kurs" : "Kurse"}`;
+  return `${shown} von ${totalInScope} ${totalInScope === 1 ? "Kurs" : "Kursen"}`;
+}
+
+function SortHeader({ header, currentSort, direction, filters }:{ header: SortableHeader; currentSort: CourseSort; direction: CourseSortDirection; filters: CourseListFilters }) {
   const active = currentSort === header.sort;
   const nextDirection = active && direction === "asc" ? "desc" : "asc";
   const query = { ...filterQuery(filters), sort: header.sort, direction: nextDirection };
@@ -86,16 +96,24 @@ export default async function CoursesPage({ searchParams }: PageProps<"/intern/k
     code: searchParam(raw, "code"),
     responsibility: searchParam(raw, "zustaendigkeit") === "alle" ? "all" : "own",
   };
-  const { programs, years, courses } = courseListData(sqlite, account, filters, sort, direction);
+  const { programs, years, courses, totalInScope } = courseListData(sqlite, account, filters, sort, direction);
+  const narrowed = Boolean(filters.program || filters.year || filters.code);
+  /* The wider responsibility with everything else left as it stands, so that the way out of an empty result is the
+     one step it names and not a return to the unfiltered list. */
+  const widerQuery = { ...filterQuery({ ...filters, responsibility: "all" }), sort, direction };
 
   return <SiteShell nav={<InternalNav account={account} current="kurse" />}><section className="course-overview" aria-labelledby="courses-heading">
-    <header className="course-overview__header"><h1 id="courses-heading">Kurse</h1><Link className="button button--compact" href="/intern/kurse/neu">Kurs anlegen</Link></header>
+    <header className="course-overview__header">
+      <div className="course-overview__title"><h1 id="courses-heading">Kurse</h1><p className="course-overview__count">{courseCountLabel(courses.length, totalInScope, narrowed)}</p></div>
+      <Link className="button button--compact" href="/intern/kurse/neu">Kurs anlegen</Link>
+    </header>
     <CourseListFilter programs={programs} years={years} values={{ ...filters, responsibility: filters.responsibility === "all" ? "alle" : null }} />
     {courses.length ? <div className="matrix-wrap" tabIndex={0}><table className="event-table"><thead><tr><CourseHeaders sort={sort} direction={direction} filters={filters} /></tr></thead>
       <tbody>{courses.map((course) => <tr key={course.id}><CourseCells course={course} namesArea={filters.responsibility === "all"} /></tr>)}</tbody>
     </table></div>
       : <p className="empty-note">{filters.responsibility === "own"
-        ? "In Ihren Bereichen gibt es für diese Filter keine Kurse. Über die Zuständigkeit sehen Sie auch die Kurse anderer Bereiche."
+        ? <>In Ihren Bereichen gibt es für diese Filter keine Kurse.{" "}
+          <Link className="text-link" href={{ pathname: "/intern/kurse", query: widerQuery }} scroll={false}>Auch Kurse anderer Bereiche anzeigen</Link></>
         : "Für diese Filter gibt es keine Kurse."}</p>}
   </section></SiteShell>;
 }

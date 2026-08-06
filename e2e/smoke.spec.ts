@@ -157,9 +157,25 @@ test("opens on the own areas and keeps foreign courses read-only, confirming wit
      walked rather than typed, so the one address the row offers is the one the assertions below arrive through — a
      course has exactly one internal address, whether it may be written to or not. */
   await page.goto("/intern/kurse");
+  const widerAreas = page.getByRole("checkbox", { name: "Auch Kurse anderer Bereiche" });
   await expect(page.getByRole("link", { name: "FRM26E2E" })).toHaveCount(0);
-  await page.getByLabel("Zuständigkeit").selectOption("alle");
+  await widerAreas.check();
   await expect(page).toHaveURL(/zustaendigkeit=alle/u);
+
+  /* An address the form did not write has to arrive in the form: the way out of an empty result sets the
+     responsibility, the back key takes it away again. The list beneath stands on the address either way — what is
+     asserted here is that the controls above it say the same thing, instead of claiming a narrowing that is gone. */
+  await page.goto("/intern/kurse?program=program-foreign");
+  await expect(widerAreas).not.toBeChecked();
+  await page.getByRole("link", { name: "Auch Kurse anderer Bereiche anzeigen" }).click();
+  await expect(widerAreas).toBeChecked();
+  // The study program came along, so the way out widens the responsibility without emptying the rest.
+  await expect(page.locator("select[name='program']")).toHaveValue("program-foreign");
+  await page.goBack();
+  await expect(widerAreas).not.toBeChecked();
+  await expect(page.locator("select[name='program']")).toHaveValue("program-foreign");
+
+  await page.goto("/intern/kurse?zustaendigkeit=alle");
   await page.getByRole("link", { name: "FRM26E2E" }).click();
   await expect(page).toHaveURL(/\/intern\/kurse\/e2e-foreign-course$/u);
   await expect(page.getByText(/lesen, aber nicht bearbeiten/u)).toBeVisible();
@@ -231,4 +247,41 @@ test("opens on the own areas and keeps foreign courses read-only, confirming wit
   await expect(page.getByRole("group", { name: confirmationName })).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(control).toBeFocused();
+});
+
+/* The course code is the one filter that reaches its address late: it waits out a typing pause, so between the
+   keystroke and the navigation it triggers, the field is ahead of the address on purpose. Every other filter takes
+   its value back from the address once the list has been read anew, and this one must not — an answer to what was
+   typed a moment ago would otherwise overwrite what is standing in the field now.
+   The answer is held back here rather than merely delayed, because a delayed one is overtaken by the next navigation
+   and never reaches the field at all: the moment this guards against is exactly the one where it does. */
+test("keeps the typed course code against an answer that arrives late", async ({ page }) => {
+  await signIn(page, "editor@test.invalid");
+  await page.goto("/intern/kurse?zustaendigkeit=alle");
+
+  let release: (() => void) | null = null;
+  await page.route(/\/intern\/kurse/u, async (route) => {
+    const url = route.request().url();
+    if (!release && /code=frm(&|$)/u.test(url)) await new Promise<void>((resolve) => { release = resolve; });
+    await route.continue();
+  });
+
+  const codeField = page.getByRole("searchbox");
+  await codeField.pressSequentially("frm", { delay: 30 });
+  await expect.poll(() => release !== null, { timeout: 5_000 }).toBe(true);
+  await codeField.pressSequentially("26");
+  await expect(codeField).toHaveValue("frm26");
+  release!();
+
+  /* Every value the field takes on from here. The answer to „frm“ is caught up by the second navigation, so a
+     momentary fall back to it would not show in a reading taken at the end. */
+  const seen = new Set<string>();
+  const until = Date.now() + 1_000;
+  while (Date.now() < until) {
+    seen.add(await codeField.inputValue());
+    await page.waitForTimeout(25);
+  }
+  expect([...seen]).toEqual(["frm26"]);
+  await expect(page).toHaveURL(/code=frm26/u);
+  await expect(page.getByRole("link", { name: "FRM26E2E" })).toBeVisible();
 });

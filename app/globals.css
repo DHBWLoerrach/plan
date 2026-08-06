@@ -136,14 +136,30 @@ p[role="status"] { margin: 0; color: var(--success); }
 .course-overview { margin-top: 1rem; }
 .course-overview__header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-bottom: .8rem; border-bottom: 1px solid var(--line); }
 .course-overview__header h1 { margin: 0; font-size: clamp(1.55rem, 3vw, 1.9rem); font-weight: 700; letter-spacing: -.015em; }
+/* Die Trefferzahl steht auf der Grundlinie der Überschrift, nicht darunter: sie benennt, worauf die Liste gerade
+   steht, und gehört damit zur Überschrift statt zu einer Zeile eigenen Rechts. */
+.course-overview__title { display: flex; flex-wrap: wrap; align-items: baseline; gap: .2rem .75rem; }
+.course-overview__count { margin: 0; color: var(--gray); font-size: .9rem; font-variant-numeric: tabular-nums; }
 .filter-grid.course-list-filter { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-top: 1rem; padding: .65rem; background: var(--surface); }
 .course-list-filter label { display: flex; align-items: center; min-width: 0; gap: .3rem; font-size: .82rem; white-space: nowrap; }
-.course-list-filter label > input, .course-list-filter label > select { width: auto; min-width: 0; flex: 1 1 auto; }
-.course-list-filter__responsibility { flex: 0 0 15rem; }
-.course-list-filter__program { flex: 0 1 21rem; }
-.course-list-filter__year { flex: 0 0 13rem; }
-.course-list-filter__code { flex: 0 0 15rem; }
-.course-list-filter__reset { flex: none; color: var(--gray); font-size: .9rem; text-underline-offset: .25rem; }
+.course-list-filter label > input:not([type="checkbox"]), .course-list-filter label > select { width: auto; min-width: 0; flex: 1 1 auto; }
+/* Die Zuständigkeit sagt, worin gesucht wird, die drei Felder daneben, wonach — der etwas größere Abstand hinter ihr
+   trennt beides, ohne dass die Zeile dafür eine Linie bräuchte. */
+.course-list-filter__responsibility { flex: none; gap: .45rem; margin-right: .35rem; }
+.course-list-filter__program { flex: 0 1 17.5rem; }
+.course-list-filter__year { flex: 0 0 12.5rem; }
+.course-list-filter__code { flex: 0 0 13rem; }
+/* Zurücksetzen ist keine weitere Filterfläche, sondern die eine Handlung der Zeile, und steht deshalb an deren Ende
+   statt am nächsten Feld. */
+.course-list-filter__reset { flex: none; margin-left: auto; padding: 0; border: 0; background: none; color: var(--gray); font: inherit; font-size: .9rem; text-decoration: underline; text-underline-offset: .25rem; cursor: pointer; }
+.course-list-filter__reset:hover { color: var(--red); }
+/* Ohne gesetzten Filter gibt der Knopf beides auf, was ihn als Handlung ausweist: die Unterstreichung und den Zeiger.
+   Übrig bleibt sein Wort, damit die Zeile beim letzten geräumten Filter nicht springt. */
+.course-list-filter__reset[aria-disabled="true"], .course-list-filter__reset[aria-disabled="true"]:hover { color: #8b979d; text-decoration: none; cursor: default; }
+/* Solange gefiltert wird, tritt das Ergebnis zurück, statt still gegen ein anderes ausgetauscht zu werden. Der
+   Geschwisterselektor genügt dafür: das Formular steht im Markup vor dem, was es filtert. Angeklickt werden kann in
+   dieser Zeit nichts — der Zeilenverweis darunter wäre der zum alten Ergebnis. */
+.course-list-filter[aria-busy="true"] ~ .matrix-wrap, .course-list-filter[aria-busy="true"] ~ .empty-note { opacity: .5; pointer-events: none; transition: opacity .15s ease; }
 .filter-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.3rem; margin-top: 1.5rem; }
 .filter-actions > a:not(.text-link) { color: var(--gray); font-size: .9rem; text-underline-offset: .25rem; }
 

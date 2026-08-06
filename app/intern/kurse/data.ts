@@ -20,8 +20,13 @@ export type CourseResponsibility = "own" | "all";
 export type CourseListFilters = { program: string | null; year: string | null; code: string | null; responsibility: CourseResponsibility };
 /** What a course is marked with in every internal view: its visibility and whether this account may write to it. */
 export type CourseMarking = { state: PublicationState; editable: boolean };
-export type CourseListRow = CourseMarking & { id: string; code: string; program: string; areaId: string; areaName: string; studyStart: string; studyEnd: string };
-export type CourseListData = { programs: LabeledOption[]; years: { year: string }[]; courses: CourseListRow[] };
+export type CourseListRow = CourseMarking & { id: string; code: string; programId: string; program: string; areaId: string; areaName: string; studyStart: string; studyEnd: string };
+/**
+ * `totalInScope` is what the listed courses are counted against: every course of the chosen responsibility, before
+ * study program, year and code narrow it. The responsibility itself is not part of that narrowing — it decides which
+ * courses exist for this view at all, so widening it changes the whole rather than the part.
+ */
+export type CourseListData = { programs: LabeledOption[]; years: { year: string }[]; courses: CourseListRow[]; totalInScope: number };
 export type InternalCourse = CourseMarking & { id: string; code: string; programId: string; program: string; areaId: string; areaName: string; studyStart: string; studyEnd: string; publishedAt: string | null };
 /** An entry of a select: the value it submits and the text it shows. */
 export type LabeledOption = { id: string; label: string };
@@ -65,7 +70,7 @@ function markCourse<TRow extends MarkingColumns>(row: TRow, editableAreas: Set<s
   return { ...row, state: publicationState(row.publishedAt), editable: editableAreas.has(row.areaId) };
 }
 
-type CourseRow = MarkingColumns & { id: string; code: string; program: string; areaName: string; studyStart: string; studyEnd: string };
+type CourseRow = MarkingColumns & { id: string; code: string; programId: string; program: string; areaName: string; studyStart: string; studyEnd: string };
 
 /**
  * Every course of every area, because area editing reads system wide and only writes within its own areas (ADR 0011).
@@ -77,18 +82,20 @@ export function courseListData(sqlite: Database.Database, account: AccountScope,
   const programs = (sqlite.prepare("SELECT id, name, abbreviation FROM programs ORDER BY abbreviation COLLATE NOCASE").all() as { id: string; name: string; abbreviation: string }[])
     .map((program) => ({ id: program.id, label: programLabel(program) }));
   const years = sqlite.prepare("SELECT DISTINCT substr(study_start, 1, 4) AS year FROM courses ORDER BY year DESC").all() as CourseListData["years"];
-  const rows = sqlite.prepare(`SELECT course.id, course.code, program.name AS program, area.id AS areaId, area.name AS areaName,
+  const rows = sqlite.prepare(`SELECT course.id, course.code, program.id AS programId, program.name AS program, area.id AS areaId, area.name AS areaName,
       course.study_start AS studyStart, course.study_end AS studyEnd, course.published_at AS publishedAt
     FROM courses course JOIN programs program ON program.id = course.program_id JOIN areas area ON area.id = program.area_id
-    WHERE (? IS NULL OR course.program_id = ?) AND (? IS NULL OR substr(course.study_start, 1, 4) = ?)
-    ORDER BY course.code COLLATE NOCASE`).all(filters.program, filters.program, filters.year, filters.year) as CourseRow[];
-  const codePrefix = normalizeCodePrefix(filters.code);
+    ORDER BY course.code COLLATE NOCASE`).all() as CourseRow[];
   /* The responsibility narrows after the marking rather than in the query, because „own“ means exactly what the
-     marking already decided — a second predicate in SQL could drift away from it. */
-  const courses = rows
-    .filter((row) => !codePrefix || matchesCodePrefix(row.code, codePrefix))
-    .map((row) => markCourse(row, editableAreas))
-    .filter((course) => filters.responsibility === "all" || course.editable);
+     marking already decided — a second predicate in SQL could drift away from it. The three remaining filters then
+     narrow beside it instead of in the query, so that the whole and the part the list counts itself against are
+     taken from one and the same set of rows. */
+  const scoped = rows.map((row) => markCourse(row, editableAreas)).filter((course) => filters.responsibility === "all" || course.editable);
+  const codePrefix = normalizeCodePrefix(filters.code);
+  const courses = scoped.filter((course) =>
+    (!filters.program || course.programId === filters.program)
+    && (!filters.year || course.studyStart.slice(0, 4) === filters.year)
+    && (!codePrefix || matchesCodePrefix(course.code, codePrefix)));
   const collator = new Intl.Collator("de", { sensitivity: "base", numeric: true });
   const valueOf = (course: CourseListRow): string => {
     switch (sort) {
@@ -102,7 +109,7 @@ export function courseListData(sqlite: Database.Database, account: AccountScope,
     const primary = collator.compare(valueOf(left), valueOf(right)) * (direction === "asc" ? 1 : -1);
     return primary || collator.compare(left.code, right.code);
   });
-  return { programs, years, courses };
+  return { programs, years, courses, totalInScope: scoped.length };
 }
 
 type OverviewRow = Omit<MarkingColumns, "areaId"> & { id: string; code: string; studyStart: string; studyEnd: string; programId: string; programName: string; abbreviation: string; areaName: string };
