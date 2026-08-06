@@ -121,6 +121,30 @@ describe("courseListData", () => {
     sqlite.prepare("UPDATE courses SET updated_at = '2026-07-01T00:00:00.000Z' WHERE id = 'course-wwi'").run();
     expect(states()).toEqual({ TIF26A: "UNPUBLISHED", WWI27A: "PUBLISHED" });
   });
+
+  /* The list names the day of the publication instead of its state, so it carries the day the instant falls on in
+     Berlin — an instant late in the evening belongs to the following day there, which is the calendar the whole
+     application reckons in. A course without a publication carries no day, and its absence is what says so. */
+  it("carries the calendar day a publication falls on in Berlin", () => {
+    const sqlite = database();
+    publish(sqlite, "course-wwi", "2026-06-01T22:30:00.000Z");
+    const days = () => Object.fromEntries(courseListData(sqlite, editor, noFilters, "code").courses.map((course) => [course.code, course.publishedOn]));
+    expect(days()).toEqual({ TIF26A: null, WWI27A: "2026-06-02" });
+    // The same instant in winter, when Berlin is one hour ahead instead of two, still falls on the following day.
+    publish(sqlite, "course-wwi", "2026-12-01T23:30:00.000Z");
+    expect(days()).toEqual({ TIF26A: null, WWI27A: "2026-12-02" });
+  });
+
+  /* Sorted by that day, not by the state behind it: the unpublished courses share the empty value and gather at one
+     end, and the course code orders them among themselves. */
+  it("sorts the publication column by the day it shows", () => {
+    const sqlite = database();
+    publish(sqlite, "course-wwi", "2026-06-01T00:00:00.000Z");
+    const codes = (direction: Parameters<typeof courseListData>[4]) =>
+      courseListData(sqlite, editor, noFilters, "publication", direction).courses.map((course) => course.code);
+    expect(codes("desc")).toEqual(["WWI27A", "TIF26A"]);
+    expect(codes("asc")).toEqual(["TIF26A", "WWI27A"]);
+  });
 });
 
 describe("findInternalCourse", () => {

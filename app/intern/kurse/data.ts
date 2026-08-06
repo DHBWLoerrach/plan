@@ -2,10 +2,11 @@ import "server-only";
 
 import type Database from "better-sqlite3";
 
+import { berlinCalendarDay } from "@/lib/domain/calendar-day";
 import type { ComparisonScope } from "@/lib/domain/course-comparison";
 import { matchesCodePrefix, normalizeCodePrefix } from "@/lib/domain/course-code";
 import { courseStanding, type CourseStanding, type StandingPhase } from "@/lib/domain/course-progress";
-import { publicationState, publicationStateLabels, type PublicationState } from "@/lib/domain/course-status";
+import { publicationState, type PublicationState } from "@/lib/domain/course-status";
 import { type CoursePlan, type PlanEvent, type PlanPhase } from "@/lib/domain/publication";
 
 import { manageableAreas } from "../data";
@@ -20,7 +21,12 @@ export type CourseResponsibility = "own" | "all";
 export type CourseListFilters = { program: string | null; year: string | null; code: string | null; responsibility: CourseResponsibility };
 /** What a course is marked with in every internal view: its visibility and whether this account may write to it. */
 export type CourseMarking = { state: PublicationState; editable: boolean };
-export type CourseListRow = CourseMarking & { id: string; code: string; programId: string; program: string; areaId: string; areaName: string; studyStart: string; studyEnd: string };
+/**
+ * `publishedOn` is the calendar day the course became visible on, and `null` where it is not. The list shows that day
+ * instead of naming the state in every row: the state is what the day already says, while the day itself differs from
+ * row to row and the state does not.
+ */
+export type CourseListRow = CourseMarking & { id: string; code: string; programId: string; program: string; areaId: string; areaName: string; studyStart: string; studyEnd: string; publishedOn: string | null };
 /**
  * `totalInScope` is what the listed courses are counted against: every course of the chosen responsibility, before
  * study program, year and code narrow it. The responsibility itself is not part of that narrowing — it decides which
@@ -73,6 +79,15 @@ function markCourse<TRow extends MarkingColumns>(row: TRow, editableAreas: Set<s
 type CourseRow = MarkingColumns & { id: string; code: string; programId: string; program: string; areaName: string; studyStart: string; studyEnd: string };
 
 /**
+ * The day a publication falls on. `published_at` holds the instant it happened in UTC, and an evening publication
+ * belongs to the following day in Berlin — the calendar every view of this application reckons in. The list shows a
+ * day, so the instant becomes one here rather than in the view that draws it.
+ */
+function publishedOn(publishedAt: string | null): string | null {
+  return publishedAt ? berlinCalendarDay(new Date(publishedAt)) : null;
+}
+
+/**
  * Every course of every area, because area editing reads system wide and only writes within its own areas (ADR 0011).
  * The study program and year filters therefore offer foreign values too — a filter that hid them would leave the
  * foreign courses findable in name only.
@@ -90,7 +105,8 @@ export function courseListData(sqlite: Database.Database, account: AccountScope,
      marking already decided — a second predicate in SQL could drift away from it. The three remaining filters then
      narrow beside it instead of in the query, so that the whole and the part the list counts itself against are
      taken from one and the same set of rows. */
-  const scoped = rows.map((row) => markCourse(row, editableAreas)).filter((course) => filters.responsibility === "all" || course.editable);
+  const scoped = rows.map((row) => ({ ...markCourse(row, editableAreas), publishedOn: publishedOn(row.publishedAt) }))
+    .filter((course) => filters.responsibility === "all" || course.editable);
   const codePrefix = normalizeCodePrefix(filters.code);
   const courses = scoped.filter((course) =>
     (!filters.program || course.programId === filters.program)
@@ -101,7 +117,9 @@ export function courseListData(sqlite: Database.Database, account: AccountScope,
     switch (sort) {
       case "program": return course.program;
       case "studyPeriod": return course.studyStart;
-      case "publication": return publicationStateLabels[course.state];
+      /* Sorted by the day the column shows, not by the state behind it. Courses without one share the empty value and
+         gather at one end, where the tie-break by course code orders them among themselves. */
+      case "publication": return course.publishedOn ?? "";
       default: return course.code;
     }
   };
