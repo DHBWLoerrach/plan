@@ -41,8 +41,8 @@ function filterQuery(filters: CourseListFilters): Record<string, string> {
  * responsibility it covers. The responsibility itself is not counted as narrowing — it decides what the whole is.
  */
 function courseCountLabel(shown: number, totalInScope: number, narrowed: boolean): string {
-  if (!narrowed) return `${totalInScope} ${totalInScope === 1 ? "Kurs" : "Kurse"}`;
-  return `${shown} von ${totalInScope} ${totalInScope === 1 ? "Kurs" : "Kursen"}`;
+  if (!narrowed) return `${totalInScope} ${totalInScope === 1 ? "Ergebnis" : "Ergebnisse"}`;
+  return `${shown} von ${totalInScope} Ergebnissen`;
 }
 
 function SortHeader({ header, currentSort, direction, filters }:{ header: SortableHeader; currentSort: CourseSort; direction: CourseSortDirection; filters: CourseListFilters }) {
@@ -104,7 +104,8 @@ export default async function CoursesPage({ searchParams }: PageProps<"/intern/k
 
   return <SiteShell nav={<InternalNav account={account} current="kurse" />}><section className="course-overview" aria-labelledby="courses-heading">
     <header className="course-overview__header">
-      <div className="course-overview__title"><h1 id="courses-heading">Kurse</h1><p className="course-overview__count">{courseCountLabel(courses.length, totalInScope, narrowed)}</p></div>
+      <div className="course-overview__title"><h1 id="courses-heading">Kurse</h1><span className="course-overview__separator" aria-hidden="true">·</span>
+        <p className="course-overview__count" aria-live="polite">{courseCountLabel(courses.length, totalInScope, narrowed)}</p></div>
       <Link className="button button--compact" href="/intern/kurse/neu">Kurs anlegen</Link>
     </header>
     <CourseListFilter programs={programs} years={years} values={{ ...filters, responsibility: filters.responsibility === "all" ? "alle" : null }} />

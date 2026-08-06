@@ -6,12 +6,14 @@ import { useEffect, useRef, useState, useTransition } from "react";
 type FilterOption = { id: string; label: string };
 type YearOption = { year: string };
 type FilterValues = { program: string | null; year: string | null; code: string | null; responsibility: string | null };
+type FilterName = "responsibility" | "program" | "year" | "code";
+type ActiveFilter = { name: FilterName; label: string };
 
 const codeFilterDelay = 300;
 /** The names of the parameters this filter owns, in the order the form offers them. */
-const filterNames = ["responsibility", "program", "year", "code"] as const;
+const filterNames: FilterName[] = ["responsibility", "program", "year", "code"];
 /** How each of them is written in the address, which is German like every other internal address of this application. */
-const parameterNames: Record<(typeof filterNames)[number], string> = { responsibility: "zustaendigkeit", program: "program", year: "year", code: "code" };
+const parameterNames: Record<FilterName, string> = { responsibility: "zustaendigkeit", program: "program", year: "year", code: "code" };
 
 export function CourseListFilter({ programs, years, values }: { programs: FilterOption[]; years: YearOption[]; values: FilterValues }) {
   const router = useRouter();
@@ -79,32 +81,48 @@ export function CourseListFilter({ programs, years, values }: { programs: Filter
     applyImmediately(emptyFilters);
   }
   const anyFilterSet = filterNames.some((name) => filters[name].trim());
+  const activeFilters: ActiveFilter[] = [];
+  const selectedProgram = programs.find((option) => option.id === filters.program);
+  if (filters.code.trim()) activeFilters.push({ name: "code", label: `Kurskennung: ${filters.code.trim()}` });
+  if (filters.program.trim()) activeFilters.push({ name: "program", label: `Studiengang: ${selectedProgram?.label ?? filters.program}` });
+  if (filters.year.trim()) activeFilters.push({ name: "year", label: `Jahrgang: ${filters.year}` });
+  if (filters.responsibility === "alle") activeFilters.push({ name: "responsibility", label: "Kurse anderer Bereiche" });
 
   return <form className="filter-grid course-list-filter" role="search" aria-label="Kurse filtern"
     aria-busy={pending} onSubmit={(event) => { event.preventDefault(); applyImmediately(filtersRef.current); }}>
-    {/* The empty value is the responsibility one opens on, so the plain list address is the own courses and only the
-        wider view carries a parameter — the same way the comparison writes only its non-default scope. Of the two
-        states it has, one is that default: a tick box therefore says in its own label what the choice is and reaches
-        it in a single press, where a select of two entries would hide the default behind its own closed state. */}
-    <label className="course-list-filter__responsibility"><input name="zustaendigkeit" type="checkbox" value="alle"
-      checked={filters.responsibility === "alle"}
-      onChange={(event) => applyImmediately(changeFilter("responsibility", event.currentTarget.checked ? "alle" : ""))} /> Auch Kurse anderer Bereiche</label>
-    <label className="course-list-filter__program">Studiengang<select name="program" value={filters.program}
-      onChange={(event) => applyImmediately(changeFilter("program", event.currentTarget.value))}><option value="">Alle Studiengänge</option>{programs.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label>
-    <label className="course-list-filter__year">Jahrgang<select name="year" value={filters.year}
-      onChange={(event) => applyImmediately(changeFilter("year", event.currentTarget.value))}><option value="">Alle Jahrgänge</option>{years.map((option) => <option key={option.year} value={option.year}>{option.year}</option>)}</select></label>
-    <label className="course-list-filter__code">Kurskennung<input name="code" type="search" value={filters.code} autoComplete="off" placeholder="z. B. TIF26"
-      onChange={(event) => {
-        if (codeTimer.current) clearTimeout(codeTimer.current);
-        const nextFilters = changeFilter("code", event.currentTarget.value);
-        codeTimer.current = setTimeout(() => applyFilters(nextFilters), codeFilterDelay);
-      }} /></label>
-    {/* Where nothing is filtered there is nothing to empty, and the button says so by standing greyed out instead of
-        leaving: a control that comes and goes moves the row it sits in, and it would take the focus with it at the
-        very moment it is pressed. It is marked as disabled rather than being disabled, so it keeps that focus — the
-        same way the matrix refuses hiding its last column. The refusal is therefore the handler's to carry. */}
-    <button type="button" className="course-list-filter__reset" aria-disabled={!anyFilterSet}
-      onClick={() => { if (anyFilterSet) resetFilters(); }}>Zurücksetzen</button>
+    <div className="course-list-filter__fields">
+      <label className="course-list-filter__code"><span>Kurskennung</span><span className="course-list-filter__search">
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></svg>
+        <input name="code" type="search" value={filters.code} autoComplete="off" placeholder="Kurskennung suchen, z. B. TIF26"
+          onChange={(event) => {
+            if (codeTimer.current) clearTimeout(codeTimer.current);
+            const nextFilters = changeFilter("code", event.currentTarget.value);
+            codeTimer.current = setTimeout(() => {
+              codeTimer.current = null;
+              applyFilters(nextFilters);
+            }, codeFilterDelay);
+          }} />
+      </span></label>
+      <label className="course-list-filter__program"><span>Studiengang</span><select name="program" value={filters.program}
+        onChange={(event) => applyImmediately(changeFilter("program", event.currentTarget.value))}><option value="">Alle Studiengänge</option>{programs.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label>
+      <label className="course-list-filter__year"><span>Jahrgang</span><select name="year" value={filters.year}
+        onChange={(event) => applyImmediately(changeFilter("year", event.currentTarget.value))}><option value="">Alle Jahrgänge</option>{years.map((option) => <option key={option.year} value={option.year}>{option.year}</option>)}</select></label>
+    </div>
+    <div className="course-list-filter__actions">
+      {/* The empty value is the responsibility one opens on, so the plain list address is the own courses and only the
+          wider view carries a parameter. A checkbox exposes that one optional widening without hiding the default in
+          a select and names the effect instead of the underlying authorization concept. */}
+      <label className="course-list-filter__responsibility"><input name="zustaendigkeit" type="checkbox" value="alle"
+        checked={filters.responsibility === "alle"}
+        onChange={(event) => applyImmediately(changeFilter("responsibility", event.currentTarget.checked ? "alle" : ""))} /> Kurse anderer Bereiche einbeziehen</label>
+      {anyFilterSet ? <button type="button" className="course-list-filter__reset" onClick={resetFilters}>Alle Filter zurücksetzen</button> : null}
+    </div>
+    {activeFilters.length ? <div className="course-list-filter__active" aria-label="Aktive Filter">
+      <span>Aktive Filter:</span>
+      <ul>{activeFilters.map((filter) => <li key={filter.name}><button type="button"
+        aria-label={`Filter ${filter.label} entfernen`}
+        onClick={() => applyImmediately(changeFilter(filter.name, ""))}>{filter.label}<span aria-hidden="true">×</span></button></li>)}</ul>
+    </div> : null}
     <span className="sr-only" role="status">{pending ? "Filter werden aktualisiert." : ""}</span>
   </form>;
 }

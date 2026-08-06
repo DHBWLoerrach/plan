@@ -157,10 +157,19 @@ test("opens on the own areas and keeps foreign courses read-only, confirming wit
      walked rather than typed, so the one address the row offers is the one the assertions below arrive through — a
      course has exactly one internal address, whether it may be written to or not. */
   await page.goto("/intern/kurse");
-  const widerAreas = page.getByRole("checkbox", { name: "Auch Kurse anderer Bereiche" });
+  const widerAreas = page.getByRole("checkbox", { name: "Kurse anderer Bereiche einbeziehen" });
+  const resetFilters = page.getByRole("button", { name: "Alle Filter zurücksetzen" });
+  await expect(resetFilters).toHaveCount(0);
   await expect(page.getByRole("link", { name: "FRM26E2E" })).toHaveCount(0);
   await widerAreas.check();
   await expect(page).toHaveURL(/zustaendigkeit=alle/u);
+  const widerAreasChip = page.getByRole("button", { name: "Filter Kurse anderer Bereiche entfernen" });
+  await expect(widerAreasChip).toBeVisible();
+  await expect(resetFilters).toBeVisible();
+  await widerAreasChip.click();
+  await expect(widerAreas).not.toBeChecked();
+  await expect(resetFilters).toHaveCount(0);
+  await widerAreas.check();
 
   /* An address the form did not write has to arrive in the form: the way out of an empty result sets the
      responsibility, the back key takes it away again. The list beneath stands on the address either way — what is

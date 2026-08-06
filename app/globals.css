@@ -133,29 +133,31 @@ p[role="status"] { margin: 0; color: var(--success); }
 .filter-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; margin-top: 1.75rem; }
 .filter-grid label { display: grid; gap: .4rem; font-weight: 700; font-size: .9rem; }
 .filter-grid .filter-actions { grid-column: 1 / -1; margin-top: .3rem; }
-.course-overview { margin-top: 1rem; }
-.course-overview__header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-bottom: .8rem; border-bottom: 1px solid var(--line); }
+.course-overview { margin-top: 0; }
+.course-overview__header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .course-overview__header h1 { margin: 0; font-size: clamp(1.55rem, 3vw, 1.9rem); font-weight: 700; letter-spacing: -.015em; }
 /* Die Trefferzahl steht auf der Grundlinie der Überschrift, nicht darunter: sie benennt, worauf die Liste gerade
    steht, und gehört damit zur Überschrift statt zu einer Zeile eigenen Rechts. */
-.course-overview__title { display: flex; flex-wrap: wrap; align-items: baseline; gap: .2rem .75rem; }
+.course-overview__title { display: flex; flex-wrap: wrap; align-items: baseline; gap: .2rem .45rem; }
+.course-overview__separator { color: var(--gray); }
 .course-overview__count { margin: 0; color: var(--gray); font-size: .9rem; font-variant-numeric: tabular-nums; }
-.filter-grid.course-list-filter { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-top: 1rem; padding: .65rem; background: var(--surface); }
-.course-list-filter label { display: flex; align-items: center; min-width: 0; gap: .3rem; font-size: .82rem; white-space: nowrap; }
-.course-list-filter label > input:not([type="checkbox"]), .course-list-filter label > select { width: auto; min-width: 0; flex: 1 1 auto; }
-/* Die Zuständigkeit sagt, worin gesucht wird, die drei Felder daneben, wonach — der etwas größere Abstand hinter ihr
-   trennt beides, ohne dass die Zeile dafür eine Linie bräuchte. */
-.course-list-filter__responsibility { flex: none; gap: .45rem; margin-right: .35rem; }
-.course-list-filter__program { flex: 0 1 17.5rem; }
-.course-list-filter__year { flex: 0 0 12.5rem; }
-.course-list-filter__code { flex: 0 0 13rem; }
-/* Zurücksetzen ist keine weitere Filterfläche, sondern die eine Handlung der Zeile, und steht deshalb an deren Ende
-   statt am nächsten Feld. */
-.course-list-filter__reset { flex: none; margin-left: auto; padding: 0; border: 0; background: none; color: var(--gray); font: inherit; font-size: .9rem; text-decoration: underline; text-underline-offset: .25rem; cursor: pointer; }
+.filter-grid.course-list-filter { display: block; margin-top: .85rem; padding: .85rem 1rem; border: 1px solid var(--line); background: #fafafa; }
+.course-list-filter__fields { display: grid; grid-template-columns: minmax(15rem, 1.25fr) minmax(15rem, 1fr) minmax(9rem, .55fr); gap: .75rem; }
+.course-list-filter__fields label { display: grid; min-width: 0; gap: .3rem; font-size: .82rem; }
+.course-list-filter__search { position: relative; display: block; }
+.course-list-filter__search svg { position: absolute; top: 50%; left: .7rem; width: 1.1rem; height: 1.1rem; transform: translateY(-50%); fill: none; stroke: var(--gray); stroke-width: 1.8; pointer-events: none; }
+.filter-grid.course-list-filter .course-list-filter__search input { padding-left: 2.25rem; }
+.course-list-filter__actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .55rem 1rem; margin-top: .7rem; }
+.course-list-filter .course-list-filter__responsibility { display: inline-flex; align-items: center; gap: .45rem; min-height: 2rem; font-size: .85rem; font-weight: 500; cursor: pointer; }
+/* Zurücksetzen ist keine weitere Filterfläche, sondern die eine Handlung der Zeile, und steht deshalb an deren Ende. */
+.course-list-filter__reset { flex: none; margin-left: auto; padding: .25rem 0; border: 0; background: none; color: var(--gray); font: inherit; font-size: .85rem; text-decoration: underline; text-underline-offset: .25rem; cursor: pointer; }
 .course-list-filter__reset:hover { color: var(--red); }
-/* Ohne gesetzten Filter gibt der Knopf beides auf, was ihn als Handlung ausweist: die Unterstreichung und den Zeiger.
-   Übrig bleibt sein Wort, damit die Zeile beim letzten geräumten Filter nicht springt. */
-.course-list-filter__reset[aria-disabled="true"], .course-list-filter__reset[aria-disabled="true"]:hover { color: #8b979d; text-decoration: none; cursor: default; }
+.course-list-filter__active { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .55rem; margin-top: .65rem; padding-top: .65rem; border-top: 1px solid var(--line); color: var(--gray-strong); font-size: .78rem; }
+.course-list-filter__active > span { font-weight: 700; }
+.course-list-filter__active ul { display: flex; flex-wrap: wrap; gap: .35rem; margin: 0; padding: 0; list-style: none; }
+.course-list-filter__active button { display: inline-flex; align-items: center; gap: .4rem; min-height: 1.9rem; padding: .2rem .45rem .2rem .6rem; border: 1px solid #cbd0d3; background: #fff; color: var(--ink); font: inherit; cursor: pointer; }
+.course-list-filter__active button:hover { border-color: var(--gray); color: var(--red); }
+.course-list-filter__active button span { color: var(--gray); font-size: 1.05rem; line-height: 1; }
 /* Solange gefiltert wird, tritt das Ergebnis zurück, statt still gegen ein anderes ausgetauscht zu werden. Der
    Geschwisterselektor genügt dafür: das Formular steht im Markup vor dem, was es filtert. Angeklickt werden kann in
    dieser Zeit nichts — der Zeilenverweis darunter wäre der zum alten Ergebnis. */
@@ -620,6 +622,8 @@ p[role="status"] { margin: 0; color: var(--success); }
 
 @media (max-width: 1000px) {
   .filter-grid, .plan-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .course-list-filter__fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .course-list-filter__year { max-width: 14rem; }
 }
 @media (max-width: 760px) {
   .site-header__inner, .site-footer, .results__heading { align-items: flex-start; flex-direction: column; }
@@ -631,8 +635,12 @@ p[role="status"] { margin: 0; color: var(--success); }
   .site-header nav { gap: .8rem; }
   .filter-grid, .plan-grid { grid-template-columns: 1fr; }
   .course-overview__header { align-items: flex-start; }
-  .filter-grid.course-list-filter { align-items: stretch; flex-wrap: wrap; }
-  .course-list-filter label { flex: 1 1 16rem; }
+  .filter-grid.course-list-filter { padding: .75rem; }
+  .course-list-filter__fields { grid-template-columns: minmax(0, 1fr); }
+  .course-list-filter__year { max-width: none; }
+  .course-list-filter__actions { align-items: flex-start; flex-direction: column; }
+  .course-list-filter__reset { margin-left: 0; }
+  .course-list-filter__active { align-items: flex-start; flex-direction: column; }
   .filter-actions { align-items: flex-start; flex-direction: column; }
   .course-list { align-items: flex-start; flex-direction: column; gap: .5rem; }
 }
