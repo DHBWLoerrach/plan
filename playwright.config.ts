@@ -20,6 +20,10 @@ export default defineConfig({
       BETTER_AUTH_URL: "http://127.0.0.1:3100",
       BETTER_AUTH_SECRET: "e2e-development-secret-that-is-long-enough",
       NEXT_DIST_DIR: ".next-e2e",
+      /* No calendar system is reached from here: the suite neither owns one nor may depend on the DHBW one being up.
+         The address refuses the connection, so the server renders the state it renders for an unreachable feed, and
+         what the calendar does from there is answered by the browser — where the tests can answer for it. */
+      DHBW_CALENDAR_URL_TEMPLATE: "http://127.0.0.1:9/kal-{course}.ics",
     },
   },
 });

@@ -38,14 +38,14 @@ describe("parseCourseCalendar", () => {
     });
   });
 
-  it("unfolds lines, reads inclusive all-day periods and ignores incomplete events", () => {
+  it("unfolds lines, reads an all-day period down to its last covered day and ignores incomplete events", () => {
     const events = parseCourseCalendar(calendar([
       "BEGIN:VEVENT",
       "UID:event-1",
       "SUMMARY:Klausurwo",
       " che",
       "DTSTART;VALUE=DATE:20260706",
-      "DTEND;VALUE=DATE:20260710",
+      "DTEND;VALUE=DATE:20260711",
       "END:VEVENT",
       "BEGIN:VEVENT",
       "SUMMARY:Ohne Ende",
@@ -53,12 +53,26 @@ describe("parseCourseCalendar", () => {
       "END:VEVENT",
     ].join("\r\n")));
 
+    // Monday to Friday: the feed writes the following Saturday, which the week does not reach into.
     expect(events).toEqual([expect.objectContaining({
       title: "Klausurwoche",
       start: "2026-07-06T00:00:00.000Z",
       end: "2026-07-10T00:00:00.000Z",
       allDay: true,
     })]);
+    expect(eventsOnCalendarDay(events, "2026-07-10").map((event) => event.title)).toEqual(["Klausurwoche"]);
+    expect(eventsOnCalendarDay(events, "2026-07-11")).toEqual([]);
+  });
+
+  /* The one day an entry lasts is written as two, and a day that begins and ends the entry is what the views ask for
+     to say „ganztägig“ rather than a period from one day to the next. */
+  it("keeps a single all-day entry on the one day it covers", () => {
+    const [event] = parseCourseCalendar(calendar([
+      "BEGIN:VEVENT", "UID:holiday", "SUMMARY:Feiertag", "DTSTART;VALUE=DATE:20260706", "DTEND;VALUE=DATE:20260707", "END:VEVENT",
+    ].join("\r\n")));
+
+    expect(event).toMatchObject({ start: "2026-07-06T00:00:00.000Z", end: "2026-07-06T00:00:00.000Z", allDay: true });
+    expect(eventsOnCalendarDay([event], "2026-07-07")).toEqual([]);
   });
 });
 
@@ -69,7 +83,7 @@ describe("calendarGroups", () => {
       "UID:week",
       "SUMMARY:Klausurwoche",
       "DTSTART;VALUE=DATE:20260706",
-      "DTEND;VALUE=DATE:20260710",
+      "DTEND;VALUE=DATE:20260711",
       "END:VEVENT",
       "BEGIN:VEVENT",
       "UID:lecture",
@@ -117,7 +131,7 @@ describe("calendar view periods", () => {
 
   it("includes events intersecting the visible week or month", () => {
     const events = parseCourseCalendar(calendar([
-      "BEGIN:VEVENT", "UID:running", "SUMMARY:Klausurwoche", "DTSTART;VALUE=DATE:20260706", "DTEND;VALUE=DATE:20260710", "END:VEVENT",
+      "BEGIN:VEVENT", "UID:running", "SUMMARY:Klausurwoche", "DTSTART;VALUE=DATE:20260706", "DTEND;VALUE=DATE:20260711", "END:VEVENT",
       "BEGIN:VEVENT", "UID:sunday", "SUMMARY:Sonntag", "DTSTART:20260712T090000", "DTEND:20260712T100000", "END:VEVENT",
       "BEGIN:VEVENT", "UID:later", "SUMMARY:Später", "DTSTART:20260803T090000", "DTEND:20260803T100000", "END:VEVENT",
     ].join("\r\n")));

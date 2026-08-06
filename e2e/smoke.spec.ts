@@ -294,3 +294,58 @@ test("keeps the typed course code against an answer that arrives late", async ({
   await expect(page).toHaveURL(/code=frm26/u);
   await expect(page.getByRole("link", { name: "FRM26E2E" })).toBeVisible();
 });
+
+/* The calendar reads one period at a time, and the period asked for last is the one it must end up showing. Address,
+   controls and heading follow the opened period immediately; if the request it triggers were dropped because an
+   earlier one was still running, the entries beneath them would stay with the period that has just been left — and
+   because both ends cut the entries down to the visible period, what stood there would mostly be nothing at all.
+   The day heads are where this is reached: they lead into another period and are not among the controls the loading
+   state disables, because they belong to the entries and not to the navigation. */
+test("takes up a calendar period opened while an earlier request is still running", async ({ page }) => {
+  await signIn(page, "editor@test.invalid");
+
+  /* No calendar system is reached from the test server (see playwright.config.ts), so the page arrives in its error
+     state and every entry from here on is one this test answered for. Each answer carries the period it was asked
+     for, which is what makes a shown entry attributable to a request. */
+  const requested: string[] = [];
+  let hold: (() => void) | null = null;
+  let holdNext = false;
+  await page.route(/\/api\/internal\/courses\/[^/]+\/calendar/u, async (route) => {
+    const query = new URL(route.request().url()).searchParams;
+    const period = `${query.get("ansicht")} ${query.get("datum")}`;
+    requested.push(period);
+    if (holdNext) {
+      holdNext = false;
+      await new Promise<void>((resolve) => { hold = resolve; });
+    }
+    const day = query.get("datum");
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ events: [{
+        uid: "one", title: `Termin ${period}`, location: "", description: "", allDay: false,
+        start: `${day}T09:00:00.000Z`, end: `${day}T10:00:00.000Z`,
+      }] }),
+    });
+  });
+
+  await page.goto("/intern/kurse/e2e-course?kalender=woche");
+  await page.getByRole("button", { name: "Erneut laden" }).click();
+  await expect(page.getByRole("region", { name: "Wochenkalender" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: `Termin ${requested[0]}` })).toBeVisible();
+
+  // The next week, with its answer held back: from here on the calendar is loading and the week stays on screen.
+  holdNext = true;
+  await page.getByRole("button", { name: "Nächste Woche" }).click();
+  await expect.poll(() => hold !== null, { timeout: 5_000 }).toBe(true);
+
+  await page.getByRole("button", { name: /Listenansicht ab diesem Tag öffnen/u }).first().click();
+  await expect(page).toHaveURL(/kalender=liste/u);
+  hold!();
+
+  /* The list is read afterwards, and its answer is the one that ends up on screen — not the week that was already on
+     its way when the list was opened. */
+  await expect.poll(() => requested.length, { timeout: 10_000 }).toBe(3);
+  expect(requested.at(-1)).toMatch(/^liste /u);
+  await expect(page.getByRole("heading", { name: `Termin ${requested.at(-1)}` })).toBeVisible();
+  await expect(page.getByRole("heading", { name: `Termin ${requested[1]}` })).toHaveCount(0);
+});

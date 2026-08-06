@@ -19,12 +19,18 @@ const maxCalendarBytes = 5 * 1024 * 1024;
 const maxCachedCourses = 100;
 const defaultUrlTemplate = "https://webmail.dhbw-loerrach.de/owa/calendar/kal-{course}@dhbw-loerrach.de/Kalender/calendar.ics";
 
-function configuredUrl(courseCode: string): string {
+/**
+ * The configured address, read and checked once. A template without its placeholder — or with more than one — is a
+ * misconfiguration that no request will ever get past, so it is rejected where the reader is built rather than inside
+ * the request: there its error would have been caught along with a refused connection and reached the reading account
+ * as „zurzeit nicht erreichbar“, the one sentence that says it will pass by itself.
+ */
+function configuredUrlForCourse(): (courseCode: string) => string {
   const template = process.env.DHBW_CALENDAR_URL_TEMPLATE ?? defaultUrlTemplate;
   if (template.split("{course}").length !== 2) {
-    throw new Error("DHBW_CALENDAR_URL_TEMPLATE muss {course} genau einmal enthalten.");
+    throw new Error("DHBW_CALENDAR_URL_TEMPLATE muss den Platzhalter {course} genau einmal enthalten.");
   }
-  return template.replace("{course}", encodeURIComponent(courseCode));
+  return (courseCode) => template.replace("{course}", encodeURIComponent(courseCode));
 }
 
 async function limitedText(response: Response): Promise<string | null> {
@@ -52,7 +58,7 @@ async function limitedText(response: Response): Promise<string | null> {
 export function createCourseCalendarReader(options: ReaderOptions = {}) {
   const fetcher = options.fetcher ?? fetch;
   const now = options.now ?? Date.now;
-  const urlForCourse = options.urlForCourse ?? configuredUrl;
+  const urlForCourse = options.urlForCourse ?? configuredUrlForCourse();
   const cache = new Map<string, { expiresAt: number; promise: Promise<CourseCalendarReadResult> }>();
 
   return async function read(courseCode: string): Promise<CourseCalendarReadResult> {

@@ -28,8 +28,17 @@ type CalendarNavigation = {
   onNavigate: (anchor: string, view: CourseCalendarView) => void;
 };
 
+/** One period asked for, and whether its answer is worth saying out loud — a reading taken by itself is not. */
+type CalendarRequest = { anchor: string; view: CourseCalendarView; announce: boolean };
+
 const refreshInterval = 10 * 60 * 1_000;
 const pixelsPerMinute = 1.1;
+const minutesPerDay = 24 * 60;
+/* The height of one all-day entry including the gap beneath it, and the padding the slot holding them adds — what
+   `.allDayEvent` and `.allDaySlot` are given in the stylesheet. Both columns of the week are set from here, so the
+   time scale beside the days keeps standing at the height the days themselves begin at. */
+const allDayRowPixels = 28;
+const allDaySlotPadding = 8;
 const dayFormatter = new Intl.DateTimeFormat("de-DE", {
   timeZone: "UTC", weekday: "long", day: "numeric", month: "long", year: "numeric",
 });
@@ -47,6 +56,23 @@ const timeFormatter = new Intl.DateTimeFormat("de-DE", { timeZone: "UTC", hour: 
 
 function date(value: string): Date {
   return new Date(value.length === 10 ? `${value}T00:00:00.000Z` : value);
+}
+
+function allDaySlotHeight(rows: number): string {
+  return `${rows * allDayRowPixels + allDaySlotPadding}px`;
+}
+
+/**
+ * The minutes of its day a timed entry runs from and to. The week draws one day per column, so an entry reaching into
+ * the next one ends at midnight here rather than starting the following day over again from zero — otherwise it would
+ * be given a height the column has no room for and would be drawn across everything below it.
+ */
+function dayMinutes(event: CalendarEvent): { from: number; to: number } {
+  const start = date(event.start);
+  const end = date(event.end);
+  const from = start.getUTCHours() * 60 + start.getUTCMinutes();
+  const endsOnStartDay = event.end.slice(0, 10) === event.start.slice(0, 10);
+  return { from, to: endsOnStartDay ? Math.max(end.getUTCHours() * 60 + end.getUTCMinutes(), from) : minutesPerDay };
 }
 
 function eventTime(event: CalendarEvent): string {
@@ -110,10 +136,9 @@ function WeekCalendar({ events, anchor, today, onOpenList }: {
   let startHour = 8;
   let endHour = 18;
   for (const event of timedEvents) {
-    const start = date(event.start);
-    const end = date(event.end);
-    startHour = Math.min(startHour, start.getUTCHours());
-    endHour = Math.max(endHour, end.getUTCHours() + (end.getUTCMinutes() > 0 ? 1 : 0));
+    const { from, to } = dayMinutes(event);
+    startHour = Math.min(startHour, Math.floor(from / 60));
+    endHour = Math.max(endHour, Math.ceil(to / 60));
   }
   const startMinute = startHour * 60;
   const totalMinutes = Math.max((endHour - startHour) * 60, 60);
@@ -126,7 +151,7 @@ function WeekCalendar({ events, anchor, today, onOpenList }: {
     <div className={styles.weekGrid} style={gridStyle}>
       <div className={styles.weekTimeColumn} aria-hidden="true">
         <div className={styles.weekHeadSpacer} />
-        {maxAllDay ? <div className={styles.allDaySpacer} style={{ height: `${maxAllDay * 28 + 8}px` }} /> : null}
+        {maxAllDay ? <div className={styles.allDaySpacer} style={{ height: allDaySlotHeight(maxAllDay) }} /> : null}
         <div className={styles.weekTimeBody} style={{ height: `${bodyHeight}px` }}>
           {Array.from({ length: endHour - startHour }, (_, index) => startHour + index + 1).map((hour) =>
             <span key={hour} style={{ top: `${(hour * 60 - startMinute) * pixelsPerMinute}px` }}>{String(hour).padStart(2, "0")}:00</span>)}
@@ -140,19 +165,17 @@ function WeekCalendar({ events, anchor, today, onOpenList }: {
           <h3 id={`calendar-day-${day}`} className={styles.weekDayHeading}>
             <button type="button" onClick={() => onOpenList(day)} title="Listenansicht ab diesem Tag" aria-label={`${dayWithoutYearFormatter.format(date(day))}: Listenansicht ab diesem Tag öffnen`}>{shortDayFormatter.format(date(day))}</button>
           </h3>
-          {maxAllDay ? <div className={styles.allDaySlot} style={{ height: `${maxAllDay * 28 + 8}px` }}>
+          {maxAllDay ? <div className={styles.allDaySlot} style={{ height: allDaySlotHeight(maxAllDay) }}>
             {allDayEvents.map((event, index) => <div className={styles.allDayEvent} key={`${event.uid}-${event.start}-${index}`} title={event.title}>
               <span className="sr-only">Ganztägig: </span>{event.title}
             </div>)}
           </div> : null}
           <div className={styles.weekDayBody} style={{ height: `${bodyHeight}px`, "--calendar-hour-pixels": `${60 * pixelsPerMinute}px` } as CSSProperties}>
             {placements.map(({ event, column, columns }, index) => {
-              const start = date(event.start);
-              const end = date(event.end);
-              const eventStart = start.getUTCHours() * 60 + start.getUTCMinutes();
-              const duration = Math.max((end.getTime() - start.getTime()) / 60_000, 15);
+              const { from, to } = dayMinutes(event);
+              const duration = Math.max(to - from, 15);
               const placementStyle = {
-                top: `${(eventStart - startMinute) * pixelsPerMinute}px`,
+                top: `${(from - startMinute) * pixelsPerMinute}px`,
                 height: `${Math.max(duration * pixelsPerMinute - 2, 24)}px`,
                 left: `${(column / columns) * 100}%`,
                 width: `calc(${100 / columns}% - 3px)`,
@@ -180,6 +203,7 @@ function MonthCalendar({ events, anchor, today, onOpenWeek }: {
 }) {
   const [selection, setSelection] = useState<MonthSelection | null>(null);
   const selectionTrigger = useRef<HTMLButtonElement | null>(null);
+  const selectionDetail = useRef<HTMLElement | null>(null);
   const days = calendarMonthDays(anchor);
   const weeks = Array.from({ length: days.length / 7 }, (_, index) => days.slice(index * 7, index * 7 + 7));
   const month = anchor.slice(0, 7);
@@ -189,62 +213,72 @@ function MonthCalendar({ events, anchor, today, onOpenWeek }: {
     window.requestAnimationFrame(() => selectionTrigger.current?.focus());
   };
 
-  return <>
-    <div className={styles.calendarScroller} role="region" aria-label={`Monatsansicht ${monthLabel}`} tabIndex={0}>
-      <div className={styles.monthGrid}>
-        {['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map((weekday) => <div className={styles.monthWeekday} aria-hidden="true" key={weekday}>{weekday}</div>)}
-        {weeks.map((week) => <Fragment key={week[0]}>
-          {week.map((day, dayIndex) => {
-            const dayEvents = eventsOnCalendarDay(events, day);
-            const visibleEvents = dayEvents.slice(0, 3);
-            const additionalEvents = dayEvents.length - visibleEvents.length;
-            return <section className={`${styles.monthDay}${dayIndex === 6 ? ` ${styles.monthDayEnd}` : ""}${day.slice(0, 7) !== month ? ` ${styles.outsideMonth}` : ""}${day === today ? ` ${styles.today}` : ""}`} key={day}>
-              <h3>
-                <button type="button" onClick={() => onOpenWeek(day)} aria-label={`Woche für ${dayWithoutYearFormatter.format(date(day))} öffnen`}>{date(day).getUTCDate()}</button>
-              </h3>
-              <ul>{visibleEvents.map((event, index) => {
-                const key = `${day}-${event.uid}-${event.start}-${index}`;
-                const expanded = selection?.key === key;
-                const timeLabel = event.allDay ? "ganztägig" : timeFormatter.format(date(event.start));
-                return <li key={key}><button
-                  className={styles.monthEvent}
-                  type="button"
-                  aria-expanded={expanded}
-                  aria-label={`${timeLabel} ${event.title} — Details ${expanded ? "ausblenden" : "anzeigen"}`}
-                  aria-controls={expanded ? "calendar-month-detail" : undefined}
-                  onClick={(clickEvent) => {
-                    if (expanded) setSelection(null);
-                    else {
-                      selectionTrigger.current = clickEvent.currentTarget;
-                      setSelection({ key, weekStart: week[0], event });
-                    }
-                  }}
-                >
-                  <span>{timeLabel}</span>
-                  <strong>{event.title}</strong>
-                </button></li>;
-              })}</ul>
-              {additionalEvents ? <button className={styles.moreEvents} type="button" onClick={() => onOpenWeek(day)}>
-                {additionalEvents === 1 ? "1 weiterer Termin" : `${additionalEvents} weitere Termine`}
-              </button> : null}
-            </section>;
-          })}
-          {selection?.weekStart === week[0] ? <article className={styles.monthDetail} id="calendar-month-detail" aria-live="polite" onKeyDown={(event) => {
+  /**
+   * The details take the focus, and closing them gives it back. They stand at the end of their week and not beside
+   * the entry they belong to, so leaving the focus where it was would have meant tabbing through the rest of the week
+   * to reach them — and Escape, which closes them, would have gone nowhere until then. Taking the focus is also what
+   * reads them out: a region that appears is announced unreliably, one that is entered is read.
+   */
+  useEffect(() => {
+    if (selection) selectionDetail.current?.focus();
+  }, [selection]);
+
+  return <div className={styles.calendarScroller} role="region" aria-label={`Monatsansicht ${monthLabel}`} tabIndex={0}>
+    <div className={styles.monthGrid}>
+      {['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map((weekday) => <div className={styles.monthWeekday} aria-hidden="true" key={weekday}>{weekday}</div>)}
+      {weeks.map((week) => <Fragment key={week[0]}>
+        {week.map((day, dayIndex) => {
+          const dayEvents = eventsOnCalendarDay(events, day);
+          const visibleEvents = dayEvents.slice(0, 3);
+          const additionalEvents = dayEvents.length - visibleEvents.length;
+          return <section className={`${styles.monthDay}${dayIndex === 6 ? ` ${styles.monthDayEnd}` : ""}${day.slice(0, 7) !== month ? ` ${styles.outsideMonth}` : ""}${day === today ? ` ${styles.today}` : ""}`} key={day}>
+            <h3>
+              <button type="button" onClick={() => onOpenWeek(day)} aria-label={`Woche für ${dayWithoutYearFormatter.format(date(day))} öffnen`}>{date(day).getUTCDate()}</button>
+            </h3>
+            <ul>{visibleEvents.map((event, index) => {
+              const key = `${day}-${event.uid}-${event.start}-${index}`;
+              const expanded = selection?.key === key;
+              const timeLabel = event.allDay ? "ganztägig" : timeFormatter.format(date(event.start));
+              return <li key={key}><button
+                className={styles.monthEvent}
+                type="button"
+                aria-expanded={expanded}
+                aria-label={`${timeLabel} ${event.title} — Details ${expanded ? "ausblenden" : "anzeigen"}`}
+                aria-controls={expanded ? "calendar-month-detail" : undefined}
+                onClick={(clickEvent) => {
+                  if (expanded) setSelection(null);
+                  else {
+                    selectionTrigger.current = clickEvent.currentTarget;
+                    setSelection({ key, weekStart: week[0], event });
+                  }
+                }}
+              >
+                <span>{timeLabel}</span>
+                <strong>{event.title}</strong>
+              </button></li>;
+            })}</ul>
+            {additionalEvents ? <button className={styles.moreEvents} type="button" onClick={() => onOpenWeek(day)}>
+              {additionalEvents === 1 ? "1 weiterer Termin" : `${additionalEvents} weitere Termine`}
+            </button> : null}
+          </section>;
+        })}
+        {selection?.weekStart === week[0] ? <article className={styles.monthDetail} id="calendar-month-detail"
+          ref={selectionDetail} tabIndex={-1} aria-label={`Termindetails: ${selection.event.title}`}
+          onKeyDown={(event) => {
             if (event.key === "Escape") closeSelection();
           }}>
-            <div className={styles.monthDetailCard}>
-              <div>
-                <h3>{selection.event.title}</h3>
-                <time dateTime={selection.event.start}>{eventTime(selection.event)}</time>
-                <EventDetails event={selection.event} />
-              </div>
-              <button type="button" onClick={closeSelection} aria-label="Termindetails schließen">×</button>
+          <div className={styles.monthDetailCard}>
+            <div>
+              <h3>{selection.event.title}</h3>
+              <time dateTime={selection.event.start}>{eventTime(selection.event)}</time>
+              <EventDetails event={selection.event} />
             </div>
-          </article> : null}
-        </Fragment>)}
-      </div>
+            <button type="button" onClick={closeSelection} aria-label="Termindetails schließen">×</button>
+          </div>
+        </article> : null}
+      </Fragment>)}
     </div>
-  </>;
+  </div>;
 }
 
 function calendarLabel(anchor: string, view: CourseCalendarView): string {
@@ -286,6 +320,20 @@ function CalendarControls({ anchor, view, loading, onNavigate }: CalendarNavigat
   </>;
 }
 
+/** Reads one visible period from the internal route. It answers with a result and touches no state, so a caller that
+    has been overtaken can drop what it got. */
+async function loadCalendar(courseId: string, anchor: string, view: CourseCalendarView): Promise<CalendarResult> {
+  try {
+    const query = new URLSearchParams({ datum: anchor, ansicht: courseCalendarViewQuery(view) });
+    const response = await fetch(`/api/internal/courses/${encodeURIComponent(courseId)}/calendar?${query}`, { cache: "no-store" });
+    const data = await response.json() as { events?: CalendarEvent[]; error?: string };
+    if (response.ok && Array.isArray(data.events)) return { kind: "available", events: data.events };
+    return { kind: response.status === 404 ? "not-found" : "unavailable" };
+  } catch {
+    return { kind: "unavailable" };
+  }
+}
+
 function errorMessage(result: Exclude<CalendarResult, { kind: "available" }>): string {
   return result.kind === "not-found"
     ? "Für diese Kurskennung wurde kein Vorlesungskalender gefunden."
@@ -310,27 +358,33 @@ export function CourseCalendar({
   const [announcement, setAnnouncement] = useState("");
   const lastLoadedAt = useRef(0);
   const requestInFlight = useRef(false);
+  const pendingRequest = useRef<CalendarRequest | null>(null);
 
+  /**
+   * One request at a time, and the period asked for last is the one that answers. A period opened while an earlier
+   * request is still running is remembered and read afterwards instead of being dropped: dropping it left address,
+   * controls and heading on the new period while the entries beneath them still belonged to the old one — and because
+   * both ends cut the entries down to what the visible period needs, what stood there was mostly nothing at all.
+   *
+   * An answer that has been overtaken in the meantime is discarded rather than shown. It belongs to a period that is
+   * no longer on screen, and putting it up only to replace it a moment later would show a stranger's week.
+   */
   const refresh = useCallback(async (requestedAnchor: string, requestedView: CourseCalendarView, announce = true) => {
+    pendingRequest.current = { anchor: requestedAnchor, view: requestedView, announce };
     if (requestInFlight.current) return;
     requestInFlight.current = true;
     setLoading(true);
-    if (announce) setAnnouncement("Vorlesungskalender wird geladen.");
     try {
-      const query = new URLSearchParams({ datum: requestedAnchor, ansicht: courseCalendarViewQuery(requestedView) });
-      const response = await fetch(`/api/internal/courses/${encodeURIComponent(courseId)}/calendar?${query}`, { cache: "no-store" });
-      const data = await response.json() as { events?: CalendarEvent[]; error?: string };
-      if (response.ok && Array.isArray(data.events)) {
-        setResult({ kind: "available", events: data.events });
-        lastLoadedAt.current = Date.now();
-        if (announce) setAnnouncement("Vorlesungskalender wurde aktualisiert.");
-      } else {
-        setResult({ kind: response.status === 404 ? "not-found" : "unavailable" });
-        if (announce) setAnnouncement("");
+      while (pendingRequest.current) {
+        const request: CalendarRequest = pendingRequest.current;
+        if (request.announce) setAnnouncement("Vorlesungskalender wird geladen.");
+        const loaded = await loadCalendar(courseId, request.anchor, request.view);
+        if (pendingRequest.current !== request) continue;
+        pendingRequest.current = null;
+        setResult(loaded);
+        if (loaded.kind === "available") lastLoadedAt.current = Date.now();
+        if (request.announce) setAnnouncement(loaded.kind === "available" ? "Vorlesungskalender wurde aktualisiert." : "");
       }
-    } catch {
-      setResult({ kind: "unavailable" });
-      if (announce) setAnnouncement("");
     } finally {
       requestInFlight.current = false;
       setLoading(false);

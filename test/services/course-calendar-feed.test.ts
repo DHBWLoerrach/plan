@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createCourseCalendarReader } from "@/lib/services/course-calendar-feed";
 
@@ -13,6 +13,27 @@ function reader(fetcher: typeof fetch, now = () => 1_000) {
 }
 
 describe("course calendar feed", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  /* A configured address without its placeholder does not turn into a working one on the next attempt. It is refused
+     where it is read, so that it cannot arrive as one more calendar that is „zurzeit nicht erreichbar“. */
+  it("refuses a configured address that does not carry the placeholder exactly once", () => {
+    vi.stubEnv("DHBW_CALENDAR_URL_TEMPLATE", "https://calendar.test/kalender.ics");
+    expect(() => createCourseCalendarReader()).toThrow(/\{course\}/u);
+
+    vi.stubEnv("DHBW_CALENDAR_URL_TEMPLATE", "https://calendar.test/{course}/{course}.ics");
+    expect(() => createCourseCalendarReader()).toThrow(/\{course\}/u);
+  });
+
+  it("reads the course code into the configured address", async () => {
+    vi.stubEnv("DHBW_CALENDAR_URL_TEMPLATE", "https://calendar.test/kal-{course}.ics");
+    const fetcher = vi.fn<typeof fetch>(async () => new Response(ics, { headers: { "content-type": "text/calendar" } }));
+
+    await createCourseCalendarReader({ fetcher })("TIF25A");
+
+    expect(fetcher).toHaveBeenCalledWith("https://calendar.test/kal-tif25a.ics", expect.anything());
+  });
+
   it("reads, validates and caches one DHBW feed per course for ten minutes", async () => {
     const fetcher = vi.fn<typeof fetch>(async () => new Response(ics, { headers: { "content-type": "text/calendar" } }));
     const read = reader(fetcher);

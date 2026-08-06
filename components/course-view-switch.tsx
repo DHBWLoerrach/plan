@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import styles from "./course-calendar.module.css";
+import styles from "./course-view-switch.module.css";
 
 export function CourseViewSwitch({ courseId, current }: { courseId: string; current: "plan" | "calendar" }) {
   return <nav className={styles.viewSwitch} aria-label="Kursansicht">

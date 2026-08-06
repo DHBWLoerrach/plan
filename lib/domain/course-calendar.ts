@@ -68,6 +68,11 @@ function eventFromProperties(properties: Record<string, string>): CalendarEvent 
   const start = parseDate(properties.DTSTART);
   const end = parseDate(properties.DTEND);
   if (!start || !end) return null;
+  const allDay = !properties.DTSTART.includes("T");
+  /* DTEND does not belong to the event (RFC 5545): a single all-day entry on the sixth is written as ending on the
+     seventh. Every view here reckons in the days an entry covers and asks its end whether a day is still one of them,
+     so what is kept is the last covered day. A feed that already writes both the same way round keeps its one day. */
+  if (allDay && end > start) end.setUTCDate(end.getUTCDate() - 1);
   return {
     uid: properties.UID ?? "",
     title: unescapeText(properties.SUMMARY ?? "").trim() || "(ohne Titel)",
@@ -75,7 +80,7 @@ function eventFromProperties(properties: Record<string, string>): CalendarEvent 
     end: end.toISOString(),
     location: unescapeText(properties.LOCATION ?? "").trim(),
     description: unescapeText(properties.DESCRIPTION ?? "").trim(),
-    allDay: !properties.DTSTART.includes("T"),
+    allDay,
   };
 }
 

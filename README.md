@@ -84,7 +84,9 @@ DHBW_CALENDAR_URL_TEMPLATE=https://webmail.dhbw-loerrach.de/owa/calendar/kal-{co
 ```
 
 `DHBW_CALENDAR_URL_TEMPLATE` ist optional und muss genau den Platzhalter `{course}`
-enthalten. Ohne Angabe verwendet die Anwendung die oben gezeigte Adresse. Der
+enthalten. Ohne Angabe verwendet die Anwendung die oben gezeigte Adresse. Eine Angabe
+ohne diesen Platzhalter wird beim Start abgewiesen und nicht als vorübergehend nicht
+erreichbarer Kalender ausgegeben. Der
 Vorlesungskalender ist nur für interne Konten mit systemweiter Kurseinsicht erreichbar;
 erfolgreiche Feeds werden pro Anwendungsprozess zehn Minuten zwischengespeichert.
 

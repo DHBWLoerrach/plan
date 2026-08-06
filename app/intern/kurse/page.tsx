@@ -60,7 +60,7 @@ function courseCountLabel(shown: number, totalInScope: number, narrowed: boolean
   return `${shown} von ${totalInScope} Ergebnissen`;
 }
 
-function SortHeader({ header, currentSort, direction, filters }:{ header: SortableHeader; currentSort: CourseSort; direction: CourseSortDirection; filters: CourseListFilters }) {
+function SortHeader({ header, currentSort, direction, filters }: { header: SortableHeader; currentSort: CourseSort; direction: CourseSortDirection; filters: CourseListFilters }) {
   const active = currentSort === header.sort;
   const nextDirection = active ? (direction === "asc" ? "desc" : "asc") : firstDirection[header.sort];
   const query = { ...filterQuery(filters), sort: header.sort, direction: nextDirection };
