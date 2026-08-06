@@ -1,0 +1,100 @@
+.viewSwitch { margin-top: 1.5rem; }
+.viewSwitchLabel { margin: 0 0 .35rem; font-size: .9rem; font-weight: 700; }
+.viewOptions { display: flex; flex-wrap: wrap; gap: .35rem; margin: 0; padding: 0; list-style: none; }
+.viewOptions a { display: block; min-height: 2.5rem; padding: .5rem .8rem; border: 1px solid var(--field-border); background: #fff; text-decoration: none; }
+.viewOptions a:hover { background: var(--surface); }
+.viewOptions a[aria-current] { border-color: var(--red); background: var(--red); color: #fff; font-weight: 700; }
+
+.calendar { margin-top: 1.5rem; }
+.explanation { max-width: 54rem; margin: 0 0 1rem; color: var(--gray-strong); }
+.viewControls { display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: 1rem; }
+.viewControls button, .navigation button { min-height: 2.5rem; padding: .45rem .75rem; border: 1px solid var(--field-border); background: #fff; color: var(--ink); font: inherit; font-weight: 700; cursor: pointer; }
+.viewControls button:hover, .navigation button:hover { background: var(--surface); }
+.viewControls button[aria-pressed="true"] { border-color: var(--red); background: var(--red); color: #fff; }
+.viewControls button:disabled, .navigation button:disabled { color: var(--gray); cursor: wait; }
+.calendarHead { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: .75rem 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--line); }
+.calendarHead h2 { margin: 0; font-size: clamp(1.35rem, 2.5vw, 1.7rem); }
+.calendarHead p { margin: .25rem 0 0; color: var(--gray); }
+.navigation { display: flex; flex-wrap: wrap; gap: .35rem; }
+.status { min-height: 1.5rem; margin: .75rem 0 0; color: var(--gray); font-size: .9rem; }
+.error { margin-top: 1rem; padding: 1rem; border: 1px solid #d7a7a5; border-left: 4px solid var(--error); background: #fff7f7; }
+.error p { margin: 0 0 .75rem; }
+.retry { min-height: 2.5rem; padding: .45rem .75rem; border: 0; background: var(--red); color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+
+.groups { margin-top: 1.5rem; }
+.day { margin-top: 1.6rem; }
+.day:first-child { margin-top: 0; }
+.day h3 { margin: 0 0 .5rem; color: var(--gray-strong); font-size: 1rem; }
+.dayLink { padding: .2rem 0; border: 0; background: transparent; color: inherit; font: inherit; font-weight: inherit; text-align: left; text-decoration: underline; text-decoration-color: transparent; text-underline-offset: .2rem; cursor: pointer; }
+.dayLink:hover { color: var(--red); text-decoration-color: currentcolor; }
+.events { display: grid; gap: .45rem; margin: 0; padding: 0; list-style: none; }
+.event { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); gap: .4rem 1rem; padding: .9rem 1rem; border: 1px solid var(--line); border-left: 4px solid var(--red); background: #fff; }
+.time { grid-column: 1; grid-row: 1 / span 3; color: var(--gray-strong); font-variant-numeric: tabular-nums; font-weight: 700; }
+.eventMain { grid-column: 2; min-width: 0; }
+.eventMain h4 { margin: 0; font-size: 1rem; }
+.location, .description { margin: .2rem 0 0; overflow-wrap: anywhere; }
+.location { color: var(--gray-strong); }
+.location a { color: var(--red); font-weight: 700; text-underline-offset: .2rem; }
+.description { white-space: pre-line; }
+.empty { margin-top: 1rem; padding: 1rem; border: 1px solid var(--line); background: var(--surface); color: var(--gray); }
+
+.calendarScroller { max-width: 100%; margin-top: 1rem; overflow-x: auto; border: 1px solid var(--line); background: #fff; overscroll-behavior-inline: contain; }
+.calendarScroller:focus { outline: .18rem solid var(--focus); outline-offset: .12rem; }
+
+.weekGrid { display: grid; grid-template-columns: 4.5rem repeat(var(--calendar-day-count), minmax(9rem, 1fr)); min-width: calc(4.5rem + var(--calendar-day-count) * 9rem); }
+.weekTimeColumn, .weekDay { min-width: 0; }
+.weekTimeColumn { border-right: 1px solid var(--line); color: var(--gray); font-size: .75rem; }
+.weekHeadSpacer, .weekDayHeading { height: 3.2rem; border-bottom: 1px solid var(--line); }
+.weekDayHeading { margin: 0; background: var(--surface); font-size: .9rem; text-align: center; }
+.weekDayHeading button { width: 100%; height: 100%; padding: .35rem; border: 0; background: transparent; color: inherit; font: inherit; font-weight: 700; cursor: pointer; }
+.weekDayHeading button:hover { color: var(--red); text-decoration: underline; text-underline-offset: .15rem; }
+.weekDay { border-right: 1px solid var(--line); }
+.weekDay:last-child { border-right: 0; }
+.weekDay.today .weekDayHeading, .monthDay.today { box-shadow: inset 0 .25rem 0 var(--red); background: #fff5f5; }
+.allDaySpacer, .allDaySlot { border-bottom: 1px solid var(--line); background: #fff; }
+.allDaySlot { display: grid; align-content: start; gap: 2px; padding: 4px 3px; overflow: hidden; }
+.allDayEvent { height: 26px; overflow: hidden; padding: .2rem .35rem; border-left: 3px solid var(--red); background: #f3dfdf; color: var(--ink); font-size: .75rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.weekTimeBody, .weekDayBody { position: relative; }
+.weekTimeBody span { position: absolute; right: .45rem; translate: 0 -50%; font-variant-numeric: tabular-nums; }
+.weekDayBody { background: repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--calendar-hour-pixels) - 1px), var(--line) calc(var(--calendar-hour-pixels) - 1px), var(--line) var(--calendar-hour-pixels)); }
+.weekEvent { position: absolute; z-index: 1; overflow: hidden; padding: .25rem .35rem; border-left: 3px solid var(--red); background: #f3dfdf; color: var(--ink); font-size: .72rem; line-height: 1.25; }
+.weekEvent h4 { margin: 0; overflow: hidden; font-size: .78rem; text-overflow: ellipsis; white-space: nowrap; }
+.weekEvent time { display: block; font-variant-numeric: tabular-nums; font-weight: 700; }
+.weekEvent .location, .weekEvent .description { display: -webkit-box; margin-top: .12rem; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+
+.monthGrid { display: grid; grid-template-columns: repeat(7, minmax(7.25rem, 1fr)); min-width: 50.75rem; }
+.monthWeekday { padding: .55rem; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--surface); color: var(--gray-strong); font-size: .85rem; font-weight: 700; text-align: center; }
+.monthWeekday:nth-child(7) { border-right: 0; }
+.monthDay { min-height: 8.5rem; padding: .35rem; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: #fff; }
+.monthDayEnd { border-right: 0; }
+.monthDay h3 { margin: 0 0 .25rem; font-size: .85rem; }
+.monthDay h3 button { display: grid; width: 2rem; min-height: 2rem; place-items: center; border: 0; border-radius: 50%; background: transparent; color: inherit; font: inherit; font-weight: 700; cursor: pointer; }
+.monthDay h3 button:hover { background: var(--surface); color: var(--red); }
+.monthDay.outsideMonth { background: #f7f7f7; color: var(--gray); }
+.monthDay ul { display: grid; gap: .2rem; margin: 0; padding: 0; list-style: none; }
+.monthEvent { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: .25rem; width: 100%; padding: .25rem .3rem; overflow: hidden; border: 0; border-left: 3px solid var(--red); background: #f3dfdf; color: var(--ink); font: inherit; font-size: .72rem; text-align: left; cursor: pointer; }
+.monthEvent:hover, .monthEvent[aria-expanded="true"] { background: #e9c9ca; }
+.monthEvent span:first-child { font-variant-numeric: tabular-nums; }
+.monthEvent strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.moreEvents { margin-top: .25rem; padding: .15rem; border: 0; background: transparent; color: var(--red); font: inherit; font-size: .72rem; font-weight: 700; cursor: pointer; }
+.monthDetail { grid-column: 1 / -1; min-width: 0; padding: .75rem; border-bottom: 1px solid var(--line); background: var(--surface); }
+.monthDetailCard { position: sticky; left: .75rem; display: flex; justify-content: space-between; gap: 1rem; width: min(32rem, calc(100vw - 3.5rem)); padding: 1rem; border: 1px solid var(--line); border-left: 4px solid var(--red); background: #fff; color: var(--ink); }
+.monthDetail h3 { margin: 0; font-size: 1.05rem; }
+.monthDetail time { display: block; margin-top: .25rem; font-weight: 700; }
+.monthDetailCard > button { flex: 0 0 auto; width: 2.5rem; height: 2.5rem; border: 1px solid var(--field-border); background: #fff; color: var(--ink); font: inherit; font-size: 1.5rem; cursor: pointer; }
+
+@media (max-width: 36rem) {
+  .event { grid-template-columns: minmax(0, 1fr); }
+  .time, .eventMain { grid-column: 1; grid-row: auto; }
+  .viewControls { width: 100%; }
+  .viewControls button { flex: 1 1 0; }
+  .navigation { width: 100%; }
+  .navigation button { flex: 1 1 auto; }
+  .calendarScroller { margin-inline: -.25rem; }
+}
+
+@media (forced-colors: active) {
+  .viewOptions a[aria-current] { border-width: .2rem; }
+  .viewControls button[aria-pressed="true"], .weekEvent, .monthEvent, .allDayEvent { border-width: .2rem; }
+  .weekDay.today .weekDayHeading, .monthDay.today { outline: .2rem solid CanvasText; outline-offset: -.2rem; }
+}

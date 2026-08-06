@@ -5,6 +5,10 @@ Theorie- und Praxisphasen sowie prüfungsrelevante Termine je Kurs. Geplant und
 veröffentlicht wird der einzelne Kurs; Blockpläne entstehen daraus als Darstellung
 in einem gewählten Zuschnitt innerhalb eines Jahrgangs — ein einzelner Kurs, der
 ganze Jahrgang oder ein Studiengang beziehungsweise ein Bereich darin.
+Intern zeigt dieselbe Kursseite außerdem den aktuellen Vorlesungskalender aus dem
+DHBW-Kalendersystem ausschließlich lesend an. Seine Kalendertermine werden nicht
+in den Planungsstand übernommen und nicht mit ihm veröffentlicht. Woche, Monat und
+chronologische Liste sind direkt adressierbare Ansichten desselben externen Feeds.
 Die Blockplanung ist der erste Baustein einer breiter angelegten
 Anwendung für den Studienbetrieb.
 
@@ -76,7 +80,13 @@ dieselben Variablen aus der Container-Umgebung:
 DATABASE_URL=./data/dhbw-mgmt.sqlite
 BETTER_AUTH_URL=http://localhost:3000
 BETTER_AUTH_SECRET=development-only-secret-change-before-production
+DHBW_CALENDAR_URL_TEMPLATE=https://webmail.dhbw-loerrach.de/owa/calendar/kal-{course}@dhbw-loerrach.de/Kalender/calendar.ics
 ```
+
+`DHBW_CALENDAR_URL_TEMPLATE` ist optional und muss genau den Platzhalter `{course}`
+enthalten. Ohne Angabe verwendet die Anwendung die oben gezeigte Adresse. Der
+Vorlesungskalender ist nur für interne Konten mit systemweiter Kurseinsicht erreichbar;
+erfolgreiche Feeds werden pro Anwendungsprozess zehn Minuten zwischengespeichert.
 
 Das erste Systemadministrationskonto anlegen — der Befehl gibt den einmalig
 verwendbaren Passwortlink auf der Standardausgabe aus:

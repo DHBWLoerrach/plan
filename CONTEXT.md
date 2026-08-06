@@ -1,6 +1,6 @@
-# Blockplanung
+# Studienbetrieb
 
-Dieses Glossar legt ausschließlich die kanonische Sprache für die Planung und Veröffentlichung der Blockpläne fest. Der aktuelle fachliche Ist-Stand wird durch Code, Datenbankschema und Tests bestimmt; Gründe für grundlegende Entscheidungen stehen in den [`ADR`](docs/adr/).
+Dieses Glossar legt die kanonische Sprache für die Planung und Veröffentlichung der Blockpläne sowie die lesende Ansicht der Vorlesungskalender fest. Der aktuelle fachliche Ist-Stand wird durch Code, Datenbankschema und Tests bestimmt; Gründe für grundlegende Entscheidungen stehen in den [`ADR`](docs/adr/).
 
 ## Planung
 
@@ -52,6 +52,14 @@ _Avoid_: Blockphase, Phase, Urlaubsphase
 **Prüfungsrelevanter Termin**: Eine Planangabe genau eines Kurses mit Titel, Kategorie und einem Startdatum sowie optionalem Enddatum, beispielsweise Anmeldung, Abgabe, Präsentation oder Prüfung. Er kann als vorläufig gekennzeichnet sein, solange seine Zeitangabe noch nicht verbindlich ist.
 
 **Kalendertag**: Ein zeitzonenloses Datum im gregorianischen Kalender.
+
+## Vorlesungskalender
+
+**Vorlesungskalender**: Die aktuelle, ausschließlich gelesene Darstellung der von der DHBW für genau einen Kurs bereitgestellten Lehrveranstaltungen. Er gehört weder zum Planungsstand noch zum Veröffentlichungszustand des Kurses.
+_Avoid_: Stundenplan, veröffentlichter Kalender
+
+**Kalendertermin**: Eine aus dem Vorlesungskalender gelesene Lehrveranstaltung mit Zeitraum und optionalem Ort und Beschreibung. Er ist keine gespeicherte Planangabe und insbesondere kein prüfungsrelevanter Termin.
+_Avoid_: Termin ohne nähere Bestimmung, prüfungsrelevanter Termin
 
 ## Darstellung
 

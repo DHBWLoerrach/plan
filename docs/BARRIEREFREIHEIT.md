@@ -35,6 +35,14 @@ Vor Go-live wird mit der zuständigen DHBW-Stelle geklärt, ob Erklärung zur Ba
 - Bestätigungen für Löschung, Kontosperrung, Zurücknahme, Rechteänderung und die Ausstellung eines neuen Passwortlinks benennen Aktion, Ziel und Folgen im zugänglichen Namen beziehungsweise in der zugeordneten Beschreibung; eine generische Schaltfläche „OK“ genügt nicht.
 - Hat sich die angezeigte Vorschau vor dem Veröffentlichen geändert, wird der neu geladene Stand verständlich angekündigt und der Hinweis erklärt die erforderliche erneute Freigabe.
 
+## Vorlesungskalender
+
+- Kalendertermine besitzen unabhängig von Farbe und räumlicher Lage eine textliche Zeitangabe, einen Titel und vorhandene Orts- und Beschreibungsangaben. Die Listenansicht benennt zusätzlich jeden Tag ausgeschrieben.
+- Wochenraster, Monatsraster und Liste lassen sich per Tastatur wechseln. Tagesköpfe verbinden die Raster mit den jeweils detaillierteren Ansichten; Terminschaltflächen im Monat blenden ihre vollständigen Angaben zugänglich ein und aus.
+- Zeitraumwechsel und erneute Abrufe sind per Tastatur bedienbar. Während eines Abrufs ist der Kalender als beschäftigt gekennzeichnet; Erfolg und Fehler werden verständlich angekündigt.
+- Ein Online-Raum öffnet nur auf ausdrückliche Betätigung in einem neuen Tab und kündigt dieses Verhalten im zugänglichen Namen an.
+- Die Liste bleibt bei 320 CSS-Pixeln Breite, 200 % Textvergrößerung und 400 % Browser-Zoom vollständig lesbar, ohne dass Uhrzeit oder Inhalt nur durch ihre Spaltenposition zugeordnet werden können. Wochen- und Monatsraster liegen bei geringer Breite in einem benannten, tastaturfokussierbaren horizontalen Bildlaufbereich und erzeugen keinen horizontalen Bildlauf für die gesamte Seite.
+
 ## Nachweis vor Abnahme
 
 - Automatisierte Scans ergänzen manuelle Prüfungen aller wesentlichen Abläufe: Plan suchen und lesen, Kurs wechseln, Phasen und Termine bearbeiten, speichern, veröffentlichen und zurücknehmen.

@@ -1,22 +1,28 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
+import { Suspense } from "react";
 
+import { CourseCalendar } from "@/components/course-calendar";
 import { DeleteCourseForm, EditCourseForm } from "@/components/course-forms";
 import { CourseEventEditor, CoursePhaseEditor } from "@/components/course-plan-editor";
 import { CoursePublicationControls } from "@/components/course-publication-controls";
+import { CourseViewSwitch } from "@/components/course-view-switch";
 import { InternalNav } from "@/components/internal-nav";
 import { PlanEventTable, PlanMatrix } from "@/components/plan-matrix";
 import { SiteShell } from "@/components/site-shell";
 import { sqlite } from "@/lib/db";
+import { berlinCalendarDay } from "@/lib/domain/calendar-day";
 import { formatCalendarPeriod } from "@/lib/domain/calendar-format";
 import { comparisonScope, comparisonScopes, coursePath, type ComparisonScope } from "@/lib/domain/course-comparison";
+import { calendarEventsForView, courseCalendarView, normalizeCalendarAnchor, type CourseCalendarView } from "@/lib/domain/course-calendar";
 import { publicationStateLabels } from "@/lib/domain/course-status";
 import { validatePublication, type PlanEvent, type PlanPhase } from "@/lib/domain/publication";
 import { getActiveAccount, managesAnyArea } from "@/lib/internal-auth";
+import { readCourseCalendar } from "@/lib/services/course-calendar-feed";
 
 import { searchParam } from "../../search-params";
-import { coursePlanData, programOptions, type PlanCourse } from "../data";
+import { coursePlanData, findInternalCourse, programOptions, type InternalCourse, type PlanCourse } from "../data";
 
 /**
  * The comparison is chosen anew on every visit and never stored, so it lives in the address alone. Links rather than a
@@ -48,6 +54,24 @@ function courseIssues(course: PlanCourse, phases: PlanPhase[], events: PlanEvent
   });
 }
 
+type CourseHeadingData = Pick<InternalCourse, "code" | "program" | "areaName" | "studyStart" | "studyEnd" | "state">;
+
+function CourseHeading({ course }: { course: CourseHeadingData }) {
+  return <>
+    <p className="eyebrow">Interner Bereich</p>
+    <h1>Kurs {course.code}</h1>
+    <p>{course.program} · Bereich {course.areaName} · Studienzeitraum {formatCalendarPeriod(course.studyStart, course.studyEnd)} · {publicationStateLabels[course.state]}</p>
+  </>;
+}
+
+async function CourseCalendarContent({ courseId, courseCode, anchor, view }: { courseId: string; courseCode: string; anchor: string; view: CourseCalendarView }) {
+  const result = await readCourseCalendar(courseCode);
+  const initialResult = result.kind === "available"
+    ? { kind: "available" as const, events: calendarEventsForView(result.events, anchor, view) }
+    : result;
+  return <CourseCalendar courseId={courseId} initialAnchor={anchor} initialView={view} initialResult={initialResult} />;
+}
+
 export default async function CoursePage({ params, searchParams }: PageProps<"/intern/kurse/[courseId]">) {
   await connection();
   const account = await getActiveAccount();
@@ -56,6 +80,22 @@ export default async function CoursePage({ params, searchParams }: PageProps<"/i
   if (!managesAnyArea(account)) redirect("/intern");
   const { courseId } = await params;
   const raw = await searchParams;
+  const selectedCalendarView = courseCalendarView(searchParam(raw, "kalender"));
+
+  if (selectedCalendarView) {
+    const course = findInternalCourse(sqlite, courseId, account);
+    if (!course) notFound();
+    const anchor = normalizeCalendarAnchor(searchParam(raw, "datum"), berlinCalendarDay());
+    return <SiteShell nav={<InternalNav account={account} current="kurse" />}><article className="plan-detail">
+      <CourseHeading course={course} />
+      <CourseViewSwitch courseId={course.id} current="calendar" />
+      <Suspense fallback={<p role="status">Vorlesungskalender wird geladen…</p>}>
+        <CourseCalendarContent courseId={course.id} courseCode={course.code} anchor={anchor} view={selectedCalendarView} />
+      </Suspense>
+      <p className="plan-detail__back"><Link className="text-link" href="/intern/kurse">Zurück zur Kursliste</Link></p>
+    </article></SiteShell>;
+  }
+
   const scope = comparisonScope(searchParam(raw, "vergleich"));
   const plan = coursePlanData(sqlite, account, courseId, scope);
   if (!plan) notFound();
@@ -73,10 +113,10 @@ export default async function CoursePage({ params, searchParams }: PageProps<"/i
   const chronology = !course.editable || comparison.length > 0;
 
   return <SiteShell nav={<InternalNav account={account} current="kurse" />}><article className="plan-detail">
-    <p className="eyebrow">Interner Bereich</p>
-    <h1>Kurs {course.code}</h1>
-    <p>{course.program} · Bereich {course.areaName} · Studienzeitraum {formatCalendarPeriod(course.studyStart, course.studyEnd)} · {publicationStateLabels[course.state]}</p>
+    <CourseHeading course={course} />
     {created ? <p role="status">Der Kurs wurde angelegt.</p> : null}
+
+    <CourseViewSwitch courseId={course.id} current="plan" />
 
     {/* Everything that writes is reserved to the own areas (ADR 0011). A foreign course therefore carries neither
         publication, nor lists, nor course details, and says once — here, where they would have stood — why. */}

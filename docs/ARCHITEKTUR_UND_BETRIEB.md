@@ -17,6 +17,17 @@ oder mehrere nebenläufig schreibende Container erfordern deshalb zuvor eine neu
 Bereitstellungsentscheidung. Die Anwendung versendet keine E-Mails und betreibt keinen eigenen
 Scheduler.
 
+Die Vorlesungskalender sind eine externe Lesesicht. Die Anwendung ruft den ICS-Feed
+eines verwalteten Kurses ausschließlich serverseitig aus dem konfigurierten
+DHBW-Kalendersystem ab, hält erfolgreiche Antworten höchstens zehn Minuten im
+Arbeitsspeicher und speichert keine Kalendertermine in SQLite. Ansicht und interne
+JSON-Route prüfen dieselbe Anmeldung und systemweite Kurseinsicht; Veröffentlichung
+oder Nichtveröffentlichung eines Kurses ändert daran nichts. Eine öffentliche
+Kalenderansicht oder Kalender-API gehört nicht zur Systemgrenze. Wochen-, Monats-
+und Listenansicht tragen Ansicht und Bezugsdatum in der Adresse; die interne Route
+liefert dafür höchstens die Termine des sichtbaren Zeitraums beziehungsweise 200
+kommende Listeneinträge.
+
 Die vorgesehene produktive Basis-URL ist
 `https://plan.apps.szi.dhbw-loerrach.de`. TLS-Terminierung, HSTS und die Weiterleitung an den
 Anwendungscontainer übernimmt Traefik. Der Container ist nicht unmittelbar öffentlich erreichbar.
@@ -44,7 +55,9 @@ Kontostatus, Passwort-Hashes, gehashte Passwortlink-Tokens, Sitzungen sowie Kont
 der letzten Änderung eines Kurses. Sitzungsdatensätze können IP-Adresse und User-Agent bis zu ihrem
 Ablauf oder Widerruf enthalten. Für das Rate-Limit können IP-Adressen zusätzlich flüchtig
 verarbeitet werden. Die Anwendung verarbeitet keine Studierendendaten und führt keine
-Nutzungsanalyse. Für gesperrte Konten gibt es keinen automatischen Anonymisierungs- oder
+Nutzungsanalyse. Aus dem DHBW-Kalendersystem verarbeitet sie flüchtig Titel, Zeiten,
+Orte und Beschreibungen von Kalenderterminen; Online-Raum-Links können darin enthalten
+sein. Für gesperrte Konten gibt es keinen automatischen Anonymisierungs- oder
 Löschlauf; eine Aufbewahrungsregel muss vor einem Regelbetrieb mit der zuständigen DHBW-Stelle
 festgelegt werden.
 
