@@ -17,8 +17,8 @@
     "reset:admin-password": "node --env-file-if-exists=.env.local scripts/reset-admin-password.mjs"
   },
   "dependencies": {
-    "better-auth": "^1.6.25",
-    "better-sqlite3": "^13.0.3",
+    "better-auth": "^1.6.26",
+    "better-sqlite3": "^12.11.1",
     "drizzle-orm": "^0.45.2",
     "next": "^16.3.0",
     "react": "19.2.8",
