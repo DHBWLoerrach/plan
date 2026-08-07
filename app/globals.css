@@ -31,7 +31,16 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 
 /* Formular-Controls: Tailwind-Preflight setzt border:0, background:transparent und color:inherit —
    jedes Control braucht deshalb explizite Fläche, Rahmen und Textfarbe. */
-input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), select, textarea { width: 100%; min-height: 2.75rem; padding: .55rem .65rem; border: 1px solid var(--field-border); border-radius: 0; background: #fff; color: var(--ink); font: inherit; }
+/* Die Ausnahmen stehen in :where(), tragen also kein Gewicht: als Kette von drei Negationen wog diese Grundregel
+   schwerer als jede Regel, die ein einzelnes Feld später größer, höher oder weiter innen setzen wollte, und solche
+   Regeln mussten ihr Gewicht künstlich aufbauen, um überhaupt zu greifen. */
+input:where(:not([type="checkbox"]):not([type="radio"]):not([type="hidden"])), select, textarea { width: 100%; min-height: 2.75rem; padding: .55rem .65rem; border: 1px solid var(--field-border); border-radius: 0; background: #fff; color: var(--ink); font: inherit; }
+/* Solange ein Select sein natives Aussehen behält, gibt WebKit ihm seine eigene Höhe und übergeht jede gesetzte: das
+   Feld stand dort 21 px hoch neben einem 44 px hohen Eingabefeld. Ohne dieses Aussehen gilt die gesetzte Höhe in jedem
+   Browser — den Pfeil, den die Plattform bis dahin zeichnete, zeichnet dann diese Datei, einmal für alle. */
+select { appearance: none; padding-right: 2.1rem; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath fill='none' stroke='%235c6971' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' d='M1.2 1.8 6 6.2l4.8-4.4'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right .7rem center; background-size: .75rem; }
+/* Ein Zwangsfarbmodus ersetzt Farben, aber keine Bilder: dort ist das native Control das lesbare. */
+@media (forced-colors: active) { select { appearance: auto; padding-right: .65rem; background-image: none; } }
 input[type="checkbox"], input[type="radio"] { width: 1.05rem; height: 1.05rem; flex: none; accent-color: var(--red); }
 ::placeholder { color: #6a737a; opacity: 1; }
 input:focus, select:focus, textarea:focus { border-color: var(--gray); }
@@ -145,15 +154,11 @@ p[role="status"] { margin: 0; color: var(--success); }
 .course-list-filter__fields { display: grid; grid-template-columns: minmax(15rem, 1.25fr) minmax(15rem, 1fr) minmax(9rem, .55fr); gap: .75rem; }
 .course-list-filter__fields label { display: grid; min-width: 0; gap: .3rem; font-size: .82rem; }
 /* The field a course code is searched in, in the internal list and in the public one: the same field, so it is drawn
-   once for both. */
+   once for both. The input is a block of its own inside the span: as an inline element it would add the descender
+   space of a line box below itself, and the field would stand taller than the selects it shares its row with. */
 .course-list-filter__search, .public-filter__search { position: relative; display: block; }
 .course-list-filter__search svg, .public-filter__search svg { position: absolute; top: 50%; left: .7rem; width: 1.1rem; height: 1.1rem; transform: translateY(-50%); fill: none; stroke: var(--gray); stroke-width: 1.8; pointer-events: none; }
-/* The field keeps the icon out of its text. Both selectors carry three classes or attributes, because the base rule
-   for every form control names three attribute negations and would otherwise outweigh them.
-   The input is a block of its own inside the span: as an inline element it would add the descender space of a line
-   box below itself, and the field would stand taller than the selects it shares its row with. */
-.course-list-filter__search input, .public-filter__search input { display: block; }
-.filter-grid.course-list-filter .course-list-filter__search input, .public-filter .public-filter__search input[type="search"] { padding-left: 2.25rem; }
+.course-list-filter__search input, .public-filter__search input { display: block; padding-left: 2.25rem; }
 .course-list-filter__actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .55rem 1rem; margin-top: .7rem; }
 .course-list-filter .course-list-filter__responsibility { display: inline-flex; align-items: center; gap: .45rem; min-height: 2rem; font-size: .85rem; font-weight: 500; cursor: pointer; }
 /* Zurücksetzen ist keine weitere Filterfläche, sondern die eine Handlung der Zeile, und steht deshalb an deren Ende. */
@@ -179,8 +184,15 @@ p[role="status"] { margin: 0; color: var(--success); }
 /* The four fields stand on one line, in the proportions the internal filter gives its own: the course code and the
    study program need the room, the year needs a four-digit number. Every label carries its text above its control and
    they all start on the same edge, so the four read as one row and not as four boxes of their own height. */
-.public-filter__fields { display: grid; grid-template-columns: minmax(13rem, 1.25fr) minmax(10rem, 1fr) minmax(12rem, 1.1fr) minmax(8rem, .55fr); gap: .75rem; }
-.public-filter label { display: grid; align-content: start; min-width: 0; gap: .3rem; font-size: .82rem; font-weight: 700; }
+/* Die schmalste Spalte trägt „Alle Jahrgänge" samt dem Platz, den der Pfeil des Auswahlfelds beansprucht — darunter
+   schnitte das Feld sein eigenes Wort ab. */
+.public-filter__fields { display: grid; grid-template-columns: minmax(13rem, 1.25fr) minmax(10rem, 1fr) minmax(12rem, 1.1fr) minmax(10rem, .55fr); align-items: end; gap: .75rem; }
+/* The fields end on one edge, whatever stands above them: a label that has to wrap grows upwards and leaves the row
+   of the fields where it is, instead of pushing its own field down out of that row. */
+.public-filter label { display: grid; align-content: end; min-width: 0; gap: .35rem; font-size: .85rem; font-weight: 700; }
+/* The bar is the way into the whole page, so its fields carry more than the height a form control has elsewhere in
+   the application, and the text in them is set in the size of the page rather than in the size of a label. */
+.public-filter input, .public-filter select { min-height: 3rem; font-size: 1rem; }
 /* The row that acts, below the row of the fields: the search opens it, the reset closes it at the other end and only
    appears while there is something to take back. */
 .public-filter__actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .55rem 1rem; margin-top: .7rem; }
@@ -188,7 +200,13 @@ p[role="status"] { margin: 0; color: var(--success); }
 .public-filter__reset:hover { color: var(--red); }
 /* How the filters combine is read once and then no longer, so it stands under the row that acts rather than between
    the fields and their button. */
-.public-filter__hint { max-width: 62ch; margin: .7rem 0 0; color: var(--gray-strong); font-size: .78rem; }
+/* Ohne Breitenschranke: der Satz steht auf einer Zeile, solange die Leiste sie hergibt, und bricht erst, wenn sie es
+   nicht mehr tut. Eine Zeilenlänge zu begrenzen lohnt bei einem Satz nicht, der einmal gelesen wird. */
+.public-filter__hint { margin: .7rem 0 0; color: var(--gray-strong); font-size: .78rem; }
+/* Solange gesucht wird, tritt das Ergebnis zurück, statt still gegen ein anderes ausgetauscht zu werden — wie in der
+   internen Kursliste. Der Geschwisterselektor genügt: die Leiste steht im Markup vor dem, was sie filtert. Angeklickt
+   werden kann in dieser Zeit nichts, der Zeilenverweis wäre der zum alten Ergebnis. */
+.public-filter[aria-busy="true"] ~ .results { opacity: .5; pointer-events: none; transition: opacity .15s ease; }
 /* Below this width the fields would be narrower than the values they hold, so they break into two columns. */
 @media (max-width: 60rem) { .public-filter__fields { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 30rem) { .public-filter__fields { grid-template-columns: minmax(0, 1fr); } }

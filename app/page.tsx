@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { connection } from "next/server";
 
+import { PublicSearchFilter } from "@/components/public-search-filter";
 import { SiteShell } from "@/components/site-shell";
 import { formatCalendarPeriod } from "@/lib/domain/calendar-format";
 import { publicCutPath } from "@/lib/domain/public-cut";
@@ -94,9 +95,6 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const filterText = activeFilters.length
     ? `Aktive Filter: ${activeFilters.map((filter) => `${filter.label} ${filter.value}`).join(", ")}.`
     : "Keine Filter gesetzt.";
-  // Resetting filters and going back or forward are client-side navigations that keep the form fields mounted; the key
-  // remounts them, so the shown filters always match the URL.
-  const formKey = filterKeys.map((key) => filters[key] ?? "").join("\u0000");
 
   return <SiteShell>
     <section className="search-hero">
@@ -115,39 +113,12 @@ export default async function Home({ searchParams }: PageProps<"/">) {
 
     {/* The filter is a bar above the list, not a section of its own: it narrows what stands beneath it and is read
         once, while the list is what the page is visited for. As a panel with an eyebrow, a heading of its own and the
-        padding of a main block it took the place of the result and pushed it below the fold.
-        It stays a plain form with a button: the public page carries no client code, so the narrowing happens on
-        submission, and every field keeps the value the address names. */}
-    <form className="public-filter" role="search" aria-label="Blockpläne filtern" key={formKey}>
-      <div className="public-filter__fields">
-        {/* The course code comes first: whoever knows it is done with one field, and the other three only help those
-            who do not. */}
-        <label><span>Kurskennung</span><span className="public-filter__search">
-          <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></svg>
-          <input name="course" type="search" defaultValue={filters.course ?? ""} autoComplete="off" aria-describedby="filter-hint" placeholder="Kurskennung suchen, z. B. TIF24" />
-        </span></label>
-        <label><span>Bereich</span><select name="area" defaultValue={filters.area ?? ""}>
-          <option value="">Alle Bereiche</option>
-          {options(published.areas, filters.area).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-        </select></label>
-        <label><span>Studiengang</span><select name="program" defaultValue={filters.program ?? ""}>
-          <option value="">Alle Studiengänge</option>
-          {options(published.programs, filters.program).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-        </select></label>
-        <label><span>Jahrgang</span><select name="year" defaultValue={filters.year ?? ""}>
-          <option value="">Alle Jahrgänge</option>
-          {options(published.years, filters.year).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-        </select></label>
-      </div>
-      {/* The row of the fields holds fields alone, as it does above the internal course list; what acts stands in the
-          row below it. The search is that row's action and opens it, the reset closes it — the internal filter, which
-          narrows without a submission, arranges its own row the same way. */}
-      <div className="public-filter__actions">
-        <button className="button button--compact" type="submit">Kurse suchen</button>
-        {activeFilters.length ? <Link className="public-filter__reset" href="/">Alle Filter zurücksetzen</Link> : null}
-      </div>
-      <p className="public-filter__hint" id="filter-hint">Mehrere Filter werden mit UND verknüpft. Die Kurskennung sucht am Anfang und ohne Beachtung der Groß- und Kleinschreibung.</p>
-    </form>
+        padding of a main block it took the place of the result and pushed it below the fold. */}
+    <PublicSearchFilter
+      areas={options(published.areas, filters.area)}
+      programs={options(published.programs, filters.program)}
+      years={options(published.years, filters.year)}
+      values={{ area: filters.area ?? "", program: filters.program ?? "", year: filters.year ?? "", course: filters.course ?? "" }} />
 
     <section className="results" aria-labelledby="results-heading">
       <h2 className="sr-only" id="results-heading">Suchergebnis</h2>
