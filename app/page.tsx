@@ -2,6 +2,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 
 import { SiteShell } from "@/components/site-shell";
+import { formatCalendarPeriod } from "@/lib/domain/calendar-format";
 import { publicCutPath } from "@/lib/domain/public-cut";
 import { filterKeys, type PublicFilterOption, type PublicFilters, type PublicPlanGroup } from "@/lib/services/public-search";
 
@@ -28,19 +29,41 @@ function options(published: (string | number | PublicFilterOption)[], current: s
     : values;
 }
 
+/**
+ * A group of found courses, read as rows rather than as a grid of cards: what is compared here runs along the row —
+ * one course against the next by its designation, its study program and its study period — and a card would set each
+ * of those values in a place of its own. It is the same list the internal course overview keeps, in the same table,
+ * so a single result looks like a result there as well and not like a grid that failed to fill.
+ *
+ * The row carries exactly one link, on the course code; the stylesheet pulls its surface over the whole row (ADR
+ * 0011). A second link per row would offer the same address twice to everything that reads links instead of rows.
+ */
 function PlanGroupSection({ group }: { group: PublicPlanGroup }) {
   if (!group.courses.length) return null;
   return <section className="plan-group" aria-labelledby={`group-${group.key}`}>
     <h3 id={`group-${group.key}`}>{group.label}</h3>
-    <div className="plan-grid">{group.courses.map((course) => <article className="plan-card" key={course.id}>
-      <p>{course.area}</p>
-      <h4><Link href={publicCutPath({ kind: "course", code: course.code })}>{course.code}</Link></h4>
-      <dl>
-        <div><dt>Studiengang</dt><dd>{course.program}</dd></div>
-        <div><dt>Jahrgang</dt><dd>{course.year}</dd></div>
-      </dl>
-      <Link className="text-link" href={publicCutPath({ kind: "course", code: course.code })}>Kursplan ansehen<span className="sr-only"> — {course.code}</span> <span aria-hidden="true">→</span></Link>
-    </article>)}</div>
+    {/* The region stays focusable, although it only scrolls on a narrow display: the stylesheet decides whether it
+        does, and a focus stop too many is the harmless half of that (BARRIEREFREIHEIT.md). */}
+    <div className="matrix-wrap course-table-wrap" tabIndex={0}>
+      <table className="course-table" aria-labelledby={`group-${group.key}`}>
+        <thead><tr>
+          <th scope="col">Kurskennung</th>
+          <th scope="col">Studiengang</th>
+          <th className="course-table__year" scope="col">Jahrgang</th>
+          <th scope="col">Studienzeitraum</th>
+        </tr></thead>
+        <tbody>{group.courses.map((course) => <tr key={course.id}>
+          <td className="course-table__code"><Link className="text-link course-table__link" href={publicCutPath({ kind: "course", code: course.code })}>{course.code}</Link></td>
+          {/* The area beside the name of the study program, and only where it says something the name does not: an
+              area bearing the name of its study program would repeat it word for word. The separator carries no
+              meaning of its own and is therefore not read out. */}
+          <td>{course.program}{course.area !== course.program
+            ? <span className="course-program__area"><span aria-hidden="true"> · </span>{course.area}</span> : null}</td>
+          <td className="course-table__year">{course.year}</td>
+          <td className="course-table__period">{formatCalendarPeriod(course.studyStart, course.studyEnd)}</td>
+        </tr>)}</tbody>
+      </table>
+    </div>
   </section>;
 }
 
@@ -90,31 +113,42 @@ export default async function Home({ searchParams }: PageProps<"/">) {
       </p>
     </section>
 
-    <section className="search-panel" aria-labelledby="search-heading">
-      <div className="section-heading"><p className="eyebrow">Suche verfeinern</p><h2 id="search-heading">Passenden Blockplan finden</h2></div>
-      <form role="search" aria-labelledby="search-heading" key={formKey}>
+    {/* The filter is a bar above the list, not a section of its own: it narrows what stands beneath it and is read
+        once, while the list is what the page is visited for. As a panel with an eyebrow, a heading of its own and the
+        padding of a main block it took the place of the result and pushed it below the fold.
+        It stays a plain form with a button: the public page carries no client code, so the narrowing happens on
+        submission, and every field keeps the value the address names. */}
+    <form className="public-filter" role="search" aria-label="Blockpläne filtern" key={formKey}>
+      <div className="public-filter__fields">
+        {/* The course code comes first: whoever knows it is done with one field, and the other three only help those
+            who do not. */}
+        <label><span>Kurskennung</span><span className="public-filter__search">
+          <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></svg>
+          <input name="course" type="search" defaultValue={filters.course ?? ""} autoComplete="off" aria-describedby="filter-hint" placeholder="z. B. TIF24" />
+        </span></label>
+        <label><span>Bereich</span><select name="area" defaultValue={filters.area ?? ""}>
+          <option value="">Alle Bereiche</option>
+          {options(published.areas, filters.area).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        </select></label>
+        <label><span>Studiengang</span><select name="program" defaultValue={filters.program ?? ""}>
+          <option value="">Alle Studiengänge</option>
+          {options(published.programs, filters.program).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        </select></label>
+        <label><span>Jahrgang</span><select name="year" defaultValue={filters.year ?? ""}>
+          <option value="">Alle Jahrgänge</option>
+          {options(published.years, filters.year).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        </select></label>
+        {/* The button stands as high as the fields beside it, so the row ends on one edge; the compact shape of the
+            internal lists would leave it hanging short of them. */}
+        <button className="button" type="submit">Suchen</button>
+      </div>
+      <div className="public-filter__actions">
         <p id="filter-hint">Mehrere Filter werden mit UND verknüpft. Die Kurskennung sucht am Anfang und ohne Beachtung der Groß- und Kleinschreibung.</p>
-        <div className="filter-grid">
-          <label>Bereich<select name="area" defaultValue={filters.area ?? ""}>
-            <option value="">Alle Bereiche</option>
-            {options(published.areas, filters.area).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-          </select></label>
-          <label>Studiengang<select name="program" defaultValue={filters.program ?? ""}>
-            <option value="">Alle Studiengänge</option>
-            {options(published.programs, filters.program).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-          </select></label>
-          <label>Jahrgang<select name="year" defaultValue={filters.year ?? ""}>
-            <option value="">Alle Jahrgänge</option>
-            {options(published.years, filters.year).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-          </select></label>
-          <label>Kurskennung<input name="course" defaultValue={filters.course ?? ""} aria-describedby="filter-hint" placeholder="z. B. TIF24" /></label>
-        </div>
-        <div className="filter-actions">
-          <button className="button" type="submit">Kurse suchen</button>
-          <Link href="/">Filter zurücksetzen</Link>
-        </div>
-      </form>
-    </section>
+        {/* Resetting is the one action of this row besides the search itself and therefore stands at its end. It only
+            appears while there is something to reset. */}
+        {activeFilters.length ? <Link className="public-filter__reset" href="/">Alle Filter zurücksetzen</Link> : null}
+      </div>
+    </form>
 
     <section className="results" aria-labelledby="results-heading">
       <h2 className="sr-only" id="results-heading">Suchergebnis</h2>
@@ -135,10 +169,11 @@ export default async function Home({ searchParams }: PageProps<"/">) {
         </nav> : null}
       </> : <div className="empty-state">
         <h3>{activeFilters.length ? "Keine Kurse für diese Filter" : "Noch keine veröffentlichten Kurse"}</h3>
+        {/* The way back to a filled list is the reset in the bar right above, so it is named rather than offered a
+            second time: two buttons to the same address would be one way too many (ADR 0011). */}
         <p>{activeFilters.length
-          ? "Setzen Sie die Filter zurück oder wählen Sie andere Werte. Zur Auswahl stehen nur Werte, die veröffentlichte Blockpläne tatsächlich tragen."
+          ? "Setzen Sie die Filter in der Leiste darüber zurück oder wählen Sie andere Werte. Zur Auswahl stehen nur Werte, die veröffentlichte Blockpläne tatsächlich tragen."
           : "Veröffentlichte Kurse erscheinen hier automatisch und können anschließend gefiltert werden."}</p>
-        {activeFilters.length ? <p><Link className="button" href="/">Filter zurücksetzen</Link></p> : null}
       </div>}
     </section>
   </SiteShell>;

@@ -106,7 +106,7 @@ p[role="status"] { margin: 0; color: var(--success); }
 .site-main:has(> .search-hero) { padding-top: .75rem; }
 .eyebrow { margin: 0 0 .7rem; color: var(--red); font-weight: 700; font-size: .76rem; letter-spacing: .12em; text-transform: uppercase; }
 
-.search-hero { padding: 0 0 1.75rem; }
+.search-hero { padding: 0 0 1.25rem; }
 .search-hero h1 { margin: 0; font-size: clamp(2rem, 4.5vw, 2.9rem); font-weight: 800; line-height: 1.05; letter-spacing: -.025em; }
 .search-hero__lead { margin: 1rem 0 0; color: var(--gray); font-size: 1.05rem; }
 /* The note carries the same statement as the former panel, but as a line beside the text instead of a
@@ -144,9 +144,16 @@ p[role="status"] { margin: 0; color: var(--success); }
 .filter-grid.course-list-filter { display: block; margin-top: .85rem; padding: .85rem 1rem; border: 1px solid var(--line); background: #fafafa; }
 .course-list-filter__fields { display: grid; grid-template-columns: minmax(15rem, 1.25fr) minmax(15rem, 1fr) minmax(9rem, .55fr); gap: .75rem; }
 .course-list-filter__fields label { display: grid; min-width: 0; gap: .3rem; font-size: .82rem; }
-.course-list-filter__search { position: relative; display: block; }
-.course-list-filter__search svg { position: absolute; top: 50%; left: .7rem; width: 1.1rem; height: 1.1rem; transform: translateY(-50%); fill: none; stroke: var(--gray); stroke-width: 1.8; pointer-events: none; }
-.filter-grid.course-list-filter .course-list-filter__search input { padding-left: 2.25rem; }
+/* The field a course code is searched in, in the internal list and in the public one: the same field, so it is drawn
+   once for both. */
+.course-list-filter__search, .public-filter__search { position: relative; display: block; }
+.course-list-filter__search svg, .public-filter__search svg { position: absolute; top: 50%; left: .7rem; width: 1.1rem; height: 1.1rem; transform: translateY(-50%); fill: none; stroke: var(--gray); stroke-width: 1.8; pointer-events: none; }
+/* The field keeps the icon out of its text. Both selectors carry three classes or attributes, because the base rule
+   for every form control names three attribute negations and would otherwise outweigh them.
+   The input is a block of its own inside the span: as an inline element it would add the descender space of a line
+   box below itself, and the field would stand taller than the selects it shares its row with. */
+.course-list-filter__search input, .public-filter__search input { display: block; }
+.filter-grid.course-list-filter .course-list-filter__search input, .public-filter .public-filter__search input[type="search"] { padding-left: 2.25rem; }
 .course-list-filter__actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .55rem 1rem; margin-top: .7rem; }
 .course-list-filter .course-list-filter__responsibility { display: inline-flex; align-items: center; gap: .45rem; min-height: 2rem; font-size: .85rem; font-weight: 500; cursor: pointer; }
 /* Zurücksetzen ist keine weitere Filterfläche, sondern die eine Handlung der Zeile, und steht deshalb an deren Ende. */
@@ -165,6 +172,28 @@ p[role="status"] { margin: 0; color: var(--success); }
 .filter-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.3rem; margin-top: 1.5rem; }
 .filter-actions > a:not(.text-link) { color: var(--gray); font-size: .9rem; text-underline-offset: .25rem; }
 
+/* The public filter is the bar the result list stands under, and it is built like the one above the internal course
+   list: a thin frame, a quiet ground, small labels. It holds no surface of its own weight — the panel it replaced was
+   the largest and most coloured block of the page and outweighed the very list it narrows. */
+.public-filter { margin-top: 1.25rem; padding: .85rem 1rem; border: 1px solid var(--line); background: #fafafa; }
+/* The four fields and the button stand on one line, each field as wide as its longest option needs. The button sits on
+   the lower edge of the row rather than in its middle, so it lines up with the fields and not with their labels. */
+.public-filter__fields { display: grid; grid-template-columns: minmax(11rem, 1.2fr) minmax(9rem, 1fr) minmax(10rem, 1.1fr) minmax(6.5rem, .55fr) auto; align-items: end; gap: .75rem; }
+.public-filter label { display: grid; min-width: 0; gap: .3rem; font-size: .82rem; font-weight: 700; }
+/* Hint and reset share the row below the fields: the one says how the filters combine, the other takes them all back.
+   The line above them separates the row that acts from the row that explains. */
+.public-filter__actions { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .35rem 1rem; margin-top: .7rem; padding-top: .65rem; border-top: 1px solid var(--line); }
+.public-filter__actions p { max-width: 62ch; margin: 0; color: var(--gray-strong); font-size: .78rem; }
+.public-filter__reset { flex: none; color: var(--gray); font-size: .85rem; text-underline-offset: .25rem; }
+.public-filter__reset:hover { color: var(--red); }
+/* Below this width the fields would be narrower than the values they hold, so they break into two columns and the
+   button takes the full width of the row it then stands in. */
+@media (max-width: 60rem) {
+  .public-filter__fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .public-filter__fields .button { grid-column: 1 / -1; justify-self: start; }
+}
+@media (max-width: 30rem) { .public-filter__fields { grid-template-columns: minmax(0, 1fr); } }
+
 .button { display: inline-flex; align-items: center; justify-content: center; min-height: 2.75rem; padding: .6rem 1.15rem; border: 0; background: var(--red); color: #fff; font: inherit; font-weight: 700; text-decoration: none; cursor: pointer; transition: background-color .15s ease; }
 .button:hover { background: var(--red-dark); }
 .button:disabled { background: #b3bcc1; cursor: default; }
@@ -182,25 +211,33 @@ p[role="status"] { margin: 0; color: var(--success); }
 .text-link { color: var(--red); font-weight: 700; font-size: .92rem; text-decoration-thickness: 1px; text-underline-offset: .25rem; }
 .text-link[aria-current] { color: var(--ink); text-decoration-thickness: 3px; text-decoration-color: var(--red); }
 
-.results { padding-top: 3rem; }
+.results { padding-top: 2rem; }
 .results__heading { display: flex; justify-content: space-between; gap: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--line); color: var(--gray); }
 .results__heading p { margin: 0; }
 .results__heading strong { color: var(--ink); }
 .results__heading span { font-size: .88rem; }
-.plan-group { margin-top: 3rem; }
-.plan-group h3 { margin: 0 0 1rem; font-size: 1.45rem; font-weight: 800; }
-.plan-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.25rem; }
-.plan-card { display: flex; flex-direction: column; min-height: 14rem; padding: 1.35rem; background: #fff; border: 1px solid var(--line); border-top: 4px solid var(--red); }
-.plan-card > p { margin: 0; color: var(--gray); font-size: .82rem; }
-.plan-card h4 { margin: .45rem 0 1.1rem; font-size: 1.35rem; font-weight: 700; line-height: 1.15; }
-.plan-card h4 a { text-decoration: none; }
-.plan-card h4 a:hover { color: var(--red); text-decoration: underline; text-underline-offset: .2em; }
-.plan-card dl { margin: 0 0 1.1rem; }
-.plan-card dl div { display: grid; grid-template-columns: 5.2rem 1fr; gap: .5rem; font-size: .9rem; }
-.plan-card dt { color: var(--gray); }
-.plan-card dd { margin: 0; }
-.plan-card .text-link { margin-top: auto; }
-.empty-state { max-width: 42rem; margin: 3rem 0; padding: 2rem; background: var(--surface); border-left: 4px solid var(--red); }
+/* A group is the heading and the list under it, so the two stay close together and the distance goes between the
+   groups. The first one keeps the line of the result count above it as its separation and adds nothing to it. */
+.plan-group { margin-top: 2.25rem; }
+.plan-group:first-of-type { margin-top: 1.25rem; }
+.plan-group h3 { margin: 0 0 .6rem; font-size: 1.3rem; font-weight: 800; letter-spacing: -.015em; }
+/* The heading already sets the distance to the list it names; the distance the scrolling region carries elsewhere
+   would come on top of it. */
+.plan-group .matrix-wrap { margin-top: 0; }
+/* On a display this narrow the public list gives up the width the internal one insists on, because a plan is read on
+   a phone as often as at a desk and scrolling a table sideways there costs more than the column it saves. What goes
+   is the year: it stands in the course code in front of it and in the study period behind it, so nothing is lost —
+   not for the eye and not for assistive technology, which no longer finds a column that says nothing new either. The
+   study period may then break; it stays one statement, but on two lines rather than pushed out of sight. */
+@media (max-width: 40rem) {
+  .plan-group .course-table { min-width: 0; }
+  .plan-group .course-table__year { display: none; }
+  .plan-group .course-table__period { white-space: normal; }
+  /* The last few pixels the three remaining columns are still over come out of the space beside them, not out of the
+     text: a column that has to be scrolled to costs more than a narrower gutter. */
+  .plan-group .course-table th, .plan-group .course-table td { padding-right: .5rem; padding-left: .5rem; }
+}
+.empty-state { max-width: 42rem; margin: 1.5rem 0; padding: 1.5rem 1.75rem; background: var(--surface); border-left: 4px solid var(--red); }
 .empty-state h2, .empty-state h3 { margin: 0; font-size: 1.35rem; font-weight: 800; }
 .empty-state p { color: var(--gray); }
 .empty-note { padding: 1rem; background: #fff; border: 1px solid var(--line); color: var(--gray); }
