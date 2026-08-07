@@ -81,13 +81,24 @@ function CourseHeaders({ sort, direction, filters }: { sort: CourseSort; directi
  * address, and the page behind it is the whole course: it shows what may be done to it and leaves out what may not,
  * so the row leads to the same place for an own and for a foreign course.
  *
- * That one address is written once, on the course code. The whole row is what can be clicked, but only as a surface
- * the stylesheet draws over it from this very link — a second link per row would offer the same address twice to
- * everything that reads links rather than looks at rows.
+ * That one address is written once, on the course code, and the link carries the padding of the cell it stands in, so
+ * what can be clicked there is the width of the whole column and not the width of the code. The remaining cells reach
+ * the same address through a surface of their own, drawn over the cell and empty of content: the row is what the eye
+ * takes for the target, and a target the width of one column would leave most of the row inert under a pointer that
+ * already shows the hand.
+ *
+ * Each of those surfaces is positioned against its own cell, never against the row — a table row is not a containing
+ * block everywhere (Safari), and a surface that misses its frame lands on the page instead, where the last row's
+ * covers every row above it. They stay out of everything that does not look at rows: assistive technology passes them
+ * over, and the tab order does not stop on them, so a row still offers exactly one link with one wording.
  */
 function CourseCells({ course, namesArea }: { course: CourseListRow; namesArea: boolean }) {
+  const href = `/intern/kurse/${course.id}`;
+  /* The cell content stays outside the surface, so nothing that is read out sits inside a link that is not read out.
+     No prefetching: the row already prefetches this address through the link that carries the course code. */
+  const cover = <Link className="course-table__cover" href={href} prefetch={false} aria-hidden="true" tabIndex={-1} />;
   return <>
-    <td className="course-table__code"><Link className="text-link course-table__link" href={`/intern/kurse/${course.id}`}>{course.code}</Link></td>
+    <td className="course-table__code"><Link className="text-link course-table__link" href={href}>{course.code}</Link></td>
     {/* The study program by its name alone: its abbreviation is what the course code beside it already begins with,
         and the ambiguity the overview needs it for — the same name in two areas — is what the area beside it resolves
         here. It stands on the same line rather than under the name: written underneath it appeared in some rows and
@@ -96,15 +107,15 @@ function CourseCells({ course, namesArea }: { course: CourseListRow; namesArea: 
         The separator carries no meaning of its own and is therefore not read out — the space around the area name is
         written into the markup, because it belongs to the reading just as much as to the typography. */}
     <td>{course.program}{namesArea && course.areaName !== course.program
-      ? <span className="course-program__area"><span aria-hidden="true"> · </span>{course.areaName}</span> : null}</td>
-    <td className="course-table__period">{formatCalendarPeriod(course.studyStart, course.studyEnd)}</td>
+      ? <span className="course-program__area"><span aria-hidden="true"> · </span>{course.areaName}</span> : null}{cover}</td>
+    <td className="course-table__period">{formatCalendarPeriod(course.studyStart, course.studyEnd)}{cover}</td>
     {/* A published course carries its day, and the column heading every cell refers to says what the day is the day
         of. An unpublished one has no day to carry: it shows the dash that stands for a missing entry throughout, and
         the sentence below the table resolves it — for assistive technology in the cell itself, in the same words as
         every other internal view, because a dash is a typographic sign and not a wording (BARRIEREFREIHEIT.md). */}
     <td className="course-table__published">{course.publishedOn
       ? formatCalendarDay(course.publishedOn)
-      : <><span aria-hidden="true">—</span><span className="sr-only">{publicationStateLabels.UNPUBLISHED}</span></>}</td>
+      : <><span aria-hidden="true">—</span><span className="sr-only">{publicationStateLabels.UNPUBLISHED}</span></>}{cover}</td>
   </>;
 }
 

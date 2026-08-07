@@ -326,14 +326,25 @@ p[role="status"] { margin: 0; color: var(--success); }
 /* Zwei Datumsspalten nebeneinander: Ziffern gleicher Breite lassen Tag, Monat und Jahr über die Zeilen hinweg
    untereinander stehen, statt sie mit jeder Zeile um Bruchteile zu verschieben. */
 .course-table__period, .course-table__published { font-variant-numeric: tabular-nums; }
-/* Die ganze Zeile führt in den Kurs, nicht nur seine Kennung: Sie hat genau ein Ziel (ADR 0011), und ein Klickfeld von
-   der Breite des Kurscodes wäre in einer Zeile über die volle Seitenbreite kaum zu treffen. Die Fläche ist die über
-   die Zeile gezogene Nachbildung des einen Verweises, den die Zeile trägt — deshalb liegt kein zweiter Link im
-   Markup, und Tastatur wie assistive Technik finden unverändert einen einzigen vor. Der Fokusring bleibt am Verweis
-   selbst; die Zeile hebt sich zusätzlich hervor, damit sichtbar ist, was der Ring gerade meint. */
-.course-table tbody tr { position: relative; }
+/* Das Klickfeld ist die ganze Kennungszelle, nicht nur der Kurscode in ihr: Der Verweis füllt sie aus, statt dass die
+   Zelle ihn umpolstert. Über die ganze Zeile gezogen war die Fläche zuvor eine absolut gesetzte Nachbildung, und die
+   braucht die Zeile als Bezugsrahmen — den eine Tabellenzeile nicht überall hergibt: In Safari bezog sich jede dieser
+   Flächen stattdessen auf die Seite, sodass die zuletzt gezeichnete über allen Zeilen lag und jeden Zeiger und jeden
+   Klick auf den untersten Kurs zog. Eine Fläche, die nur ihre eigene Zelle ausfüllt, hängt an keinem solchen Rahmen.
+   Die Zeile hebt sich weiterhin als ganze hervor, sobald der Zeiger oder der Fokus sie erreicht — dafür genügt die
+   Zeile selbst. Der Fokusring rückt nach innen, weil der Verweis nun an der Kante der Tabelle beginnt und außen
+   angesetzt über deren Rand hinausliefe.
+
+   Die übrigen Zellen tragen je eine eigene, leere Fläche zum selben Ziel. Jede liegt in ihrer Zelle, denn eine Zelle
+   ist überall ein Bezugsrahmen — die Zeile ist es nicht, und genau daran ist die eine über die Zeile gezogene Fläche
+   gescheitert. So führt die ganze Zeile in den Kurs, und die Hand über ihr sagt nichts, was die Zeile nicht hält. */
+.course-table tbody tr { cursor: pointer; }
 .course-table tbody tr:hover, .course-table tbody tr:focus-within { background: var(--surface); }
-.course-table__link::after { content: ""; position: absolute; inset: 0; }
+.course-table td.course-table__code { padding: 0; }
+.course-table__link { display: block; padding: .6rem .8rem; }
+.course-table__link:focus-visible { outline-offset: -3px; }
+.course-table tbody td { position: relative; }
+.course-table__cover { position: absolute; inset: 0; }
 /* Der Strich steht für den fehlenden Eintrag und nicht für eine Angabe: Er tritt zurück, damit die Spalte von den
    wenigen Tagen gelesen wird, die tatsächlich in ihr stehen. Sein Wortlaut steht für assistive Technik in derselben
    Zelle, sichtbar löst ihn der Satz unter der Tabelle auf. */
