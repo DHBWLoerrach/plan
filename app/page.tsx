@@ -36,8 +36,10 @@ function options(published: (string | number | PublicFilterOption)[], current: s
  * of those values in a place of its own. It is the same list the internal course overview keeps, in the same table,
  * so a single result looks like a result there as well and not like a grid that failed to fill.
  *
- * The row carries exactly one link, on the course code; the stylesheet pulls its surface over the whole row (ADR
- * 0011). A second link per row would offer the same address twice to everything that reads links instead of rows.
+ * The row carries exactly one visible link, on the course code. Every remaining cell has an empty link surface for
+ * the same address, hidden from assistive technology and the tab order, so the whole row can be clicked without
+ * offering the address repeatedly to everything that reads links rather than rows. Each surface belongs to its own
+ * cell: unlike a table row, that is a reliable containing block in Safari, so no surface can escape onto the page.
  */
 function PlanGroupSection({ group }: { group: PublicPlanGroup }) {
   if (!group.courses.length) return null;
@@ -53,16 +55,22 @@ function PlanGroupSection({ group }: { group: PublicPlanGroup }) {
           <th className="course-table__year" scope="col">Jahrgang</th>
           <th scope="col">Studienzeitraum</th>
         </tr></thead>
-        <tbody>{group.courses.map((course) => <tr key={course.id}>
-          <td className="course-table__code"><Link className="text-link course-table__link" href={publicCutPath({ kind: "course", code: course.code })}>{course.code}</Link></td>
-          {/* The area beside the name of the study program, and only where it says something the name does not: an
-              area bearing the name of its study program would repeat it word for word. The separator carries no
-              meaning of its own and is therefore not read out. */}
-          <td>{course.program}{course.area !== course.program
-            ? <span className="course-program__area"><span aria-hidden="true"> · </span>{course.area}</span> : null}</td>
-          <td className="course-table__year">{course.year}</td>
-          <td className="course-table__period">{formatCalendarPeriod(course.studyStart, course.studyEnd)}</td>
-        </tr>)}</tbody>
+        <tbody>{group.courses.map((course) => {
+          const href = publicCutPath({ kind: "course", code: course.code });
+          /* The visible link already prefetches this address. These copies only provide pointer targets and therefore
+             stay out of prefetching, assistive technology and the tab order. */
+          const cover = <Link className="course-table__cover" href={href} prefetch={false} aria-hidden="true" tabIndex={-1} />;
+          return <tr key={course.id}>
+            <td className="course-table__code"><Link className="text-link course-table__link" href={href}>{course.code}</Link></td>
+            {/* The area beside the name of the study program, and only where it says something the name does not: an
+                area bearing the name of its study program would repeat it word for word. The separator carries no
+                meaning of its own and is therefore not read out. */}
+            <td>{course.program}{course.area !== course.program
+              ? <span className="course-program__area"><span aria-hidden="true"> · </span>{course.area}</span> : null}{cover}</td>
+            <td className="course-table__year">{course.year}{cover}</td>
+            <td className="course-table__period">{formatCalendarPeriod(course.studyStart, course.studyEnd)}{cover}</td>
+          </tr>;
+        })}</tbody>
       </table>
     </div>
   </section>;
