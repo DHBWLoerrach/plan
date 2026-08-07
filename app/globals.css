@@ -176,22 +176,21 @@ p[role="status"] { margin: 0; color: var(--success); }
    list: a thin frame, a quiet ground, small labels. It holds no surface of its own weight — the panel it replaced was
    the largest and most coloured block of the page and outweighed the very list it narrows. */
 .public-filter { margin-top: 1.25rem; padding: .85rem 1rem; border: 1px solid var(--line); background: #fafafa; }
-/* The four fields and the button stand on one line, each field as wide as its longest option needs. The button sits on
-   the lower edge of the row rather than in its middle, so it lines up with the fields and not with their labels. */
-.public-filter__fields { display: grid; grid-template-columns: minmax(11rem, 1.2fr) minmax(9rem, 1fr) minmax(10rem, 1.1fr) minmax(6.5rem, .55fr) auto; align-items: end; gap: .75rem; }
-.public-filter label { display: grid; min-width: 0; gap: .3rem; font-size: .82rem; font-weight: 700; }
-/* Hint and reset share the row below the fields: the one says how the filters combine, the other takes them all back.
-   The line above them separates the row that acts from the row that explains. */
-.public-filter__actions { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .35rem 1rem; margin-top: .7rem; padding-top: .65rem; border-top: 1px solid var(--line); }
-.public-filter__actions p { max-width: 62ch; margin: 0; color: var(--gray-strong); font-size: .78rem; }
-.public-filter__reset { flex: none; color: var(--gray); font-size: .85rem; text-underline-offset: .25rem; }
+/* The four fields stand on one line, in the proportions the internal filter gives its own: the course code and the
+   study program need the room, the year needs a four-digit number. Every label carries its text above its control and
+   they all start on the same edge, so the four read as one row and not as four boxes of their own height. */
+.public-filter__fields { display: grid; grid-template-columns: minmax(13rem, 1.25fr) minmax(10rem, 1fr) minmax(12rem, 1.1fr) minmax(8rem, .55fr); gap: .75rem; }
+.public-filter label { display: grid; align-content: start; min-width: 0; gap: .3rem; font-size: .82rem; font-weight: 700; }
+/* The row that acts, below the row of the fields: the search opens it, the reset closes it at the other end and only
+   appears while there is something to take back. */
+.public-filter__actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .55rem 1rem; margin-top: .7rem; }
+.public-filter__reset { flex: none; margin-left: auto; color: var(--gray); font-size: .85rem; text-underline-offset: .25rem; }
 .public-filter__reset:hover { color: var(--red); }
-/* Below this width the fields would be narrower than the values they hold, so they break into two columns and the
-   button takes the full width of the row it then stands in. */
-@media (max-width: 60rem) {
-  .public-filter__fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .public-filter__fields .button { grid-column: 1 / -1; justify-self: start; }
-}
+/* How the filters combine is read once and then no longer, so it stands under the row that acts rather than between
+   the fields and their button. */
+.public-filter__hint { max-width: 62ch; margin: .7rem 0 0; color: var(--gray-strong); font-size: .78rem; }
+/* Below this width the fields would be narrower than the values they hold, so they break into two columns. */
+@media (max-width: 60rem) { .public-filter__fields { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 30rem) { .public-filter__fields { grid-template-columns: minmax(0, 1fr); } }
 
 .button { display: inline-flex; align-items: center; justify-content: center; min-height: 2.75rem; padding: .6rem 1.15rem; border: 0; background: var(--red); color: #fff; font: inherit; font-weight: 700; text-decoration: none; cursor: pointer; transition: background-color .15s ease; }

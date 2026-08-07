@@ -124,7 +124,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
             who do not. */}
         <label><span>Kurskennung</span><span className="public-filter__search">
           <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></svg>
-          <input name="course" type="search" defaultValue={filters.course ?? ""} autoComplete="off" aria-describedby="filter-hint" placeholder="z. B. TIF24" />
+          <input name="course" type="search" defaultValue={filters.course ?? ""} autoComplete="off" aria-describedby="filter-hint" placeholder="Kurskennung suchen, z. B. TIF24" />
         </span></label>
         <label><span>Bereich</span><select name="area" defaultValue={filters.area ?? ""}>
           <option value="">Alle Bereiche</option>
@@ -138,16 +138,15 @@ export default async function Home({ searchParams }: PageProps<"/">) {
           <option value="">Alle Jahrgänge</option>
           {options(published.years, filters.year).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
         </select></label>
-        {/* The button stands as high as the fields beside it, so the row ends on one edge; the compact shape of the
-            internal lists would leave it hanging short of them. */}
-        <button className="button" type="submit">Suchen</button>
       </div>
+      {/* The row of the fields holds fields alone, as it does above the internal course list; what acts stands in the
+          row below it. The search is that row's action and opens it, the reset closes it — the internal filter, which
+          narrows without a submission, arranges its own row the same way. */}
       <div className="public-filter__actions">
-        <p id="filter-hint">Mehrere Filter werden mit UND verknüpft. Die Kurskennung sucht am Anfang und ohne Beachtung der Groß- und Kleinschreibung.</p>
-        {/* Resetting is the one action of this row besides the search itself and therefore stands at its end. It only
-            appears while there is something to reset. */}
+        <button className="button button--compact" type="submit">Kurse suchen</button>
         {activeFilters.length ? <Link className="public-filter__reset" href="/">Alle Filter zurücksetzen</Link> : null}
       </div>
+      <p className="public-filter__hint" id="filter-hint">Mehrere Filter werden mit UND verknüpft. Die Kurskennung sucht am Anfang und ohne Beachtung der Groß- und Kleinschreibung.</p>
     </form>
 
     <section className="results" aria-labelledby="results-heading">
