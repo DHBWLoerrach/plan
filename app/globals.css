@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
-/* DHBW-Corporate-Design: DHBW-Rot #E2001A und Grau #5C6971 (vgl. dhbw.de, dhbw-loerrach.de).
-   Schriftstapel = offizieller Web-Fallback der DHBW-Seiten für Generis Sans. */
+/* DHBW corporate design: DHBW red #E2001A and grey #5C6971 (see dhbw.de and dhbw-loerrach.de).
+   The font stack is the official web fallback used by the DHBW sites for Generis Sans. */
 :root {
   --red: #e2001a; --red-dark: #c90017; --ink: #333333; --gray: #5c6971;
   --line: #e5e5e5; --surface: #f5f5f5; --field-border: #6f7c85;
@@ -29,8 +29,8 @@ h1, h2, h3 { text-wrap: balance; }
 a { color: inherit; }
 a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, [tabindex="0"]:focus-visible { outline: 3px solid #1a1a1a; outline-offset: 2px; }
 
-/* Formular-Controls: Tailwind-Preflight setzt border:0, background:transparent und color:inherit —
-   jedes Control braucht deshalb explizite Fläche, Rahmen und Textfarbe. */
+/* Form controls: Tailwind Preflight sets border: 0, background: transparent and color: inherit, so every control
+   needs an explicit surface, border and text colour. */
 input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), select, textarea { width: 100%; min-height: 2.75rem; padding: .55rem .65rem; border: 1px solid var(--field-border); border-radius: 0; background: #fff; color: var(--ink); font: inherit; }
 input[type="checkbox"], input[type="radio"] { width: 1.05rem; height: 1.05rem; flex: none; accent-color: var(--red); }
 ::placeholder { color: #6a737a; opacity: 1; }
@@ -120,7 +120,7 @@ p[role="status"] { margin: 0; color: var(--success); }
    up is an optical correction and has no computed counterpart. */
 .search-hero__note-icon { width: 1.05rem; height: 1.05rem; flex: none; position: relative; top: -1px; }
 
-/* Roter Balken als Überschriften-Signatur (Anmutung der DHBW-Seiten) */
+/* The red bar gives headings the visual signature of the DHBW sites. */
 .search-hero h1::after, .search-panel h1::after, .plan-detail h1::after, .section-heading h2::after, .not-found h1::after { content: ""; display: block; width: 3rem; height: .28rem; margin-top: .55rem; background: var(--red); }
 
 .search-panel { margin-top: 1rem; padding: clamp(1.5rem, 5vw, 2.75rem); background: var(--surface); border-top: 4px solid var(--red); }
@@ -136,8 +136,8 @@ p[role="status"] { margin: 0; color: var(--success); }
 .course-overview { margin-top: 0; }
 .course-overview__header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .course-overview__header h1 { margin: 0; font-size: clamp(1.55rem, 3vw, 1.9rem); font-weight: 700; letter-spacing: -.015em; }
-/* Die Trefferzahl steht auf der Grundlinie der Überschrift, nicht darunter: sie benennt, worauf die Liste gerade
-   steht, und gehört damit zur Überschrift statt zu einer Zeile eigenen Rechts. */
+/* The result count sits on the heading's baseline rather than below it: it describes the current extent of the list
+   and therefore belongs to the heading instead of occupying a line of its own. */
 .course-overview__title { display: flex; flex-wrap: wrap; align-items: baseline; gap: .2rem .45rem; }
 .course-overview__separator { color: var(--gray); }
 .course-overview__count { margin: 0; color: var(--gray); font-size: .9rem; font-variant-numeric: tabular-nums; }
@@ -149,7 +149,7 @@ p[role="status"] { margin: 0; color: var(--success); }
 .filter-grid.course-list-filter .course-list-filter__search input { padding-left: 2.25rem; }
 .course-list-filter__actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .55rem 1rem; margin-top: .7rem; }
 .course-list-filter .course-list-filter__responsibility { display: inline-flex; align-items: center; gap: .45rem; min-height: 2rem; font-size: .85rem; font-weight: 500; cursor: pointer; }
-/* Zurücksetzen ist keine weitere Filterfläche, sondern die eine Handlung der Zeile, und steht deshalb an deren Ende. */
+/* Reset is the one action of the row rather than another filter surface, so it stands at the end of that row. */
 .course-list-filter__reset { flex: none; margin-left: auto; padding: .25rem 0; border: 0; background: none; color: var(--gray); font: inherit; font-size: .85rem; text-decoration: underline; text-underline-offset: .25rem; cursor: pointer; }
 .course-list-filter__reset:hover { color: var(--red); }
 .course-list-filter__active { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .55rem; margin-top: .65rem; padding-top: .65rem; border-top: 1px solid var(--line); color: var(--gray-strong); font-size: .78rem; }
@@ -158,9 +158,9 @@ p[role="status"] { margin: 0; color: var(--success); }
 .course-list-filter__active button { display: inline-flex; align-items: center; gap: .4rem; min-height: 1.9rem; padding: .2rem .45rem .2rem .6rem; border: 1px solid #cbd0d3; background: #fff; color: var(--ink); font: inherit; cursor: pointer; }
 .course-list-filter__active button:hover { border-color: var(--gray); color: var(--red); }
 .course-list-filter__active button span { color: var(--gray); font-size: 1.05rem; line-height: 1; }
-/* Solange gefiltert wird, tritt das Ergebnis zurück, statt still gegen ein anderes ausgetauscht zu werden. Der
-   Geschwisterselektor genügt dafür: das Formular steht im Markup vor dem, was es filtert. Angeklickt werden kann in
-   dieser Zeit nichts — der Zeilenverweis darunter wäre der zum alten Ergebnis. */
+/* While filtering, the result steps back instead of being silently replaced by another one. The sibling selector is
+   sufficient because the form precedes what it filters in the markup. Nothing can be clicked in the meantime: the
+   row link underneath would still belong to the old result. */
 .course-list-filter[aria-busy="true"] ~ .matrix-wrap, .course-list-filter[aria-busy="true"] ~ .empty-note { opacity: .5; pointer-events: none; transition: opacity .15s ease; }
 .filter-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.3rem; margin-top: 1.5rem; }
 .filter-actions > a:not(.text-link) { color: var(--gray); font-size: .9rem; text-underline-offset: .25rem; }
@@ -170,10 +170,10 @@ p[role="status"] { margin: 0; color: var(--success); }
 .button:disabled { background: #b3bcc1; cursor: default; }
 .button--ghost { background: #fff; color: var(--ink); border: 1px solid var(--field-border); }
 .button--ghost:hover { background: #eceeef; }
-/* Destruktiv wird nicht über einen zweiten Rotton unterschieden — DHBW-Rot ist bereits die Primärfarbe, zwei
-   gefüllte Rottöne wären auf einen Blick verwechselbar. Der Unterschied liegt in der Form: die vorwärts führende
-   Aktion ist gefüllt, die zerstörende umrissen. Sie bleibt dadurch eindeutig erkennbar, ohne einladender zu wirken
-   als der sichere Weg. Die Bedeutung selbst tragen immer die Beschriftung und die Bestätigung, nie die Farbe. */
+/* A destructive action is not distinguished by a second shade of red: DHBW red is already the primary colour, and
+   two filled reds would be easy to confuse at a glance. Shape carries the distinction instead: the action that moves
+   forward is filled, while the destructive one is outlined. It remains unambiguous without looking more inviting
+   than the safe path. The label and confirmation always carry the meaning themselves; colour never does. */
 .button--danger { background: #fff; color: var(--error); border: 2px solid var(--error); }
 .button--danger:hover { background: var(--error); color: #fff; }
 .button--danger:disabled { background: #fff; color: var(--gray); border-color: var(--field-border); }
@@ -299,45 +299,43 @@ p[role="status"] { margin: 0; color: var(--success); }
 .matrix th, .matrix td, .event-table th, .event-table td { padding: .45rem .7rem; border: 1px solid var(--line); vertical-align: top; }
 .matrix thead th, .event-table thead th { background: var(--surface); border-bottom: 2px solid var(--gray); font-size: .85rem; }
 
-/* Die Kursliste ist eine Liste, keine Matrix. Sie trennt ihre Zeilen durch je eine Linie und gibt das Gitter auf, das
-   die Matrix braucht, weil dort jede Zelle für sich gelesen wird — hier wird die Zeile gelesen, und senkrechte Linien
-   zerschnitten genau die. Die letzte Zeile gibt ihre Linie an den Rahmen des Bereichs ab, sonst stünden dort zwei. */
+/* The course table is a list rather than a matrix. A line separates each row, and the table gives up the grid the
+   matrix needs because each matrix cell is read on its own. Here the row is read as a whole, and vertical lines would
+   cut through exactly that unit. The last row yields its line to the surrounding border so the two do not overlap. */
 .course-table { width: 100%; min-width: 34rem; border-collapse: separate; border-spacing: 0; background: #fff; text-align: left; }
 .course-table th, .course-table td { padding: .6rem .8rem; border-bottom: 1px solid var(--line); vertical-align: baseline; }
 .course-table tbody tr:last-child td { border-bottom: 0; }
-/* Der Kopf bleibt beim Blättern stehen: Über eine Liste dieser Länge hinweg verließe er sonst nach dem ersten
-   Bildschirm die Sicht, und mit ihm die Bedeutung der Spalten und die Schalter, die sie sortieren. Er braucht dafür
-   eine eigene Fläche, weil die Zeilen unter ihm hindurchziehen. */
+/* The header stays in place while scrolling: over a list of this length it would otherwise leave the viewport after
+   the first screen, taking the meaning of the columns and the controls that sort them with it. It needs a surface of
+   its own because the rows pass underneath it. */
 .course-table thead th { position: sticky; top: 0; z-index: 1; background: var(--surface); border-bottom: 2px solid var(--gray); font-size: .85rem; }
-/* Ein klebender Kopf richtet sich am Rand des Bereichs aus, in dem gescrollt wird — liegt die Tabelle in einem eigenen
-   Scrollbereich, ist das nicht die Seite, und der Kopf klebt an einer Kante, die mit der Seite wandert. Der Bereich
-   gibt sein Scrollen deshalb auf, solange die Seite breit genug für die Tabelle ist; erst darunter nimmt er es wieder
-   auf, und dort tritt der klebende Kopf zurück. Die Schwelle liegt über der schmalsten Breite, auf die sich die
-   Tabelle bringen lässt (rund 690 px, gemessen bei genannten Bereichen) — darunter liefe sie sonst über die Seite
-   hinaus, statt in ihrem Bereich zu scrollen. */
+/* A sticky header follows the edge of its scrolling container. If the table has its own scroll container, that edge
+   is not the page edge and moves along with the page. The container therefore gives up scrolling while the page is
+   wide enough for the table; below that width it takes scrolling back and the sticky header steps back. The threshold
+   sits above the table's narrowest possible width (about 690 px with area names shown): below it the table would
+   otherwise overflow the page instead of scrolling inside its container. */
 .course-table-wrap { overflow-x: visible; }
 @media (max-width: 48rem) { .course-table-wrap { overflow-x: auto; } }
-/* Kennung und Veröffentlichungstag beanspruchen nur ihren Inhalt. Der übrige Platz fällt an Studiengang und
-   Studienzeitraum zusammen, statt allein an den Studiengang: sonst klaffte zwischen dessen kurzen Namen und dem
-   Zeitraum eine Lücke über die halbe Zeile, und das Auge müsste sie bei jeder Zeile neu überqueren. Umbrechen darf der
-   Zeitraum darum trotzdem nicht — er ist eine Angabe, keine zwei. */
+/* The code and publication day claim only the space their content needs. Study programme and study period share the
+   remaining room instead of giving it all to the programme: otherwise a gap spanning half the row would open between
+   its short names and the period, and the eye would have to cross it again on every row. The period must still not
+   wrap because it is one value rather than two. */
 .course-table__code, .course-table__published { width: 1%; }
 .course-table__code, .course-table__period, .course-table__published { white-space: nowrap; }
-/* Zwei Datumsspalten nebeneinander: Ziffern gleicher Breite lassen Tag, Monat und Jahr über die Zeilen hinweg
-   untereinander stehen, statt sie mit jeder Zeile um Bruchteile zu verschieben. */
+/* Two date columns side by side: equal-width digits align day, month and year across rows instead of shifting them by
+   fractions from one row to the next. */
 .course-table__period, .course-table__published { font-variant-numeric: tabular-nums; }
-/* Das Klickfeld ist die ganze Kennungszelle, nicht nur der Kurscode in ihr: Der Verweis füllt sie aus, statt dass die
-   Zelle ihn umpolstert. Über die ganze Zeile gezogen war die Fläche zuvor eine absolut gesetzte Nachbildung, und die
-   braucht die Zeile als Bezugsrahmen — den eine Tabellenzeile nicht überall hergibt: In Safari bezog sich jede dieser
-   Flächen stattdessen auf die Seite, sodass die zuletzt gezeichnete über allen Zeilen lag und jeden Zeiger und jeden
-   Klick auf den untersten Kurs zog. Eine Fläche, die nur ihre eigene Zelle ausfüllt, hängt an keinem solchen Rahmen.
-   Die Zeile hebt sich weiterhin als ganze hervor, sobald der Zeiger oder der Fokus sie erreicht — dafür genügt die
-   Zeile selbst. Der Fokusring rückt nach innen, weil der Verweis nun an der Kante der Tabelle beginnt und außen
-   angesetzt über deren Rand hinausliefe.
+/* The click target is the entire code cell rather than only the course code inside it: the link fills the cell instead
+   of leaving the cell to pad it. The former target spanning the whole row was an absolutely positioned imitation and
+   needed the row as its containing block, which a table row does not provide everywhere. In Safari each target was
+   positioned against the page instead, so the last one painted lay over every row and sent every pointer and click to
+   the bottom course. A target that fills only its own cell depends on no such frame. The whole row still highlights
+   when the pointer or focus reaches it, for which the row itself is sufficient. The focus ring moves inward because
+   the link now begins at the edge of the table and an outer ring would extend beyond that edge.
 
-   Die übrigen Zellen tragen je eine eigene, leere Fläche zum selben Ziel. Jede liegt in ihrer Zelle, denn eine Zelle
-   ist überall ein Bezugsrahmen — die Zeile ist es nicht, und genau daran ist die eine über die Zeile gezogene Fläche
-   gescheitert. So führt die ganze Zeile in den Kurs, und die Hand über ihr sagt nichts, was die Zeile nicht hält. */
+   Each remaining cell carries its own empty target for the same destination. Every target stays in its cell because a
+   cell is a containing block everywhere, whereas the row is not — precisely why the single target spanning the row
+   failed. The whole row therefore leads to the course, and the pointer hand promises nothing the row does not keep. */
 .course-table tbody tr { cursor: pointer; }
 .course-table tbody tr:hover, .course-table tbody tr:focus-within { background: var(--surface); }
 .course-table td.course-table__code { padding: 0; }
@@ -345,14 +343,14 @@ p[role="status"] { margin: 0; color: var(--success); }
 .course-table__link:focus-visible { outline-offset: -3px; }
 .course-table tbody td { position: relative; }
 .course-table__cover { position: absolute; inset: 0; }
-/* Der Strich steht für den fehlenden Eintrag und nicht für eine Angabe: Er tritt zurück, damit die Spalte von den
-   wenigen Tagen gelesen wird, die tatsächlich in ihr stehen. Sein Wortlaut steht für assistive Technik in derselben
-   Zelle, sichtbar löst ihn der Satz unter der Tabelle auf. */
+/* The dash represents a missing entry rather than a value. It steps back so the column is read by the few days it
+   actually contains. Its wording remains in the same cell for assistive technology, while the sentence below the
+   table resolves it visibly. */
 .course-table__published { font-size: .9rem; }
 .course-table__published [aria-hidden="true"] { color: var(--gray); }
-/* Die Auflösung steht außerhalb des scrollbaren Bereichs — bei einer waagerecht gescrollten Tabelle bliebe sie sonst
-   außer Sicht, während die Striche sichtbar blieben. Rechtsbündig wie die Fußnote der Planmatrix, weil dort die Spalte
-   steht, die sie auflöst. */
+/* The explanation stands outside the scrolling region: in a horizontally scrolled table it would otherwise remain
+   out of sight while the dashes stayed visible. It is right-aligned like the plan matrix footnote because that is
+   where the column it explains stands. */
 .course-table-note { margin: .4rem 0 0; color: var(--gray); font-size: .78rem; text-align: right; }
 /* The area a study program belongs to, beside its name where the course list names one. It breaks like any other
    text: held on one line it would be the longest unbreakable run of the whole table and would set the width the table
