@@ -139,9 +139,10 @@ p[role="status"] { margin: 0; color: var(--success); }
 .section-heading > p:last-child { margin: .5rem 0 0; color: var(--gray); }
 
 .search-panel form > p { max-width: 62ch; margin: 1.5rem 0 0; color: var(--gray); font-size: .9rem; }
-.filter-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; margin-top: 1.75rem; }
-.filter-grid label { display: grid; gap: .4rem; font-weight: 700; font-size: .9rem; }
-.filter-grid .filter-actions { grid-column: 1 / -1; margin-top: .3rem; }
+/* Eine Auswahl, die über eine Angabe entscheidet, und der Schalter, der sie bestätigt: beide über die Breite des
+   Bereichs, in dem sie stehen, weil das, was zur Wahl steht, ausgeschriebene Namen sind. */
+.choice-form { display: grid; justify-items: start; gap: .6rem; margin-top: 1.75rem; }
+.choice-form label { display: grid; gap: .4rem; width: 100%; font-weight: 700; font-size: .9rem; }
 .course-overview { margin-top: 0; }
 .course-overview__header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .course-overview__header h1 { margin: 0; font-size: clamp(1.55rem, 3vw, 1.9rem); font-weight: 700; letter-spacing: -.015em; }
@@ -720,7 +721,6 @@ p[role="status"] { margin: 0; color: var(--success); }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
 @media (max-width: 1000px) {
-  .filter-grid, .plan-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .course-list-filter .filter-bar__fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .course-list-filter__year { max-width: 14rem; }
 }
@@ -732,7 +732,6 @@ p[role="status"] { margin: 0; color: var(--success); }
      only accessible name. It stays announced and is removed visually only. */
   .account-menu__email { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
   .site-header nav { gap: .8rem; }
-  .filter-grid, .plan-grid { grid-template-columns: 1fr; }
   .course-overview__header { align-items: flex-start; }
   .filter-bar { padding: .75rem; }
   .course-list-filter .filter-bar__fields { grid-template-columns: minmax(0, 1fr); }

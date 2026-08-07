@@ -30,12 +30,14 @@ export default async function NewCourseFromTemplatePage({ searchParams }: PagePr
     <h1 id="new-course-heading">Aus Vorlage übernehmen</h1>
     <p>Eine Übernahme kopiert Kursverlauf und Termine der Vorlage einmalig und versetzt sie um ganze Wochen; danach besteht zwischen Vorlage und neuem Kurs keine Verbindung.</p>
 
-    <form method="get" className="filter-grid" aria-label="Vorlage wählen">
+    {/* Eine Auswahl, kein Filter: Sie grenzt keine Liste ein, sondern entscheidet, womit die Seite weitergeht. Als
+        Filterraster gesetzt stand ihr Feld in einer von vier Spalten und schnitt die Namen ab, die es tragen soll. */}
+    <form method="get" className="choice-form" aria-label="Vorlage wählen">
       <label>Vorlage<select name="vorlage" defaultValue={template?.id ?? ""}>
         <option value="" disabled>Bitte wählen</option>
         {templates.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
       </select></label>
-      <div className="filter-actions"><button className="button" type="submit">Vorlage wählen</button></div>
+      <button className="button" type="submit">Vorlage wählen</button>
     </form>
 
     {requestedTemplate && !template ? <p className="notice">Die gewählte Vorlage wurde nicht gefunden. Wählen Sie eine andere.</p> : null}
