@@ -1,10 +1,3 @@
-.viewSwitch { margin-top: 1.5rem; }
-.viewSwitchLabel { margin: 0 0 .35rem; font-size: .9rem; font-weight: 700; }
-.viewOptions { display: flex; flex-wrap: wrap; gap: .35rem; margin: 0; padding: 0; list-style: none; }
-.viewOptions a { display: block; min-height: 2.5rem; padding: .5rem .8rem; border: 1px solid var(--field-border); background: #fff; text-decoration: none; }
-.viewOptions a:hover { background: var(--surface); }
-.viewOptions a[aria-current] { border-color: var(--red); background: var(--red); color: #fff; font-weight: 700; }
-
 .calendar { margin-top: 1.5rem; }
 .explanation { max-width: 54rem; margin: 0 0 1rem; color: var(--gray-strong); }
 .viewControls { display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: 1rem; }
@@ -78,6 +71,9 @@
 .monthEvent strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .moreEvents { margin-top: .25rem; padding: .15rem; border: 0; background: transparent; color: var(--red); font: inherit; font-size: .72rem; font-weight: 700; cursor: pointer; }
 .monthDetail { grid-column: 1 / -1; min-width: 0; padding: .75rem; border-bottom: 1px solid var(--line); background: var(--surface); }
+/* The details take the focus when they open, so they have to show it — the outline lies inside, where the scrolling
+   region cannot cut it off. */
+.monthDetail:focus { outline: .18rem solid var(--focus); outline-offset: -.18rem; }
 .monthDetailCard { position: sticky; left: .75rem; display: flex; justify-content: space-between; gap: 1rem; width: min(32rem, calc(100vw - 3.5rem)); padding: 1rem; border: 1px solid var(--line); border-left: 4px solid var(--red); background: #fff; color: var(--ink); }
 .monthDetail h3 { margin: 0; font-size: 1.05rem; }
 .monthDetail time { display: block; margin-top: .25rem; font-weight: 700; }
@@ -94,7 +90,6 @@
 }
 
 @media (forced-colors: active) {
-  .viewOptions a[aria-current] { border-width: .2rem; }
   .viewControls button[aria-pressed="true"], .weekEvent, .monthEvent, .allDayEvent { border-width: .2rem; }
   .weekDay.today .weekDayHeading, .monthDay.today { outline: .2rem solid CanvasText; outline-offset: -.2rem; }
 }

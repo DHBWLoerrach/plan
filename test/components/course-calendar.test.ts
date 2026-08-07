@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { CalendarEventList, CourseCalendar } from "@/components/course-calendar";
-import type { CalendarEvent } from "@/lib/domain/course-calendar";
+import { parseCourseCalendar, type CalendarEvent } from "@/lib/domain/course-calendar";
 
 const events: CalendarEvent[] = [
   {
@@ -42,6 +42,18 @@ describe("CalendarEventList", () => {
   it("states when the feed has no future calendar entries", () => {
     const markup = renderToStaticMarkup(createElement(CalendarEventList, { events: [], anchor: "2026-08-10" }));
     expect(markup).toContain("Keine Kalendertermine ab diesem Datum");
+  });
+
+  /* An entry lasting one day says so and does not name a period from that day to the next — what the feed writes as
+     its end is the day after the last one it covers, and the day is what is read here. */
+  it("names a single all-day entry as lasting the whole day", () => {
+    const [holiday] = parseCourseCalendar([
+      "BEGIN:VEVENT", "UID:holiday", "SUMMARY:Feiertag", "DTSTART;VALUE=DATE:20260810", "DTEND;VALUE=DATE:20260811", "END:VEVENT",
+    ].join("\r\n"));
+    const markup = renderToStaticMarkup(createElement(CalendarEventList, { events: [holiday], anchor: "2026-08-10" }));
+
+    expect(markup).toContain("ganztägig");
+    expect(markup).not.toContain("11.08.");
   });
 });
 

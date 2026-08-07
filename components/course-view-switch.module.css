@@ -1,0 +1,10 @@
+.viewSwitch { margin-top: 1.5rem; }
+.viewSwitchLabel { margin: 0 0 .35rem; font-size: .9rem; font-weight: 700; }
+.viewOptions { display: flex; flex-wrap: wrap; gap: .35rem; margin: 0; padding: 0; list-style: none; }
+.viewOptions a { display: block; min-height: 2.5rem; padding: .5rem .8rem; border: 1px solid var(--field-border); background: #fff; text-decoration: none; }
+.viewOptions a:hover { background: var(--surface); }
+.viewOptions a[aria-current] { border-color: var(--red); background: var(--red); color: #fff; font-weight: 700; }
+
+@media (forced-colors: active) {
+  .viewOptions a[aria-current] { border-width: .2rem; }
+}
