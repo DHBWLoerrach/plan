@@ -150,66 +150,64 @@ p[role="status"] { margin: 0; color: var(--success); }
 .course-overview__title { display: flex; flex-wrap: wrap; align-items: baseline; gap: .2rem .45rem; }
 .course-overview__separator { color: var(--gray); }
 .course-overview__count { margin: 0; color: var(--gray); font-size: .9rem; font-variant-numeric: tabular-nums; }
-.filter-grid.course-list-filter { display: block; margin-top: .85rem; padding: .85rem 1rem; border: 1px solid var(--line); background: #fafafa; }
-.course-list-filter__fields { display: grid; grid-template-columns: minmax(15rem, 1.25fr) minmax(15rem, 1fr) minmax(9rem, .55fr); gap: .75rem; }
-.course-list-filter__fields label { display: grid; min-width: 0; gap: .3rem; font-size: .82rem; }
-/* The field a course code is searched in, in the internal list and in the public one: the same field, so it is drawn
-   once for both. The input is a block of its own inside the span: as an inline element it would add the descender
-   space of a line box below itself, and the field would stand taller than the selects it shares its row with. */
-.course-list-filter__search, .public-filter__search { position: relative; display: block; }
-.course-list-filter__search svg, .public-filter__search svg { position: absolute; top: 50%; left: .7rem; width: 1.1rem; height: 1.1rem; transform: translateY(-50%); fill: none; stroke: var(--gray); stroke-width: 1.8; pointer-events: none; }
-.course-list-filter__search input, .public-filter__search input { display: block; padding-left: 2.25rem; }
-.course-list-filter__actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .55rem 1rem; margin-top: .7rem; }
-.course-list-filter .course-list-filter__responsibility { display: inline-flex; align-items: center; gap: .45rem; min-height: 2rem; font-size: .85rem; font-weight: 500; cursor: pointer; }
-/* Zurücksetzen ist keine weitere Filterfläche, sondern die eine Handlung der Zeile, und steht deshalb an deren Ende. */
-.course-list-filter__reset { flex: none; margin-left: auto; padding: .25rem 0; border: 0; background: none; color: var(--gray); font: inherit; font-size: .85rem; text-decoration: underline; text-underline-offset: .25rem; cursor: pointer; }
-.course-list-filter__reset:hover { color: var(--red); }
-.course-list-filter__active { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .55rem; margin-top: .65rem; padding-top: .65rem; border-top: 1px solid var(--line); color: var(--gray-strong); font-size: .78rem; }
-.course-list-filter__active > span { font-weight: 700; }
-.course-list-filter__active ul { display: flex; flex-wrap: wrap; gap: .35rem; margin: 0; padding: 0; list-style: none; }
-.course-list-filter__active button { display: inline-flex; align-items: center; gap: .4rem; min-height: 1.9rem; padding: .2rem .45rem .2rem .6rem; border: 1px solid #cbd0d3; background: #fff; color: var(--ink); font: inherit; cursor: pointer; }
-.course-list-filter__active button:hover { border-color: var(--gray); color: var(--red); }
-.course-list-filter__active button span { color: var(--gray); font-size: 1.05rem; line-height: 1; }
+/* Die Filterleiste: ein dünner Rahmen, ein ruhiger Grund, kleine Beschriftungen, darunter die Zeile, die handelt. Sie
+   steht über der Kursliste wie über der öffentlichen Suche — beide grenzen dieselbe Art Liste ein, also sehen sie
+   gleich aus und unterscheiden sich nur dort, wo die Seite es verlangt. Eigenes Gewicht trägt sie nicht: Was sie
+   eingrenzt, ist der Grund des Besuchs, nicht sie selbst. */
+.filter-bar { padding: .85rem 1rem; border: 1px solid var(--line); background: #fafafa; }
+.filter-bar__fields { display: grid; gap: .75rem; }
+.filter-bar__fields label { display: grid; min-width: 0; gap: .3rem; font-size: .82rem; }
+/* Das Feld, in dem eine Kennung gesucht wird. Die Lupe liegt im Feld statt daneben, damit das Feld die volle Breite
+   seiner Spalte behält. Das Eingabefeld ist darin ein eigener Block: als Inline-Element brächte es die Unterlänge
+   einer Zeilenbox mit und stünde höher als die Auswahlfelder seiner Zeile. */
+.filter-bar__search { position: relative; display: block; }
+.filter-bar__search svg { position: absolute; top: 50%; left: .7rem; width: 1.1rem; height: 1.1rem; transform: translateY(-50%); fill: none; stroke: var(--gray); stroke-width: 1.8; pointer-events: none; }
+.filter-bar__search input { display: block; padding-left: 2.25rem; }
+/* Die Zeile, die handelt, unter der Zeile der Felder. */
+.filter-bar__actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .55rem 1rem; margin-top: .7rem; }
+/* Zurücksetzen ist keine weitere Filterfläche, sondern die eine Handlung der Zeile, und steht deshalb an deren Ende.
+   Als Schalter wie als Verweis trägt es dieselbe Gestalt, weil es dasselbe tut. */
+.filter-bar__reset { flex: none; margin-left: auto; padding: .25rem 0; border: 0; background: none; color: var(--gray); font: inherit; font-size: .85rem; text-decoration: underline; text-underline-offset: .25rem; cursor: pointer; }
+.filter-bar__reset:hover { color: var(--red); }
+.filter-bar__active { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .55rem; margin-top: .65rem; padding-top: .65rem; border-top: 1px solid var(--line); color: var(--gray-strong); font-size: .78rem; }
+.filter-bar__active > span { font-weight: 700; }
+.filter-bar__active ul { display: flex; flex-wrap: wrap; gap: .35rem; margin: 0; padding: 0; list-style: none; }
+.filter-bar__active button { display: inline-flex; align-items: center; gap: .4rem; min-height: 1.9rem; padding: .2rem .45rem .2rem .6rem; border: 1px solid #cbd0d3; background: #fff; color: var(--ink); font: inherit; cursor: pointer; }
+.filter-bar__active button:hover { border-color: var(--gray); color: var(--red); }
+.filter-bar__active button span { color: var(--gray); font-size: 1.05rem; line-height: 1; }
 /* Solange gefiltert wird, tritt das Ergebnis zurück, statt still gegen ein anderes ausgetauscht zu werden. Der
-   Geschwisterselektor genügt dafür: das Formular steht im Markup vor dem, was es filtert. Angeklickt werden kann in
+   Geschwisterselektor genügt dafür: die Leiste steht im Markup vor dem, was sie filtert. Angeklickt werden kann in
    dieser Zeit nichts — der Zeilenverweis darunter wäre der zum alten Ergebnis. */
-.course-list-filter[aria-busy="true"] ~ .matrix-wrap, .course-list-filter[aria-busy="true"] ~ .empty-note { opacity: .5; pointer-events: none; transition: opacity .15s ease; }
+.filter-bar[aria-busy="true"] ~ .matrix-wrap, .filter-bar[aria-busy="true"] ~ .empty-note,
+.filter-bar[aria-busy="true"] ~ .results { opacity: .5; pointer-events: none; transition: opacity .15s ease; }
+
+/* Die Leiste über der internen Kursliste: drei Felder, darunter die Zuständigkeit und das Zurücksetzen. */
+.course-list-filter { margin-top: .85rem; }
+.course-list-filter .filter-bar__fields { grid-template-columns: minmax(15rem, 1.25fr) minmax(15rem, 1fr) minmax(9rem, .55fr); }
+.course-list-filter .course-list-filter__responsibility { display: inline-flex; align-items: center; gap: .45rem; min-height: 2rem; font-size: .85rem; font-weight: 500; cursor: pointer; }
+
+/* Die Leiste der öffentlichen Suche. Sie ist der Weg in die ganze Seite und trägt deshalb höhere Felder als ein
+   Formularfeld sonst in dieser Anwendung, mit Text in der Größe der Seite statt in der einer Beschriftung. */
+.filter-bar--public { margin-top: 1.25rem; }
+/* Vier Felder auf einer Zeile, in den Verhältnissen der internen Leiste: Kurskennung und Studiengang brauchen den
+   Platz, der Jahrgang eine vierstellige Zahl. Die schmalste Spalte trägt „Alle Jahrgänge" samt dem Platz, den der
+   Pfeil des Auswahlfelds beansprucht — darunter schnitte das Feld sein eigenes Wort ab. */
+.filter-bar--public .filter-bar__fields { grid-template-columns: minmax(13rem, 1.25fr) minmax(10rem, 1fr) minmax(12rem, 1.1fr) minmax(10rem, .55fr); align-items: end; }
+/* Die Felder enden auf einer Kante, was auch über ihnen steht: eine Beschriftung, die umbrechen muss, wächst nach
+   oben und lässt die Zeile der Felder, wo sie ist, statt ihr eigenes Feld aus ihr herauszuschieben. */
+.filter-bar--public .filter-bar__fields label { align-content: end; gap: .35rem; font-size: .85rem; font-weight: 700; }
+.filter-bar--public input, .filter-bar--public select { min-height: 3rem; font-size: 1rem; }
+/* Wie die Filter zusammenwirken, wird einmal gelesen und dann nicht mehr, steht also unter der Zeile, die handelt.
+   Ohne Breitenschranke: der Satz steht auf einer Zeile, solange die Leiste sie hergibt, und bricht erst, wenn sie es
+   nicht mehr tut. */
+.filter-bar__hint { margin: .7rem 0 0; color: var(--gray-strong); font-size: .78rem; }
+/* Unter dieser Breite wären die Felder schmaler als die Werte, die sie tragen; sie brechen dann in zwei Spalten. */
+@media (max-width: 60rem) { .filter-bar--public .filter-bar__fields { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 30rem) { .filter-bar--public .filter-bar__fields { grid-template-columns: minmax(0, 1fr); } }
+
 .filter-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.3rem; margin-top: 1.5rem; }
 .filter-actions > a:not(.text-link) { color: var(--gray); font-size: .9rem; text-underline-offset: .25rem; }
 
-/* The public filter is the bar the result list stands under, and it is built like the one above the internal course
-   list: a thin frame, a quiet ground, small labels. It holds no surface of its own weight — the panel it replaced was
-   the largest and most coloured block of the page and outweighed the very list it narrows. */
-.public-filter { margin-top: 1.25rem; padding: .85rem 1rem; border: 1px solid var(--line); background: #fafafa; }
-/* The four fields stand on one line, in the proportions the internal filter gives its own: the course code and the
-   study program need the room, the year needs a four-digit number. Every label carries its text above its control and
-   they all start on the same edge, so the four read as one row and not as four boxes of their own height. */
-/* Die schmalste Spalte trägt „Alle Jahrgänge" samt dem Platz, den der Pfeil des Auswahlfelds beansprucht — darunter
-   schnitte das Feld sein eigenes Wort ab. */
-.public-filter__fields { display: grid; grid-template-columns: minmax(13rem, 1.25fr) minmax(10rem, 1fr) minmax(12rem, 1.1fr) minmax(10rem, .55fr); align-items: end; gap: .75rem; }
-/* The fields end on one edge, whatever stands above them: a label that has to wrap grows upwards and leaves the row
-   of the fields where it is, instead of pushing its own field down out of that row. */
-.public-filter label { display: grid; align-content: end; min-width: 0; gap: .35rem; font-size: .85rem; font-weight: 700; }
-/* The bar is the way into the whole page, so its fields carry more than the height a form control has elsewhere in
-   the application, and the text in them is set in the size of the page rather than in the size of a label. */
-.public-filter input, .public-filter select { min-height: 3rem; font-size: 1rem; }
-/* The row that acts, below the row of the fields: the search opens it, the reset closes it at the other end and only
-   appears while there is something to take back. */
-.public-filter__actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .55rem 1rem; margin-top: .7rem; }
-.public-filter__reset { flex: none; margin-left: auto; color: var(--gray); font-size: .85rem; text-underline-offset: .25rem; }
-.public-filter__reset:hover { color: var(--red); }
-/* How the filters combine is read once and then no longer, so it stands under the row that acts rather than between
-   the fields and their button. */
-/* Ohne Breitenschranke: der Satz steht auf einer Zeile, solange die Leiste sie hergibt, und bricht erst, wenn sie es
-   nicht mehr tut. Eine Zeilenlänge zu begrenzen lohnt bei einem Satz nicht, der einmal gelesen wird. */
-.public-filter__hint { margin: .7rem 0 0; color: var(--gray-strong); font-size: .78rem; }
-/* Solange gesucht wird, tritt das Ergebnis zurück, statt still gegen ein anderes ausgetauscht zu werden — wie in der
-   internen Kursliste. Der Geschwisterselektor genügt: die Leiste steht im Markup vor dem, was sie filtert. Angeklickt
-   werden kann in dieser Zeit nichts, der Zeilenverweis wäre der zum alten Ergebnis. */
-.public-filter[aria-busy="true"] ~ .results { opacity: .5; pointer-events: none; transition: opacity .15s ease; }
-/* Below this width the fields would be narrower than the values they hold, so they break into two columns. */
-@media (max-width: 60rem) { .public-filter__fields { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 30rem) { .public-filter__fields { grid-template-columns: minmax(0, 1fr); } }
 
 .button { display: inline-flex; align-items: center; justify-content: center; min-height: 2.75rem; padding: .6rem 1.15rem; border: 0; background: var(--red); color: #fff; font: inherit; font-weight: 700; text-decoration: none; cursor: pointer; transition: background-color .15s ease; }
 .button:hover { background: var(--red-dark); }
@@ -723,7 +721,7 @@ p[role="status"] { margin: 0; color: var(--success); }
 
 @media (max-width: 1000px) {
   .filter-grid, .plan-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .course-list-filter__fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .course-list-filter .filter-bar__fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .course-list-filter__year { max-width: 14rem; }
 }
 @media (max-width: 760px) {
@@ -736,12 +734,12 @@ p[role="status"] { margin: 0; color: var(--success); }
   .site-header nav { gap: .8rem; }
   .filter-grid, .plan-grid { grid-template-columns: 1fr; }
   .course-overview__header { align-items: flex-start; }
-  .filter-grid.course-list-filter { padding: .75rem; }
-  .course-list-filter__fields { grid-template-columns: minmax(0, 1fr); }
+  .filter-bar { padding: .75rem; }
+  .course-list-filter .filter-bar__fields { grid-template-columns: minmax(0, 1fr); }
   .course-list-filter__year { max-width: none; }
-  .course-list-filter__actions { align-items: flex-start; flex-direction: column; }
-  .course-list-filter__reset { margin-left: 0; }
-  .course-list-filter__active { align-items: flex-start; flex-direction: column; }
+  .filter-bar__actions { align-items: flex-start; flex-direction: column; }
+  .filter-bar__reset { margin-left: 0; }
+  .filter-bar__active { align-items: flex-start; flex-direction: column; }
   .filter-actions { align-items: flex-start; flex-direction: column; }
   .course-list { align-items: flex-start; flex-direction: column; gap: .5rem; }
 }
