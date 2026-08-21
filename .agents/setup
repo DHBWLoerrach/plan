@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$repo_root"
+
+run_step() {
+  local label="$1"
+  shift
+  local started_at=$SECONDS
+  printf '==> %s\n' "$label"
+  "$@"
+  printf '<== %s (%ss)\n' "$label" "$((SECONDS - started_at))"
+}
+
+run_step "Installing npm dependencies" npm ci
+
+if [[ ! -f .env.local ]]; then
+  run_step "Creating .env.local" cp -- env.example .env.local
+else
+  printf '==> Keeping existing .env.local\n'
+fi
+
+run_step "Generating Next.js route types" npx next typegen
+run_step "Installing Playwright Chromium" npx playwright install chromium
+
+printf 'Orb setup complete.\n'
