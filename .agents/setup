@@ -13,6 +13,10 @@ run_step() {
   printf '<== %s (%ss)\n' "$label" "$((SECONDS - started_at))"
 }
 
+echo "[setup] Configuring repository-local Git identity"
+git config --local user.name "Erik Behrends"
+git config --local user.email "behrends@users.noreply.github.com"
+
 run_step "Installing npm dependencies" npm ci
 
 if [[ ! -f .env.local ]]; then
