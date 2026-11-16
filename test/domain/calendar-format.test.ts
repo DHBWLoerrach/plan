@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatCalendarDay, formatCalendarPeriod, formatCompactDuration, formatPeriodDuration, weekdayName } from "@/lib/domain/calendar-format";
+import { formatCalendarDay, formatCalendarPeriod, formatCompactDuration, formatLongCalendarDay, formatPeriodDuration, weekdayName } from "@/lib/domain/calendar-format";
 
 describe("formatCalendarDay", () => {
   it("formats a calendar day in German notation", () => {
@@ -68,5 +68,11 @@ describe("weekdayName", () => {
 
   it("names a Saturday", () => {
     expect(weekdayName("2027-06-19")).toBe("Samstag");
+  });
+});
+
+describe("formatLongCalendarDay", () => {
+  it("writes weekday, day, month and year out in full", () => {
+    expect(formatLongCalendarDay("2026-11-05")).toBe("Donnerstag, 5. November 2026");
   });
 });

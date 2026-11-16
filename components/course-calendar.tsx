@@ -14,6 +14,7 @@ import {
   type CourseCalendarView,
 } from "@/lib/domain/course-calendar";
 
+import { CalendarLocation } from "./calendar-location";
 import styles from "./course-calendar.module.css";
 
 type CalendarResult =
@@ -84,9 +85,7 @@ function eventTime(event: CalendarEvent): string {
 
 function EventLocation({ value }: { value: string }) {
   if (!value) return null;
-  return <p className={styles.location}>{/^https?:\/\//u.test(value)
-    ? <a href={value} target="_blank" rel="noopener noreferrer">Online-Raum<span className="sr-only"> (öffnet in neuem Tab)</span></a>
-    : value}</p>;
+  return <p className={styles.location}><CalendarLocation value={value} /></p>;
 }
 
 function EventDetails({ event }: { event: CalendarEvent }) {

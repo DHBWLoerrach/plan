@@ -20,7 +20,7 @@ const events: CalendarEvent[] = [
     title: "Online-Seminar",
     start: "2026-08-11T13:00:00.000Z",
     end: "2026-08-11T14:00:00.000Z",
-    location: "https://example.test/room",
+    location: "online: https://example.test/room",
     description: "",
     allDay: false,
   },
@@ -35,7 +35,8 @@ describe("CalendarEventList", () => {
     expect(markup).toContain("Analysis");
     expect(markup).toContain("A336");
     expect(markup).toContain("Bitte Laptop mitbringen");
-    expect(markup).toContain('href="https://example.test/room"');
+    // An address inside the location is linked wherever it stands, and the words before it stay.
+    expect(markup).toContain('online: </span><a href="https://example.test/room"');
     expect(markup).toContain('rel="noopener noreferrer"');
   });
 

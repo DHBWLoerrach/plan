@@ -543,6 +543,45 @@ p[role="status"] { margin: 0; color: var(--success); }
 /* The state is named in words like every other marking; the tone only repeats what the word already says. */
 .course-tile .course-tile__unpublished { color: var(--warning); }
 
+/* The day page lists one row per studying course: the course and where it stands on the left, its calendar entries
+   for the day on the right. Courses without entries keep their row, so a course in its practice phase is seen to have
+   none rather than missing from the list. Below the width where both columns fit, the entries move under the course. */
+.today > .course-overview__header { margin-bottom: 1.4rem; }
+.today-courses { display: grid; gap: .5rem; margin: 0; padding: 0; list-style: none; }
+.today-course { display: grid; grid-template-columns: minmax(8rem, 13rem) minmax(0, 1fr); gap: .4rem 1rem; padding: .6rem .75rem; background: #fff; border: 1px solid var(--line); }
+.today-course__code { margin: 0; font-size: 1rem; }
+.today-course__code a { color: var(--red); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 700; text-decoration: none; }
+.today-course__code a:hover { text-decoration: underline; text-underline-offset: .25rem; }
+.today-course__standing { margin: .1rem 0 0; color: var(--gray); font-size: .82rem; }
+.today-course__note { margin: 0; color: var(--gray); font-size: .9rem; }
+.today-events { display: grid; gap: .5rem; margin: 0; padding: 0; list-style: none; }
+.today-event { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr); gap: .1rem .75rem; }
+.today-event__time { font-size: .9rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.today-event__title { margin: 0; font-weight: 700; font-size: .95rem; overflow-wrap: break-word; }
+.today-event__detail { margin: .1rem 0 0; color: var(--gray); font-size: .85rem; overflow-wrap: break-word; }
+/* A long description rests as its first line and opens into the rest. The marker is drawn rather than written, as on
+   the other disclosures, because the element already tells assistive technology whether it is open. */
+.today-description { margin: .1rem 0 0; color: var(--gray); font-size: .85rem; }
+.today-description > summary { display: flex; align-items: baseline; gap: .45rem; cursor: pointer; list-style: none; }
+.today-description > summary::-webkit-details-marker { display: none; }
+.today-description > summary::after {
+  content: ""; flex: none; align-self: center; width: .4rem; height: .4rem;
+  border-right: 2px solid var(--red); border-bottom: 2px solid var(--red); transform: translateY(-.1rem) rotate(45deg);
+}
+.today-description[open] > summary::after { transform: translateY(.1rem) rotate(-135deg); }
+.today-description > summary:hover { color: var(--ink); }
+.today-description > summary:focus-visible { outline: 3px solid #1a1a1a; outline-offset: 2px; }
+@media (forced-colors: active) { .today-description > summary::after { border-color: currentColor; } }
+.today-description__first { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.today-description[open] .today-description__first { white-space: normal; overflow-wrap: break-word; }
+.today-description__rest { margin: .1rem 0 0; white-space: pre-line; overflow-wrap: break-word; }
+@media (max-width: 36rem) {
+  .today-course { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 22rem) {
+  .today-event { grid-template-columns: minmax(0, 1fr); }
+}
+
 /* The selection sits in the head of the matrix card and is the only thing acting there, so it may take the left edge
    of the card: label and options on one line, the hint on the next, all three starting at that edge. Every option is a
    framed control with a hover and a focus of its own, which is what tells it apart from the legend of the section, and

@@ -14,7 +14,11 @@ type ReaderOptions = {
 };
 
 const courseCodePattern = /^[a-z]{3,6}\d{2}[a-z]?(?:-[a-z]{1,20})?$/u;
+/* How long an answer is kept. A missing calendar stays missing as long as a found one stays current, so it is kept
+   just as long. An unreachable one is kept briefly: long enough that a page reading many courses at once does not
+   send the calendar system a request per course and view while it is down, short enough to notice its return soon. */
 const cacheTtl = 10 * 60 * 1_000;
+const unavailableTtl = 60 * 1_000;
 const maxCalendarBytes = 5 * 1024 * 1024;
 const maxCachedCourses = 100;
 const defaultUrlTemplate = "https://webmail.dhbw-loerrach.de/owa/calendar/kal-{course}@dhbw-loerrach.de/Kalender/calendar.ics";
@@ -54,7 +58,11 @@ async function limitedText(response: Response): Promise<string | null> {
   }
 }
 
-/** A bounded process-local cache mirrors the single-container deployment and deduplicates concurrent upstream reads. */
+/**
+ * A bounded process-local cache mirrors the single-container deployment and deduplicates concurrent upstream reads.
+ * Every answer is kept, not only a found calendar: a course without one or an unreachable system would otherwise be
+ * asked again on every view of every page that reads it.
+ */
 export function createCourseCalendarReader(options: ReaderOptions = {}) {
   const fetcher = options.fetcher ?? fetch;
   const now = options.now ?? Date.now;
@@ -88,10 +96,12 @@ export function createCourseCalendarReader(options: ReaderOptions = {}) {
       }
     })();
 
-    cache.set(normalizedCode, { expiresAt: now() + cacheTtl, promise });
+    const entry = { expiresAt: now() + cacheTtl, promise };
+    cache.set(normalizedCode, entry);
     if (cache.size > maxCachedCourses) cache.delete(cache.keys().next().value!);
     const result = await promise;
-    if (result.kind !== "available" && cache.get(normalizedCode)?.promise === promise) cache.delete(normalizedCode);
+    // Counted from the answer rather than the request, so a read that ran into its timeout is not already expired.
+    if (result.kind === "unavailable") entry.expiresAt = now() + unavailableTtl;
     return result;
   };
 }

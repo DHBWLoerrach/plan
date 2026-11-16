@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  calendarDescriptionParts,
+  calendarLocationParts,
   calendarEventPlacements,
   calendarEventsForView,
+  calendarEventTimeOnDay,
   calendarMonthDays,
   calendarWeekDays,
   courseCalendarView,
@@ -155,5 +158,72 @@ describe("calendarEventPlacements", () => {
       { event: expect.objectContaining({ uid: "parallel" }), column: 1, columns: 2 },
       { event: expect.objectContaining({ uid: "later" }), column: 0, columns: 1 },
     ]);
+  });
+});
+
+describe("calendarEventTimeOnDay", () => {
+  const event = { uid: "one", title: "Analysis", location: "", description: "" };
+
+  it("writes the Berlin wall time a timed entry runs from and to", () => {
+    const [parsed] = parseCourseCalendar(calendar("BEGIN:VEVENT\r\nUID:one\r\nSUMMARY:Analysis\r\nDTSTART:20261105T071500Z\r\nDTEND:20261105T103000Z\r\nEND:VEVENT"));
+    expect(calendarEventTimeOnDay(parsed)).toBe("08:15–11:30");
+  });
+
+  it("calls an all-day entry all-day on every day it covers", () => {
+    expect(calendarEventTimeOnDay({ ...event, allDay: true, start: "2026-11-02T00:00:00.000Z", end: "2026-11-06T00:00:00.000Z" })).toBe("ganztägig");
+  });
+});
+
+describe("calendarDescriptionParts", () => {
+  it("leaves a single short line as it is", () => {
+    expect(calendarDescriptionParts("  Herr Rapp  ")).toEqual({ firstLine: "Herr Rapp", rest: "", collapsible: false });
+  });
+
+  it("splits a description of several lines after its first, dropping the blank lines around the rest", () => {
+    expect(calendarDescriptionParts("Zoom-Einladung\n\nMeeting-ID: 648\nKenncode: 356\n"))
+      .toEqual({ firstLine: "Zoom-Einladung", rest: "Meeting-ID: 648\nKenncode: 356", collapsible: true });
+  });
+
+  it("shrinks runs of blank lines in the rest to one", () => {
+    expect(calendarDescriptionParts("Einladung\nMeeting-ID: 648\n\n \n\t\u00a0\n---\n\n\nSIP").rest).toBe("Meeting-ID: 648\n\n---\n\nSIP");
+  });
+
+  it("makes a single line collapsible once it is too long to stand in the column", () => {
+    const line = "x".repeat(121);
+    expect(calendarDescriptionParts(line)).toEqual({ firstLine: line, rest: "", collapsible: true });
+    expect(calendarDescriptionParts("x".repeat(120)).collapsible).toBe(false);
+  });
+});
+
+describe("calendarLocationParts", () => {
+  it("keeps a room as text", () => {
+    expect(calendarLocationParts("A336")).toEqual([{ kind: "text", text: "A336" }]);
+  });
+
+  it("links an address standing alone", () => {
+    expect(calendarLocationParts("https://zoom.us/j/1?pwd=x")).toEqual([{ kind: "link", href: "https://zoom.us/j/1?pwd=x" }]);
+  });
+
+  it("links an address inside a sentence and keeps the words around it", () => {
+    expect(calendarLocationParts("ONLINE; https://eu02web.zoom-x.de/j/648?pwd=s.1 oder Raum K102")).toEqual([
+      { kind: "text", text: "ONLINE; " },
+      { kind: "link", href: "https://eu02web.zoom-x.de/j/648?pwd=s.1" },
+      { kind: "text", text: " oder Raum K102" },
+    ]);
+  });
+
+  it("leaves closing punctuation and an unopened parenthesis outside the address", () => {
+    expect(calendarLocationParts("(Zoom: https://zoom.us/j/1).")).toEqual([
+      { kind: "text", text: "(Zoom: " },
+      { kind: "link", href: "https://zoom.us/j/1" },
+      { kind: "text", text: ")." },
+    ]);
+    expect(calendarLocationParts("https://de.wikipedia.org/wiki/Raum_(Physik)")).toEqual([
+      { kind: "link", href: "https://de.wikipedia.org/wiki/Raum_(Physik)" },
+    ]);
+  });
+
+  it("never links anything but a web address", () => {
+    expect(calendarLocationParts("javascript:alert(1)")).toEqual([{ kind: "text", text: "javascript:alert(1)" }]);
   });
 });

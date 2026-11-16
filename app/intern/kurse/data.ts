@@ -142,21 +142,37 @@ type OverviewRow = Omit<MarkingColumns, "areaId"> & { id: string; code: string; 
  * area; the id is therefore also what settles the order within an area.
  */
 export function overviewPrograms(sqlite: Database.Database, account: AccountScope, today: string): OverviewProgram[] {
+  return ownAreaPrograms(sqlite, account, today, false);
+}
+
+/**
+ * The same grouping, narrowed to the courses whose study period includes `today` — the ones the day page reads the
+ * lecture calendars of. A course that has not begun or has finished has no lectures to show, and reading its calendar
+ * would only cost a request to the DHBW calendar system per course.
+ */
+export function studyingPrograms(sqlite: Database.Database, account: AccountScope, today: string): OverviewProgram[] {
+  return ownAreaPrograms(sqlite, account, today, true);
+}
+
+function ownAreaPrograms(sqlite: Database.Database, account: AccountScope, today: string, studyingOnly: boolean): OverviewProgram[] {
+  const scope = [account.systemAdmin ? 1 : 0, account.id, studyingOnly ? 1 : 0, today, today];
   const rows = sqlite.prepare(`SELECT course.id, course.code, course.study_start AS studyStart, course.study_end AS studyEnd,
       program.id AS programId, program.name AS programName, program.abbreviation, area.name AS areaName,
       course.published_at AS publishedAt
     FROM courses course JOIN programs program ON program.id = course.program_id JOIN areas area ON area.id = program.area_id
-    WHERE ? = 1 OR program.area_id IN (SELECT area_id FROM area_assignments WHERE user_id = ?)
+    WHERE (? = 1 OR program.area_id IN (SELECT area_id FROM area_assignments WHERE user_id = ?))
+      AND (? = 0 OR (course.study_start <= ? AND course.study_end >= ?))
     ORDER BY area.name COLLATE NOCASE, program.abbreviation COLLATE NOCASE, program.id,
       substr(course.study_start, 1, 4), course.code COLLATE NOCASE`)
-    .all(account.systemAdmin ? 1 : 0, account.id) as OverviewRow[];
+    .all(...scope) as OverviewRow[];
 
   /* The phases of all those courses at once: one query per course would repeat the area predicate for every tile. */
   const phaseRows = sqlite.prepare(`SELECT phase.course_id AS courseId, phase.semester, phase.phase_type AS type,
       phase.start_date AS startDate, phase.end_date AS endDate
     FROM course_phases phase JOIN courses course ON course.id = phase.course_id JOIN programs program ON program.id = course.program_id
-    WHERE ? = 1 OR program.area_id IN (SELECT area_id FROM area_assignments WHERE user_id = ?)
-    ORDER BY phase.start_date`).all(account.systemAdmin ? 1 : 0, account.id) as (StandingPhase & { courseId: string })[];
+    WHERE (? = 1 OR program.area_id IN (SELECT area_id FROM area_assignments WHERE user_id = ?))
+      AND (? = 0 OR (course.study_start <= ? AND course.study_end >= ?))
+    ORDER BY phase.start_date`).all(...scope) as (StandingPhase & { courseId: string })[];
   const phasesByCourse = new Map<string, StandingPhase[]>();
   for (const { courseId, ...phase } of phaseRows) {
     const phases = phasesByCourse.get(courseId);

@@ -47,20 +47,45 @@ describe("course calendar feed", () => {
     expect(fetcher).toHaveBeenCalledWith("https://calendar.test/tif25a.ics", expect.objectContaining({ cache: "no-store" }));
   });
 
-  it("deduplicates concurrent requests and does not cache failures", async () => {
+  it("deduplicates concurrent requests and keeps an unreachable calendar for one minute", async () => {
+    let time = 1_000;
     let resolve!: (response: Response) => void;
     const firstResponse = new Promise<Response>((done) => { resolve = done; });
     const fetcher = vi.fn<typeof fetch>()
       .mockImplementationOnce(() => firstResponse)
       .mockResolvedValueOnce(new Response(ics, { headers: { "content-type": "text/calendar" } }));
-    const read = reader(fetcher);
+    const read = reader(fetcher, () => time);
 
     const first = read("TIF25A");
     const concurrent = read("TIF25A");
+    /* The minute runs from the answer: a request that took its whole timeout must not arrive already expired. */
+    time += 20_000;
     resolve(new Response("nicht erreichbar", { status: 503 }));
 
     await expect(first).resolves.toEqual({ kind: "unavailable" });
     await expect(concurrent).resolves.toEqual({ kind: "unavailable" });
+    time += 59_999;
+    await expect(read("TIF25A")).resolves.toEqual({ kind: "unavailable" });
+    expect(fetcher).toHaveBeenCalledOnce();
+
+    time += 1;
+    await expect(read("TIF25A")).resolves.toEqual({ kind: "available", events: expect.any(Array) });
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps a missing calendar as long as a found one", async () => {
+    let time = 1_000;
+    const fetcher = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response("", { status: 404 }))
+      .mockResolvedValueOnce(new Response(ics, { headers: { "content-type": "text/calendar" } }));
+    const read = reader(fetcher, () => time);
+
+    await expect(read("TIF25A")).resolves.toEqual({ kind: "not-found" });
+    time += 10 * 60 * 1_000 - 1;
+    await expect(read("TIF25A")).resolves.toEqual({ kind: "not-found" });
+    expect(fetcher).toHaveBeenCalledOnce();
+
+    time += 1;
     await expect(read("TIF25A")).resolves.toEqual({ kind: "available", events: expect.any(Array) });
     expect(fetcher).toHaveBeenCalledTimes(2);
   });

@@ -18,7 +18,7 @@ async function signIn(page: Page, email: string) {
     await page.waitForTimeout(signInWindow);
     await attemptSignIn(page, email, rejection);
   }
-  await expect(page).toHaveURL(/\/intern$/u);
+  await expect(page).toHaveURL(/\/intern\/heute$/u);
 }
 
 /** One attempt, filled anew each time: a rejected submission leaves the form reset, so a retry starts from empty fields. */
@@ -27,7 +27,7 @@ async function attemptSignIn(page: Page, email: string, rejection: Locator) {
   await page.getByLabel("Passwort").fill(password);
   await page.getByRole("button", { name: "Anmelden" }).click();
   await Promise.race([
-    page.waitForURL(/\/intern$/u).catch(() => {}),
+    page.waitForURL(/\/intern\/heute$/u).catch(() => {}),
     rejection.waitFor({ state: "visible" }).catch(() => {}),
   ]);
 }
@@ -41,7 +41,7 @@ test("sets a password from a link and signs in", async ({ page }) => {
   await page.getByLabel("Dienstliche E-Mail-Adresse").fill("link@test.invalid");
   await page.getByLabel("Passwort").fill(password);
   await page.getByRole("button", { name: "Anmelden" }).click();
-  await expect(page).toHaveURL(/\/intern$/u);
+  await expect(page).toHaveURL(/\/intern\/heute$/u);
 });
 
 /** The disclosure an entry or a form rests behind, addressed by its summary line. */
@@ -150,11 +150,22 @@ test("adopts the progression of an existing course into a new one", async ({ pag
   await expect(page.getByText("Planungsstand ist vollständig.")).toBeVisible();
 });
 
-/* The overview is asserted here rather than in a test of its own: every sign-in beyond the rate limit costs the suite a
-   waited-out window. This test already signs in as the editor, and what the overview shows it — the own areas and
-   nothing beyond them — is the same boundary its remaining steps read from the other end. */
+/* The day page and the overview are asserted here rather than in tests of their own: every sign-in beyond the rate
+   limit costs the suite a waited-out window. This test already signs in as the editor, and what both pages show it —
+   the own areas and nothing beyond them — is the same boundary its remaining steps read from the other end. */
 test("opens on the own areas and keeps foreign courses read-only, confirming with the keyboard", async ({ page }) => {
   await signIn(page, "editor@test.invalid");
+  await expect(page.getByRole("heading", { level: 1, name: "Heute" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Heute" })).toHaveAttribute("aria-current", "page");
+  const dayRow = page.getByRole("listitem").filter({ has: page.getByRole("link", { name: /^TIF26/u }) });
+  await expect(dayRow.getByRole("link")).toHaveAttribute("href", "/intern/kurse/e2e-course?kalender=woche");
+  /* The seeded course code is no DHBW calendar name, so its row settles on the not-found state without a request
+     leaving the suite — what is asserted is that the row resolves rather than staying on its loading line. */
+  await expect(dayRow.getByText("Kein Vorlesungskalender gefunden.")).toBeVisible();
+  await expect(page.getByText("FRM26E2E")).toHaveCount(0);
+
+  await page.getByRole("link", { name: "Übersicht" }).first().click();
+  await expect(page).toHaveURL(/\/intern$/u);
   await expect(page.getByRole("heading", { name: "E2E Testinformatik" })).toBeVisible();
   /* The publishing test renames the course, so only the part of the code that survives it is matched. */
   await expect(page.getByRole("link", { name: /^TIF26/u })).toBeVisible();

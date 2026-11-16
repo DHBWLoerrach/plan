@@ -9,6 +9,9 @@ Intern zeigt dieselbe Kursseite außerdem den aktuellen Vorlesungskalender aus d
 DHBW-Kalendersystem ausschließlich lesend an. Seine Kalendertermine werden nicht
 in den Planungsstand übernommen und nicht mit ihm veröffentlicht. Woche, Monat und
 chronologische Liste sind direkt adressierbare Ansichten desselben externen Feeds.
+Nach der Anmeldung öffnet die Seite **Heute** (`/intern/heute`): Sie zeigt für jeden
+Kurs der eigenen Bereiche, dessen Studienzeitraum den heutigen Tag umfasst, die
+Kalendertermine des Tages aus demselben Feed.
 Die Blockplanung ist der erste Baustein einer breiter angelegten
 Anwendung für den Studienbetrieb.
 
@@ -88,7 +91,9 @@ enthalten. Ohne Angabe verwendet die Anwendung die oben gezeigte Adresse. Eine A
 ohne diesen Platzhalter wird beim Start abgewiesen und nicht als vorübergehend nicht
 erreichbarer Kalender ausgegeben. Der
 Vorlesungskalender ist nur für interne Konten mit systemweiter Kurseinsicht erreichbar;
-erfolgreiche Feeds werden pro Anwendungsprozess zehn Minuten zwischengespeichert.
+Feeds werden pro Anwendungsprozess zehn Minuten zwischengespeichert, ebenso die Auskunft,
+dass es für einen Kurs keinen Feed gibt; ein nicht erreichbares Kalendersystem wird für
+eine Minute nicht erneut gefragt.
 
 Das erste Systemadministrationskonto anlegen — der Befehl gibt den einmalig
 verwendbaren Passwortlink auf der Standardausgabe aus:
