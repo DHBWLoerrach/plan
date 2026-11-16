@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useActionState, useEffect, useId, useRef, useState, type MouseEvent, type ReactNode } from "react";
 
 import {
   type PlanFormState,
@@ -52,44 +52,55 @@ function shownDay(value: FormDataEntryValue | null): string {
 }
 
 /**
- * The mark of an entry that can be opened for editing. It is drawn rather than written: the word „Bearbeiten“ on every
- * line would outweigh the plan it stands in. It is an addition for the eye only — the control around it carries the
- * whole action in its name.
- */
-function EditMark() {
-  return <svg className="edit-mark" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false">
-    <path d="M11.3 1.7a1.2 1.2 0 0 1 1.7 0l1.3 1.3a1.2 1.2 0 0 1 0 1.7L5.6 13.4 2 14l.6-3.6z" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
-    <path d="M10 3l3 3" fill="none" stroke="currentColor" strokeWidth="1.4" />
-  </svg>;
-}
-
-/**
  * Which entry of the plan is open, and the way back to the line it was opened from. Only one is open at a time: the
  * page at rest is the plan, and editing adds exactly one form to it. Closing by the button of the form returns focus
  * to the control of that line, found by the attribute it carries rather than remembered — the list is rendered anew
  * after every save and the element that was clicked may no longer be the one that is there.
  */
 function useOpenEntry() {
-  const [openKey, setOpenKey] = useState<string | null>(null);
+  const [open, setOpen] = useState<{ key: string; period: boolean } | null>(null);
   const panelId = useId();
   return {
-    openKey,
+    openKey: open?.key ?? null,
+    /** Whether the open entry was asked for by its period, see `openWithPeriod`. */
+    periodAsked: open?.period ?? false,
     panelId,
-    toggle: (key: string) => setOpenKey((current) => (current === key ? null : key)),
+    toggle: (key: string) => setOpen((current) => (current?.key === key ? null : { key, period: false })),
+    /**
+     * Opens an entry by the period its line shows. Whoever aims at the dates means to change the dates, so the form
+     * arrives with its period laid open — and an entry that is open already stays open and only lays it open, since
+     * closing would be the opposite of what was asked for.
+     */
+    openWithPeriod: (key: string) => setOpen({ key, period: true }),
     close: () => {
-      if (openKey) document.querySelector<HTMLElement>(`[data-entry="${CSS.escape(openKey)}"]`)?.focus();
-      setOpenKey(null);
+      if (open) document.querySelector<HTMLElement>(`[data-entry="${CSS.escape(open.key)}"]`)?.focus();
+      setOpen(null);
     },
   };
 }
 type OpenEntry = ReturnType<typeof useOpenEntry>;
 
-/** The control at the end of a line that opens its form. Its name says what is opened; visibly it is the mark alone. */
-function EditControl({ entryKey, entry, name }: { entryKey: string; entry: OpenEntry; name: string }) {
+/**
+ * The way into the form of a line, set on what the line is about: the type of a phase, the title of a date, the day of
+ * a change. It is written rather than drawn beside the entry — a column of tool buttons down the right edge would
+ * give every line the same weight and turn the plan into a list of controls. The text shows at rest that it can be
+ * activated, and the control covers its whole line, so the line is what is aimed at. `action` completes the name for
+ * assistive technology, which hears the visible text first.
+ */
+function EntryControl({ entryKey, entry, action, periodAware, children }: { entryKey: string; entry: OpenEntry; action: string; periodAware?: boolean; children: ReactNode }) {
   const open = entry.openKey === entryKey;
-  return <button type="button" className="icon-action" data-entry={entryKey}
-    aria-expanded={open} aria-controls={open ? entry.panelId : undefined} onClick={() => entry.toggle(entryKey)}>
-    <EditMark /><span className="sr-only">{name}</span>
+  /* The control covers its whole line, the period included, so where the pointer came down is read from the event:
+     within the period of the line it asks for the dates. Activated by keyboard the event carries no position and the
+     entry opens the plain way. */
+  function activate(event: MouseEvent<HTMLButtonElement>) {
+    const period = periodAware ? event.currentTarget.closest(".plan-line")?.querySelector(".plan-line__when")?.getBoundingClientRect() : null;
+    const onPeriod = period && event.detail > 0
+      && event.clientX >= period.left && event.clientX <= period.right && event.clientY >= period.top && event.clientY <= period.bottom;
+    if (onPeriod) entry.openWithPeriod(entryKey); else entry.toggle(entryKey);
+  }
+  return <button type="button" className="entry-action" data-entry={entryKey}
+    aria-expanded={open} aria-controls={open ? entry.panelId : undefined} onClick={activate}>
+    {children}<span className="sr-only">, {action}</span>
   </button>;
 }
 
@@ -174,7 +185,14 @@ function PhaseCreateForm({ course, transferTargets }: { course: PlanCourse; tran
   </form>;
 }
 
-function PhaseEditForm({ phase, course }: { phase: PlanPhase; course: PlanCourse }) {
+/**
+ * `periodOpen` shows the period right away. Between two adjoining phases the day is moved as the change they share,
+ * on the line between them, so the period rests closed here — offered twice it would be two ways to the same date.
+ * It opens where no such line exists: at the start of the first phase, the end of the last, and beside a gap or an
+ * overlap, where the phase itself is the only place its dates can be corrected. `periodAsked` lays it open as well:
+ * the form was opened by the period of its line, and the note inside then says where the day is moved as a rule.
+ */
+function PhaseEditForm({ phase, course, periodOpen, periodAsked }: { phase: PlanPhase; course: PlanCourse; periodOpen: boolean; periodAsked: boolean }) {
   const [updateState, updateAction, updating] = useActionState<PlanFormState<PhaseField, PhaseDetails>, FormData>(updatePhaseAction, {});
   const [deleteState, deleteAction, deleting] = useActionState<PlanFormState, FormData>(deletePhaseAction, {});
   const ids = { semester: useId(), type: useId(), error: useId() };
@@ -191,8 +209,18 @@ function PhaseEditForm({ phase, course }: { phase: PlanPhase; course: PlanCourse
       </select>
       <label htmlFor={ids.type}>Phasentyp</label>
       <select id={ids.type} name="type" defaultValue={values?.type ?? phase.type} required aria-invalid={updateState.field === "type" || undefined} aria-describedby={updateState.field === "type" ? ids.error : undefined}>{phaseTypes.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}</select>
-      <DateField label="Startdatum" name="startDate" required defaultValue={values?.startDate ?? phase.startDate} invalid={updateState.field === "startDate"} errorId={ids.error} />
-      <DateField label="Enddatum" name="endDate" required defaultValue={values?.endDate ?? phase.endDate} invalid={updateState.field === "endDate"} errorId={ids.error} />
+      {/* Closed, the fields stay in the form and are submitted unchanged. A field emptied and then closed away would
+          stop the browser from submitting without anything to show for it — it cannot point at a control that is not
+          displayed. The section therefore opens the moment one of its fields is found invalid, which is before the
+          browser looks for the control to focus and to hang its message on. */}
+      <details className="form-more" onInvalidCapture={(event) => { event.currentTarget.open = true; }} open={periodOpen || periodAsked || updateState.field === "startDate" || updateState.field === "endDate" || undefined}>
+        <summary>Zeitraum ändern</summary>
+        <div className="account-form">
+          {periodOpen ? null : <p className="field-hint">Den Wechsel zur Nachbarphase verschieben Sie in der Zeile zwischen den beiden Kursphasen.</p>}
+          <DateField label="Startdatum" name="startDate" required defaultValue={values?.startDate ?? phase.startDate} invalid={updateState.field === "startDate"} errorId={ids.error} />
+          <DateField label="Enddatum" name="endDate" required defaultValue={values?.endDate ?? phase.endDate} invalid={updateState.field === "endDate"} errorId={ids.error} />
+        </div>
+      </details>
       {published
         ? <ConfirmAction openLabel="Kursphase prüfen" heading="Öffentliche Kursphase ändern"
             consequence={`Die Kursphase von ${course.code} wird geändert.`}
@@ -375,11 +403,12 @@ function EventLine({ event, course, entry }: { event: PlanEvent; course: PlanCou
     <div className="plan-line">
       <span className="plan-line__when">{period}</span>
       <span className="plan-line__what">
-        <strong>{event.title}</strong> <span className="plan-event__category">{eventCategoryLabel(event.category)}</span>
+        {course.editable
+          ? <EntryControl entryKey={key} entry={entry} action={`${period}, Termin bearbeiten`}>{event.title}</EntryControl>
+          : <strong>{event.title}</strong>} <span className="plan-event__category">{eventCategoryLabel(event.category)}</span>
         {event.provisional ? <span className="provisional">Vorläufig</span> : null}
         {event.description ? <span className="plan-event__description">{event.description}</span> : null}
       </span>
-      {course.editable ? <EditControl entryKey={key} entry={entry} name={`Termin bearbeiten: ${event.title}, ${period}`} /> : null}
     </div>
     {course.editable && entry.openKey === key
       ? <EditPanel id={entry.panelId} onClose={entry.close} heading={<>Termin bearbeiten: {event.title} · {period}</>}>
@@ -391,7 +420,7 @@ function EventLine({ event, course, entry }: { event: PlanEvent; course: PlanCou
 /**
  * The planning state of one course as one chronological reading: its semesters, in each the phases, in each phase the
  * dates that begin there, and between two phases the day the course changes over. Every line is at once the entry and
- * the way into editing it; the form opens directly below the line it belongs to.
+ * the way into editing it — through the word it is about, with no tool beside it — and the form opens directly below.
  *
  * The parallel courses of the study program are not drawn beside it. They are told apart only where they differ —
  * once in a summary above the plan and again in the semester concerned — and stand in full in the comparison view.
@@ -413,6 +442,9 @@ export function CoursePlanWorkspace({ course, parallels, phases, events }: { cou
   const excludedTargets = parallels.filter((candidate) => candidate.editable && candidate.state === "UNPUBLISHED" && !phaseTargets.includes(candidate));
   const eventTargets = parallels.filter((candidate) => candidate.editable);
 
+  // The phases a change leads into: together with a change after it, such a phase has both of its days on a line of their own.
+  const changeBefore = new Set(progression.semesters.flatMap((semester) => semester.phases)
+    .filter((line) => line.junction?.kind === "change" && line.next).map((line) => line.next!.id));
   const openKeys = new Set<string>();
   for (const semester of progression.semesters) for (const line of semester.phases) {
     openKeys.add(`phase:${line.phase.id}`);
@@ -424,6 +456,8 @@ export function CoursePlanWorkspace({ course, parallels, phases, events }: { cou
 
   return <section className="course-plan" aria-labelledby="plan-heading">
     <h2 id="plan-heading" className="eyebrow">Kursverlauf und Termine</h2>
+    {/* A dotted line under a word is also how a page marks a term it explains. Said once, it is read as what it is here. */}
+    {course.editable ? <p className="course-plan__hint">Gepunktet unterstrichene Angaben lassen sich bearbeiten.</p> : null}
     {/* The diagram carries its statement through area, length and position, so it stays hidden from assistive
         technology: the list below holds the same plan in words and with its dates (BARRIEREFREIHEIT.md). */}
     {ownPhases.length ? <div className="plan-overview" aria-hidden="true"><PlanTimeline courses={[course]} phases={ownPhases} /></div> : null}
@@ -447,12 +481,15 @@ export function CoursePlanWorkspace({ course, parallels, phases, events }: { cou
             <div className="plan-phase" data-phase={phase.type === "THEORY" ? "theory" : "practice"}>
               <div className="plan-line">
                 <span className="plan-line__when">{period}</span>
-                <span className="plan-line__what"><strong>{phaseTypeLabel(phase.type)}</strong> <span className="plan-phase__duration">{formatPeriodDuration(phase.startDate, phase.endDate)}</span></span>
-                {course.editable ? <EditControl entryKey={key} entry={entry} name={`Kursphase bearbeiten: ${phaseTypeLabel(phase.type)}, ${period}`} /> : null}
+                <span className="plan-line__what">
+                  {course.editable
+                    ? <EntryControl entryKey={key} entry={entry} periodAware action={`${period}, Kursphase bearbeiten`}>{phaseTypeLabel(phase.type)}</EntryControl>
+                    : <strong>{phaseTypeLabel(phase.type)}</strong>} <span className="plan-phase__duration">{formatPeriodDuration(phase.startDate, phase.endDate)}</span>
+                </span>
               </div>
               {course.editable && entry.openKey === key
                 ? <EditPanel id={entry.panelId} onClose={entry.close} heading={<>Kursphase bearbeiten: {phaseTypeLabel(phase.type)} · {period}</>}>
-                  <PhaseEditForm phase={phase} course={course} />
+                  <PhaseEditForm phase={phase} course={course} periodOpen={!(changeBefore.has(phase.id) && junction?.kind === "change")} periodAsked={entry.periodAsked} />
                 </EditPanel> : null}
               {phaseEvents.length ? <ul className="plan-events">{phaseEvents.map((event) => <EventLine key={event.id} event={event} course={course} entry={entry} />)}</ul> : null}
             </div>
@@ -461,9 +498,9 @@ export function CoursePlanWorkspace({ course, parallels, phases, events }: { cou
             {junction && next ? <div className="plan-junction" data-kind={junction.kind}>
               {junction.kind === "change" ? <>
                 <div className="plan-line">
-                  <span className="plan-junction__text">{next.semester !== phase.semester ? "Semesterwechsel" : "Wechsel"} am {formatCalendarDay(junction.date, { weekday: true })}</span>
-                  {course.editable ? <EditControl entryKey={changeKey} entry={entry}
-                    name={`Wechsel verschieben: von ${phaseTypeLabel(phase.type)} zu ${phaseTypeLabel(next.type)} am ${formatCalendarDay(junction.date)}`} /> : null}
+                  <span className="plan-junction__text">{next.semester !== phase.semester ? "Semesterwechsel" : "Wechsel"} am {course.editable
+                    ? <EntryControl entryKey={changeKey} entry={entry} action={`Wechsel von ${phaseTypeLabel(phase.type)} zu ${phaseTypeLabel(next.type)} verschieben`}>{formatCalendarDay(junction.date, { weekday: true })}</EntryControl>
+                    : formatCalendarDay(junction.date, { weekday: true })}</span>
                 </div>
                 {course.editable && entry.openKey === changeKey
                   ? <EditPanel id={entry.panelId} onClose={entry.close}

@@ -310,7 +310,7 @@ test("edits a change, a phase and a date from the lines of the plan", async ({ p
   await signIn(page, "admin@test.invalid");
   await page.goto("/intern/kurse/e2e-course");
 
-  const phaseLine = page.getByRole("button", { name: /^Kursphase bearbeiten/u }).first();
+  const phaseLine = page.getByRole("button", { name: /Kursphase bearbeiten$/u }).first();
   await phaseLine.click();
   const phasePanel = page.getByRole("region", { name: /^Kursphase bearbeiten/u });
   await expect(phasePanel).toBeFocused();
@@ -319,12 +319,40 @@ test("edits a change, a phase and a date from the lines of the plan", async ({ p
   await expect(phasePanel).toHaveCount(0);
   await expect(phaseLine).toBeFocused();
 
+  /* The period of a phase between two changes rests closed inside its form. A day emptied there and closed away again
+     must not block saving out of sight: the section opens and the browser points at the field. */
+  await page.getByRole("button", { name: /Kursphase bearbeiten$/u }).nth(1).click();
+  const period = phasePanel.locator("details").filter({ hasText: "Zeitraum ändern" });
+  await expect(period).not.toHaveAttribute("open");
+  await period.locator("summary").click();
+  await phasePanel.getByLabel("Startdatum").fill("");
+  await period.locator("summary").click();
+  await expect(period).not.toHaveAttribute("open");
+  await save(phasePanel.locator("form").first(), "Kursphase prüfen", "Kursphase speichern", "Änderung speichern und veröffentlichen");
+  await expect(period).toHaveAttribute("open");
+  await expect(phasePanel.getByLabel("Startdatum")).toBeFocused();
+  await expect(phasePanel.getByRole("status")).toHaveCount(0);
+  await phasePanel.getByRole("button", { name: "Schließen" }).click();
+
+  /* Whoever aims at the dates of a phase means to change the dates: opened by its period, the form arrives with the
+     period laid open — and a form that is open already stays open. The control covers the whole line, so the pointer
+     is set down on the period rather than a locator clicked through the layer above it. */
+  const periodBox = (await page.locator(".plan-phase > .plan-line > .plan-line__when").nth(1).boundingBox())!;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    await page.mouse.click(periodBox.x + 20, periodBox.y + periodBox.height / 2);
+    await expect(phasePanel).toBeVisible();
+    await expect(period).toHaveAttribute("open");
+  }
+  await expect(phasePanel.getByText("Den Wechsel zur Nachbarphase verschieben Sie")).toBeVisible();
+  await phasePanel.getByRole("button", { name: "Schließen" }).click();
+  await expect(page.getByText("Gepunktet unterstrichene Angaben lassen sich bearbeiten.")).toBeVisible();
+
   /* The form is opened anew for every save and what it then offers is read after a reload: a message left over from
      an earlier save and the value just typed would both be there whether or not anything was stored. */
   const changePanel = page.getByRole("region", { name: /^Wechsel verschieben/u });
   const day = changePanel.getByLabel(/^Erster Tag der folgenden Kursphase/u);
   const openChange = async () => {
-    await page.getByRole("button", { name: /^Wechsel verschieben/u }).first().click();
+    await page.getByRole("button", { name: /Wechsel von \S+ zu \S+ verschieben$/u }).first().click();
     await expect(changePanel).toBeFocused();
   };
   await openChange();
@@ -351,7 +379,7 @@ test("edits a change, a phase and a date from the lines of the plan", async ({ p
   await save(createForm, "Termin prüfen", "Termin speichern", "Termin speichern");
   await expect(createForm.getByRole("status")).toContainText("gespeichert");
 
-  await page.getByRole("button", { name: /^Termin bearbeiten: Listentermin/u }).click();
+  await page.getByRole("button", { name: /^Listentermin\b.*Termin bearbeiten$/u }).click();
   const eventPanel = page.getByRole("region", { name: /^Termin bearbeiten/u });
   await expect(eventPanel).toBeFocused();
   const editForm = eventPanel.locator("form").first();

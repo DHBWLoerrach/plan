@@ -804,6 +804,7 @@ p[role="status"] { margin: 0; color: var(--success); }
 /* The planning state of one course: a diagram of the whole, then the same plan as one list to read and to edit. */
 .plan-detail .course-plan { margin-top: 2.25rem; }
 .course-plan > .eyebrow { margin-bottom: .2rem; }
+.course-plan__hint { margin: 0; color: var(--gray-strong); font-size: .9rem; }
 .course-plan .timeline-codes { display: none; }
 /* What the parallel courses do differently, once above the plan: a remark, not a part of the plan. */
 .plan-compare { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .4rem 1.5rem; margin-top: 1rem; padding: .7rem 1rem; border: 1px solid var(--line); background: #fff; font-size: .95rem; }
@@ -817,35 +818,30 @@ p[role="status"] { margin: 0; color: var(--success); }
 .plan-phase { border: 1px solid var(--line); border-left: 4px solid; background: #fff; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 .plan-phase[data-phase="theory"] { border-left-color: var(--theory-edge); }
 .plan-phase[data-phase="practice"] { border-left-color: var(--practice-edge); }
-.plan-phase > .plan-line { min-height: 2.75rem; padding: .35rem .5rem .35rem 1rem; }
+.plan-phase > .plan-line { min-height: 2.75rem; padding: .35rem 1rem; }
 .plan-phase[data-phase="theory"] > .plan-line { background: var(--theory); }
 .plan-phase[data-phase="practice"] > .plan-line { background: var(--practice); }
-/* One line of the plan: when, what, and — where the course may be edited — the way into its form at the right edge.
-   The first column keeps one width down the whole list, so periods and days stand under each other. */
-.plan-line { display: grid; grid-template-columns: 13.5rem minmax(0, 1fr) auto; align-items: center; gap: .2rem 1rem; }
+/* One line of the plan: when and what. The first column keeps one width down the whole list, so periods and days
+   stand under each other. */
+.plan-line { display: grid; grid-template-columns: 13.5rem minmax(0, 1fr); align-items: center; gap: .2rem 1rem; }
 .plan-line__when { font-variant-numeric: tabular-nums; }
 .plan-phase__duration, .plan-event__category { margin-left: .4rem; color: var(--gray-strong); font-size: .9rem; }
 /* The dates of a phase stand inside its block, set in from its head, so they read as belonging to it. */
 .plan-events { padding: .15rem 0; }
-.plan-event > .plan-line { min-height: 2.5rem; padding: .25rem .5rem .25rem 1rem; }
+.plan-event > .plan-line { min-height: 2.5rem; padding: .25rem 1rem; }
 .plan-event + .plan-event { border-top: 1px solid var(--line); }
 .plan-event .provisional { display: inline-block; margin: 0 0 0 .5rem; vertical-align: .1em; }
 .plan-event__description { display: block; color: var(--gray); font-size: .9rem; }
 .plan-events--unplaced { border: 1px solid var(--line); background: #fff; }
 /* The day the course changes over stands between the two phases it belongs to, quieter than either: a seam, with the
    one control that moves it. Where the phases do not adjoin, the seam says what is wrong instead. */
-.plan-junction { padding: .1rem .5rem .1rem 1rem; color: var(--gray-strong); font-size: .9rem; }
-.plan-junction > .plan-line { grid-template-columns: minmax(0, 1fr) auto; min-height: 2.25rem; }
+.plan-junction { color: var(--gray-strong); font-size: .9rem; }
+.plan-junction > .plan-line { grid-template-columns: minmax(0, 1fr); min-height: 2.25rem; padding: .1rem 1rem; }
 .plan-junction__text::before { content: ""; display: inline-block; width: 1.25rem; margin-right: .6rem; border-top: 1px solid var(--practice-edge); vertical-align: middle; }
-.plan-junction__issue { margin: .4rem 0; padding: .5rem .8rem; border: 1px solid var(--warning-border); border-left-width: 4px; background: var(--warning-bg); color: var(--ink); }
-.plan-junction .edit-panel, .plan-phase .edit-panel { margin: .4rem 0 .6rem; }
+.plan-junction__issue { margin: .4rem 1rem; padding: .5rem .8rem; border: 1px solid var(--warning-border); border-left-width: 4px; background: var(--warning-bg); color: var(--ink); }
+.plan-junction .edit-panel, .plan-phase .edit-panel { margin: .4rem .6rem .6rem; }
 .plan-phase > .edit-panel, .plan-event > .edit-panel { margin-inline: .6rem; }
-@media (max-width: 40rem) {
-  .plan-line { grid-template-columns: minmax(0, 1fr) auto; }
-  .plan-line__when { grid-column: 1; }
-  .plan-line__what { grid-column: 1; grid-row: 2; }
-  .plan-line > .icon-action { grid-row: 1 / span 2; grid-column: 2; }
-}
+@media (max-width: 40rem) { .plan-line { grid-template-columns: minmax(0, 1fr); } }
 /* Adding stands apart from the entries it adds to, marked the way every editing surface of this application is. */
 .plan-create { display: grid; gap: .5rem; margin-top: 2rem; }
 .plan-create .disclosure { border-left: 4px solid var(--red); }
@@ -856,14 +852,24 @@ p[role="status"] { margin: 0; color: var(--success); }
 .course-settings h2 { margin: 0 0 .5rem; font-size: 1.1rem; font-weight: 700; }
 .course-settings .account-form + h2 { margin-top: 2rem; }
 
-/* The mark of a line that can be opened for editing, and the control that carries it: a target of its own size at the
-   right edge of the line, quiet until it is aimed at. The mark holds 3:1 against the phase fills (WCAG 1.4.11). */
-.edit-mark { display: inline-block; flex: none; vertical-align: -.1em; }
-.icon-action { display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; padding: 0; border: 1px solid transparent; background: none; color: var(--gray-strong); cursor: pointer; }
-.icon-action:hover { border-color: var(--field-border); background: #fff; color: var(--red-dark); }
-.icon-action:focus-visible { outline: 3px solid #1a1a1a; outline-offset: 2px; }
-.icon-action[aria-expanded="true"] { border-color: var(--red); background: #fff; color: var(--red-dark); }
-@media print { .icon-action, .plan-create, .course-settings { display: none; } }
+/* The way into the form of a line is the word the line is about. A dotted line under it says at rest that it can be
+   changed, where a solid one would promise a link leading away; under the pointer and while its form is open it turns
+   solid in the colour of an action. The control covers its whole line through a layer of its own, so the line is the
+   target and answers the pointer as a whole. */
+.plan-line { position: relative; }
+.entry-action { padding: 0; border: 0; background: none; color: inherit; font: inherit; font-weight: 700; text-align: left; cursor: pointer;
+  text-decoration: underline dotted var(--gray-strong) 1px; text-underline-offset: .3rem; }
+.entry-action::after { content: ""; position: absolute; inset: 0; }
+.plan-line:hover .entry-action, .entry-action[aria-expanded="true"] { text-decoration-style: solid; text-decoration-color: var(--red); text-decoration-thickness: 2px; }
+.plan-line:has(.entry-action):hover { box-shadow: inset 0 0 0 1px var(--field-border); }
+.entry-action:focus-visible { outline: none; }
+.entry-action:focus-visible::after { outline: 3px solid #1a1a1a; outline-offset: -3px; }
+.plan-junction .entry-action { font-weight: 600; }
+@media print { .entry-action { text-decoration: none; } .plan-create, .course-settings { display: none; } }
+/* The part of a form that is rarely needed, behind one line inside it. */
+.form-more > summary { width: max-content; padding: .3rem 0; color: var(--gray-strong); font-size: .9rem; font-weight: 700; cursor: pointer; }
+.form-more > summary:focus-visible { outline: 3px solid #1a1a1a; outline-offset: 2px; }
+.form-more > .account-form { margin-top: .4rem; }
 
 /* The form of the entry being edited, directly below its line and marked the way every editing surface of this
    application is. It takes focus when it opens; the outline of that programmatic focus would frame the whole form and
