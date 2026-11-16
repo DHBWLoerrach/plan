@@ -9,11 +9,6 @@ import { groupComparableCourses, groupComparableEvents, type ComparableCourseGro
 import { phaseTypeLabel } from "@/lib/domain/phase-type";
 import { buildSemesterMatrix, deriveEventSemester, noPhaseLabel, type CoursePlan, type CourseEvent, type CoursePhase, type MatrixRow } from "@/lib/domain/publication";
 
-/**
- * How a matrix cell shows the phase label the domain produced: the full label stays in the cell for assistive
- * technology, while sighted readers see the abbreviation the legend resolves. Fill and hatching only support that
- * text, they never carry the phase alone (BARRIEREFREIHEIT.md).
- */
 function phaseCell(cell: string): { phase: string; abbreviation: string } {
   if (cell === phaseTypeLabel("THEORY")) return { phase: "theory", abbreviation: "T" };
   if (cell === phaseTypeLabel("PRACTICE")) return { phase: "practice", abbreviation: "P" };
@@ -80,8 +75,7 @@ function PhaseCell({ cell, group, headers, rowSpan = 1, duration }: { cell: stri
  * not read as settled (ADR 0011). Only the internal views pass it, and there for every such column including the one
  * being edited — a public cut shows published courses only and marks nothing.
  *
- * `children` are written into the same section below the matrix. The internal course page puts the editable phase
- * list of its course there, so everything about course progressions stands under one heading.
+ * `children` are written into the same section below the matrix.
  */
 export function PlanMatrix({ courses, phases, primaryCourseId, unpublishedCourseIds, children }: { courses: CoursePlan[]; phases: CoursePhase[]; primaryCourseId?: string; unpublishedCourseIds?: string[]; children?: ReactNode }) {
   const unpublished = new Set(unpublishedCourseIds);
@@ -279,21 +273,18 @@ export function PlanMatrix({ courses, phases, primaryCourseId, unpublishedCourse
 
 /**
  * The examination-relevant dates of every course a view shows, in one chronological order. It is a presentation and
- * never an editor: where a course is edited, its own dates are listed below this under the same heading, passed in as
- * `children`.
+ * never an editor: the dates of a course are changed on its own page.
  */
-export function PlanEventTable({ courses, phases, events, chronology = true, children }: { courses: CoursePlan[]; phases: CoursePhase[]; events: CourseEvent[]; chronology?: boolean; children?: ReactNode }) {
+export function PlanEventTable({ courses, phases, events, emptyNote = "Für diesen Plan sind keine prüfungsrelevanten Termine veröffentlicht.", children }: { courses: CoursePlan[]; phases: CoursePhase[]; events: CourseEvent[]; emptyNote?: string; children?: ReactNode }) {
   const courseCodes = new Map(courses.map((course) => [course.id, course.code]));
 
   return <section aria-labelledby="events-heading">
       <div className="section-heading">
         <p className="eyebrow">Prüfungsrelevante Termine</p>
         <h2 id="events-heading">Termine</h2>
-        {/* The chronology is dropped where it would repeat, entry for entry, the editable list of one course's own
-            dates below it: with nothing standing beside that course, both orders hold exactly the same dates. */}
-        {chronology ? <p>Chronologisch über alle Semester, mit dem je betroffenem Kurs abgeleiteten Semester.</p> : null}
+        <p>Chronologisch über alle Semester, mit dem je betroffenem Kurs abgeleiteten Semester.</p>
       </div>
-      {!chronology ? null : events.length ? <div className="matrix-wrap" role="region" aria-labelledby="events-table-caption" tabIndex={0}>
+      {events.length ? <div className="matrix-wrap" role="region" aria-labelledby="events-table-caption" tabIndex={0}>
         <table className="event-table">
           <caption id="events-table-caption">Prüfungsrelevante Termine in chronologischer Reihenfolge</caption>
           <thead><tr>
@@ -317,7 +308,7 @@ export function PlanEventTable({ courses, phases, events, chronology = true, chi
             })}</ul></td>
           </tr>)}</tbody>
         </table>
-      </div> : <p className="empty-note">Für diesen Plan sind keine prüfungsrelevanten Termine veröffentlicht.</p>}
+      </div> : <p className="empty-note">{emptyNote}</p>}
       {children}
     </section>;
 }

@@ -235,7 +235,6 @@ const planCourseColumns = `course.id, course.code, course.study_start AS studySt
  * seeing them is the point of reading system wide, writing to them stays refused (ADR 0011).
  */
 function comparisonCourseRows(sqlite: Database.Database, course: PlanCourseRow, scope: ComparisonScope): PlanCourseRow[] {
-  if (scope === "none") return [];
   const restriction = scope === "program" ? "AND course.program_id = ?" : scope === "area" ? "AND program.area_id = ?" : "";
   const parameters = scope === "program" ? [course.programId] : scope === "area" ? [course.areaId] : [];
   return sqlite.prepare(`SELECT ${planCourseColumns}

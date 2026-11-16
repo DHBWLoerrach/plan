@@ -6,7 +6,7 @@ import { sqlite } from "@/lib/db";
 import { FieldError } from "@/lib/domain/field-error";
 import { getActiveAccount } from "@/lib/internal-auth";
 import { createCourseEvent, deleteCourseEvent, updateCourseEvent, type EventField, type EventInput } from "@/lib/services/event-admin";
-import { createCoursePhases, deleteCoursePhase, updateCoursePhase, type PhaseDetails, type PhaseField, type PhaseInput } from "@/lib/services/phase-admin";
+import { createCoursePhases, deleteCoursePhase, moveCoursePhaseChange, updateCoursePhase, type PhaseChangeField, type PhaseDetails, type PhaseField, type PhaseInput } from "@/lib/services/phase-admin";
 import { assertTransferTargets } from "@/lib/services/plan-transfer";
 
 export type PlanFormState<TField extends string = string, TValues = never> = {
@@ -108,6 +108,22 @@ export async function updatePhaseAction(_: PlanFormState<PhaseField, PhaseDetail
     return { success: "Die Kursphase wurde gespeichert." };
   } catch (error) {
     return rejected<PhaseField, PhaseDetails>(error, details);
+  }
+}
+
+export async function movePhaseChangeAction(_: PlanFormState<PhaseChangeField, { date: string }>, formData: FormData): Promise<PlanFormState<PhaseChangeField, { date: string }>> {
+  const date = String(formData.get("date") ?? "");
+  try {
+    moveCoursePhaseChange(sqlite, {
+      accountId: await requireAccountId(),
+      earlierPhaseId: String(formData.get("earlierPhaseId") ?? ""),
+      laterPhaseId: String(formData.get("laterPhaseId") ?? ""),
+      date,
+    });
+    revalidatePlan();
+    return { success: "Der Wechsel wurde gespeichert." };
+  } catch (error) {
+    return rejected<PhaseChangeField, { date: string }>(error, { date });
   }
 }
 

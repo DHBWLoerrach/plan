@@ -2,7 +2,7 @@ import Database from "better-sqlite3";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { FieldError } from "@/lib/domain/field-error";
-import { createCoursePhases, deleteCoursePhase, updateCoursePhase } from "@/lib/services/phase-admin";
+import { createCoursePhases, deleteCoursePhase, moveCoursePhaseChange, updateCoursePhase } from "@/lib/services/phase-admin";
 import { applySchema } from "@/test/schema";
 
 const databases: Database.Database[] = [];
@@ -203,5 +203,77 @@ describe("changes to a published course", () => {
 
     expect(sqlite.prepare("SELECT count(*) FROM course_phases").pluck().get()).toBe(6);
     expect(sqlite.prepare("SELECT start_date FROM course_phases WHERE id = 'phase-2'").pluck().get()).toBe("2027-04-01");
+  });
+});
+
+/* The day a course changes over is one fact carried by two phases. It is moved as that one fact — for an unpublished
+   course too, where nothing else would keep the two rows together. */
+describe("moveCoursePhaseChange", () => {
+  function adjoining(sqlite: Database.Database) {
+    sqlite.exec(`INSERT INTO course_phases VALUES
+      ('phase-1', 'course', 1, 'THEORY', '2026-10-01', '2026-12-20'),
+      ('phase-2', 'course', 1, 'PRACTICE', '2026-12-21', '2027-03-31');`);
+  }
+  const stored = (sqlite: Database.Database) => sqlite.prepare("SELECT id, start_date AS startDate, end_date AS endDate FROM course_phases ORDER BY id").all();
+  const move = (sqlite: Database.Database, date: string, ids = { earlierPhaseId: "phase-1", laterPhaseId: "phase-2" }) =>
+    moveCoursePhaseChange(sqlite, { accountId: "editor", ...ids, date, now: new Date("2026-05-05T10:00:00.000Z") });
+
+  it("moves the end of the earlier and the start of the later phase together and stamps the course", () => {
+    const sqlite = database();
+    adjoining(sqlite);
+
+    move(sqlite, "2027-01-04");
+
+    expect(stored(sqlite)).toEqual([
+      { id: "phase-1", startDate: "2026-10-01", endDate: "2027-01-03" },
+      { id: "phase-2", startDate: "2027-01-04", endDate: "2027-03-31" },
+    ]);
+    expect(sqlite.prepare("SELECT updated_at FROM courses WHERE id = 'course'").pluck().get()).toBe("2026-05-05T10:00:00.000Z");
+  });
+
+  it("leaves each of the two phases at least one day", () => {
+    const sqlite = database();
+    adjoining(sqlite);
+
+    expect(rejectedField(() => move(sqlite, "2026-10-01"))).toBe("date");
+    expect(rejectedField(() => move(sqlite, "2027-04-01"))).toBe("date");
+    move(sqlite, "2026-10-02");
+    move(sqlite, "2027-03-31");
+    expect(stored(sqlite)).toEqual([
+      { id: "phase-1", startDate: "2026-10-01", endDate: "2027-03-30" },
+      { id: "phase-2", startDate: "2027-03-31", endDate: "2027-03-31" },
+    ]);
+  });
+
+  it("refuses a day that is not a calendar day and changes nothing", () => {
+    const sqlite = database();
+    adjoining(sqlite);
+
+    expect(rejectedField(() => move(sqlite, "2027-02-30"))).toBe("date");
+    expect(stored(sqlite)).toEqual([
+      { id: "phase-1", startDate: "2026-10-01", endDate: "2026-12-20" },
+      { id: "phase-2", startDate: "2026-12-21", endDate: "2027-03-31" },
+    ]);
+  });
+
+  // The form was drawn from a state that someone else may have changed since.
+  it("refuses two phases that do not adjoin, or that are not both phases of the course", () => {
+    const sqlite = database();
+    adjoining(sqlite);
+    sqlite.exec("UPDATE course_phases SET start_date = '2026-12-28' WHERE id = 'phase-2'");
+
+    expect(() => move(sqlite, "2027-01-04")).toThrow("grenzen nicht mehr aneinander");
+    expect(() => move(sqlite, "2027-01-04", { earlierPhaseId: "fehlt", laterPhaseId: "phase-2" })).toThrow("nicht gefunden");
+    expect(() => move(sqlite, "2027-01-04", { earlierPhaseId: "phase-1", laterPhaseId: "fehlt" })).toThrow("nicht gefunden");
+  });
+
+  it("moves the change of a published course as well and keeps its plan complete", () => {
+    const sqlite = database();
+    publishCompleteCourse(sqlite);
+
+    move(sqlite, "2027-04-08");
+
+    expect(sqlite.prepare("SELECT end_date FROM course_phases WHERE id = 'phase-1'").pluck().get()).toBe("2027-04-07");
+    expect(sqlite.prepare("SELECT start_date FROM course_phases WHERE id = 'phase-2'").pluck().get()).toBe("2027-04-08");
   });
 });

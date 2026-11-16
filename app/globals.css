@@ -791,12 +791,93 @@ p[role="status"] { margin: 0; color: var(--success); }
 }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
 
-.entry-list { display: grid; gap: .5rem; margin: 0; padding: 0; list-style: none; }
-.entry-list > li { background: #fff; }
-.entry-list > li > p { margin: 0; padding: .9rem 1rem; border: 1px solid var(--line); }
+/* The state of the course in one line under its title: the statement on the left, the one step on the right. The
+   confirmation of that step needs the whole width, so the action takes the line to itself while it is open. */
+.plan-detail .course-status { margin-top: 1.25rem; padding: .8rem 1rem; border: 1px solid var(--line); border-left: 4px solid var(--gray-strong); background: var(--surface); }
+.course-status__line { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .6rem 1.5rem; }
+.course-status__line > p { flex: 1 1 20rem; margin: 0; }
+.course-status__action { display: grid; gap: .5rem; }
+.course-status__action:has(.confirm-region:not([hidden])) { flex: 1 1 100%; }
+.course-status__action p { margin: 0; }
+.course-status .issue-list { margin-top: .5rem; }
 
-/* An entry rests as a line and opens into the form belonging to it. The behaviour is entirely the browser's; what is
-   set here is the line, so it reads as one control rather than as a heading with a stray marker beside it. */
+/* The planning state of one course: a diagram of the whole, then the same plan as one list to read and to edit. */
+.plan-detail .course-plan { margin-top: 2.25rem; }
+.course-plan > .eyebrow { margin-bottom: .2rem; }
+.course-plan .timeline-codes { display: none; }
+/* What the parallel courses do differently, once above the plan: a remark, not a part of the plan. */
+.plan-compare { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .4rem 1.5rem; margin-top: 1rem; padding: .7rem 1rem; border: 1px solid var(--line); background: #fff; font-size: .95rem; }
+.plan-compare ul { flex: 1 1 24rem; margin: 0; padding: 0; list-style: none; }
+.plan-detail .plan-semester { margin-top: 1.75rem; }
+.plan-semester h3 { margin: 0 0 .5rem; font-size: 1.15rem; font-weight: 800; letter-spacing: -.01em; }
+.plan-deviation { margin: 0 0 .5rem; color: var(--gray-strong); font-size: .9rem; }
+.plan-entries, .plan-events { margin: 0; padding: 0; list-style: none; }
+/* A phase is a block in the fill and contour the diagram above draws it in, so the page states once what a phase type
+   looks like. Its type is written out in every block: the fill only supports the word (BARRIEREFREIHEIT.md). */
+.plan-phase { border: 1px solid var(--line); border-left: 4px solid; background: #fff; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+.plan-phase[data-phase="theory"] { border-left-color: var(--theory-edge); }
+.plan-phase[data-phase="practice"] { border-left-color: var(--practice-edge); }
+.plan-phase > .plan-line { min-height: 2.75rem; padding: .35rem .5rem .35rem 1rem; }
+.plan-phase[data-phase="theory"] > .plan-line { background: var(--theory); }
+.plan-phase[data-phase="practice"] > .plan-line { background: var(--practice); }
+/* One line of the plan: when, what, and — where the course may be edited — the way into its form at the right edge.
+   The first column keeps one width down the whole list, so periods and days stand under each other. */
+.plan-line { display: grid; grid-template-columns: 13.5rem minmax(0, 1fr) auto; align-items: center; gap: .2rem 1rem; }
+.plan-line__when { font-variant-numeric: tabular-nums; }
+.plan-phase__duration, .plan-event__category { margin-left: .4rem; color: var(--gray-strong); font-size: .9rem; }
+/* The dates of a phase stand inside its block, set in from its head, so they read as belonging to it. */
+.plan-events { padding: .15rem 0; }
+.plan-event > .plan-line { min-height: 2.5rem; padding: .25rem .5rem .25rem 1rem; }
+.plan-event + .plan-event { border-top: 1px solid var(--line); }
+.plan-event .provisional { display: inline-block; margin: 0 0 0 .5rem; vertical-align: .1em; }
+.plan-event__description { display: block; color: var(--gray); font-size: .9rem; }
+.plan-events--unplaced { border: 1px solid var(--line); background: #fff; }
+/* The day the course changes over stands between the two phases it belongs to, quieter than either: a seam, with the
+   one control that moves it. Where the phases do not adjoin, the seam says what is wrong instead. */
+.plan-junction { padding: .1rem .5rem .1rem 1rem; color: var(--gray-strong); font-size: .9rem; }
+.plan-junction > .plan-line { grid-template-columns: minmax(0, 1fr) auto; min-height: 2.25rem; }
+.plan-junction__text::before { content: ""; display: inline-block; width: 1.25rem; margin-right: .6rem; border-top: 1px solid var(--practice-edge); vertical-align: middle; }
+.plan-junction__issue { margin: .4rem 0; padding: .5rem .8rem; border: 1px solid var(--warning-border); border-left-width: 4px; background: var(--warning-bg); color: var(--ink); }
+.plan-junction .edit-panel, .plan-phase .edit-panel { margin: .4rem 0 .6rem; }
+.plan-phase > .edit-panel, .plan-event > .edit-panel { margin-inline: .6rem; }
+@media (max-width: 40rem) {
+  .plan-line { grid-template-columns: minmax(0, 1fr) auto; }
+  .plan-line__when { grid-column: 1; }
+  .plan-line__what { grid-column: 1; grid-row: 2; }
+  .plan-line > .icon-action { grid-row: 1 / span 2; grid-column: 2; }
+}
+/* Adding stands apart from the entries it adds to, marked the way every editing surface of this application is. */
+.plan-create { display: grid; gap: .5rem; margin-top: 2rem; }
+.plan-create .disclosure { border-left: 4px solid var(--red); }
+.plan-create .notice { margin: 0; }
+.plan-create__note { margin: 0; color: var(--gray-strong); font-size: .9rem; }
+/* Course details and deletion rest behind one line at the end of the page. */
+.course-settings { margin-top: 2.5rem; }
+.course-settings h2 { margin: 0 0 .5rem; font-size: 1.1rem; font-weight: 700; }
+.course-settings .account-form + h2 { margin-top: 2rem; }
+
+/* The mark of a line that can be opened for editing, and the control that carries it: a target of its own size at the
+   right edge of the line, quiet until it is aimed at. The mark holds 3:1 against the phase fills (WCAG 1.4.11). */
+.edit-mark { display: inline-block; flex: none; vertical-align: -.1em; }
+.icon-action { display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; padding: 0; border: 1px solid transparent; background: none; color: var(--gray-strong); cursor: pointer; }
+.icon-action:hover { border-color: var(--field-border); background: #fff; color: var(--red-dark); }
+.icon-action:focus-visible { outline: 3px solid #1a1a1a; outline-offset: 2px; }
+.icon-action[aria-expanded="true"] { border-color: var(--red); background: #fff; color: var(--red-dark); }
+@media print { .icon-action, .plan-create, .course-settings { display: none; } }
+
+/* The form of the entry being edited, directly below its line and marked the way every editing surface of this
+   application is. It takes focus when it opens; the outline of that programmatic focus would frame the whole form and
+   say nothing, so it is left to the controls inside. */
+.edit-panel { margin-top: 1rem; padding: 1rem; border: 1px solid var(--line); border-left: 4px solid var(--red); background: #fff; scroll-margin-top: 1rem; }
+.edit-panel:focus { outline: none; }
+.edit-panel__head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .5rem 1rem; margin-bottom: 1rem; }
+.edit-panel__head h4 { flex: 1 1 16rem; margin: 0; font-size: 1.05rem; font-weight: 700; }
+.edit-panel > .account-form:first-of-type { margin-top: 0; }
+.edit-panel__gone { margin: 1rem 0 0; padding: 1rem; border: 1px solid var(--line); background: #fff; }
+.edit-panel__gone:focus { outline: none; }
+
+/* A form rests as a line and opens on request. The behaviour is entirely the browser's; what is set here is the
+   line, so it reads as one control rather than as a heading with a stray marker beside it. */
 .disclosure { border: 1px solid var(--line); background: #fff; }
 .disclosure > summary { display: flex; align-items: baseline; gap: .3rem .9rem; min-height: 2.75rem; padding: .75rem 1rem; cursor: pointer; list-style: none; }
 .disclosure > summary::-webkit-details-marker { display: none; }
@@ -804,8 +885,6 @@ p[role="status"] { margin: 0; color: var(--success); }
 /* Inset, because the outline of a summary flush against its own border would otherwise sit half outside the entry. */
 .disclosure > summary:focus-visible { outline: 3px solid #1a1a1a; outline-offset: -3px; }
 .disclosure__summary { flex: 1 1 auto; min-width: 0; }
-/* What opening does, where the summary does not already say it. */
-.disclosure__hint { flex: none; color: var(--red); font-size: .9rem; font-weight: 700; }
 /* Drawn rather than written: a character would be read out by assistive technology, which is already told the
    expanded state by the element itself. */
 .disclosure > summary::after {
@@ -818,14 +897,6 @@ p[role="status"] { margin: 0; color: var(--success); }
 .disclosure__body { padding: 1rem; }
 .disclosure__body > .account-form { margin-top: 0; }
 
-/* The list of course phases follows the semesters of its course, the way the matrix above it is divided into row
-   groups: one order for the same subject, and a semester without a phase says so rather than being absent. */
-.semester-group { margin-top: 1.4rem; }
-.semester-group h4 { margin: 0 0 .5rem; color: var(--gray-strong); font-size: 1rem; font-weight: 700; }
-.semester-group .empty-note { margin: 0; }
-/* Creating stands apart from the entries it adds to, marked the way every editing surface of this application is. */
-.plan-block__create { margin-top: 1.5rem; }
-.plan-block__create .disclosure { border-left: 4px solid var(--red); }
 
 .field-hint { margin: 0; color: var(--gray); font-size: .85rem; }
 

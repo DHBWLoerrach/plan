@@ -307,12 +307,6 @@ describe("coursePlanData", () => {
     }
   });
 
-  it("stands the course alone when no comparison is asked for", () => {
-    const sqlite = withParallelCourses(database());
-    const plan = coursePlanData(sqlite, editor, "course-tif", "none");
-    expect(plan?.comparison).toEqual([]);
-  });
-
   it("reads the plan of every shown course, so the matrix can draw all of its columns", () => {
     const sqlite = withParallelCourses(database());
     sqlite.exec(`INSERT INTO course_phases VALUES ('phase-a', 'course-tif', 1, 'THEORY', '2026-10-01', '2026-12-31'),

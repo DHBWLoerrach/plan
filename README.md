@@ -26,7 +26,8 @@ veröffentlichte Darstellung eines Zuschnitts (siehe
 [ADR 0010](docs/adr/0010-kurs-als-planungs-und-veroeffentlichungseinheit.md) und
 [ADR 0011](docs/adr/0011-systemweite-leseeinsicht-in-kurse.md)). Intern ist der
 Kurs zugleich der Bearbeitungsgegenstand und hat genau eine Adresse, die alles
-trägt, was ihn betrifft; die Kurse desselben Jahrgangs stehen dort nur zum
+trägt, was ihn betrifft: Im Planungsstand wird er als eine chronologische Liste
+bearbeitet, die Kurse desselben Jahrgangs stehen in einer eigenen Ansicht nur zum
 Vergleich daneben
 ([ADR 0013](docs/adr/0013-kurs-als-bearbeitungsgegenstand-vergleich-als-vorschau.md)).
 Sein Zustand ist allein die Veröffentlichung — eine zweite Kennzeichnung „in Arbeit“

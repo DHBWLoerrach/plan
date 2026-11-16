@@ -9,6 +9,7 @@ import { assertCourseEditPermission, assertCoursesEditPermission } from "@/lib/s
 import { assertPublishedCourseValid } from "@/lib/services/publication";
 
 export type PhaseField = "courseIds" | "semester" | "type" | "startDate" | "endDate";
+export type PhaseChangeField = "date";
 export type PhaseDetails = { semester: string; type: string; startDate: string; endDate: string };
 export type PhaseInput = PhaseDetails & { courseIds: string[] };
 
@@ -47,6 +48,33 @@ export function updateCoursePhase(sqlite: Database.Database, input: { accountId:
     if (course.publishedAt) adjustPublishedPhaseNeighbours(sqlite, input.phaseId, course, phase);
     sqlite.prepare("UPDATE course_phases SET semester = ?, phase_type = ?, start_date = ?, end_date = ? WHERE id = ?")
       .run(phase.semester, phase.type, phase.startDate, phase.endDate, input.phaseId);
+    touchCourse(sqlite, course.id, input.accountId, now);
+    assertPublishedCourseValid(sqlite, course.id);
+  })();
+}
+
+/**
+ * Moves the day a course changes over from one phase to the next. That day is one fact carried by two rows — the end
+ * of the earlier phase and the start of the later one — so both are written together, for an unpublished course just
+ * as for a published one: moved one at a time they would leave a gap or an overlap in between, which is exactly what
+ * this operation exists to rule out. `date` is the first day of the later phase.
+ */
+export function moveCoursePhaseChange(sqlite: Database.Database, input: { accountId: string; earlierPhaseId: string; laterPhaseId: string; date: string; now?: Date }): void {
+  const now = input.now ?? new Date();
+  sqlite.transaction(() => {
+    const course = requireCourseOfPhase(sqlite, input.laterPhaseId);
+    assertCourseEditPermission(sqlite, input.accountId, course.id);
+    const read = sqlite.prepare("SELECT id, start_date AS startDate, end_date AS endDate FROM course_phases WHERE id = ? AND course_id = ?");
+    const earlier = read.get(input.earlierPhaseId, course.id) as StoredPhase | undefined;
+    const later = read.get(input.laterPhaseId, course.id) as StoredPhase;
+    if (!earlier) throw new Error("Die Kursphase wurde nicht gefunden.");
+    // What the form showed may have been changed since; a day between two phases that no longer adjoin does not exist.
+    if (later.startDate !== plusDays(earlier.endDate, 1)) throw new Error("Die beiden Kursphasen grenzen nicht mehr aneinander. Laden Sie die Seite neu.");
+    const date = normalizeCalendarDayField(input.date, "date", "Der Tag des Wechsels");
+    if (date <= earlier.startDate) throw new FieldError("date", "Der Wechsel muss nach dem ersten Tag der vorherigen Kursphase liegen, sonst bliebe von ihr kein Tag übrig.");
+    if (date > later.endDate) throw new FieldError("date", "Der Wechsel darf nicht nach dem letzten Tag der folgenden Kursphase liegen, sonst bliebe von ihr kein Tag übrig.");
+    sqlite.prepare("UPDATE course_phases SET end_date = ? WHERE id = ?").run(plusDays(date, -1), earlier.id);
+    sqlite.prepare("UPDATE course_phases SET start_date = ? WHERE id = ?").run(date, later.id);
     touchCourse(sqlite, course.id, input.accountId, now);
     assertPublishedCourseValid(sqlite, course.id);
   })();
