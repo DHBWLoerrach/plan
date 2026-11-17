@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { adoptionShiftDays, planAdoption, proposedStudyEnd, type AdoptionTemplate } from "@/lib/domain/course-adoption";
+import { adoptionShiftDays, planAdoption, proposedStudyEnd, type AdoptionTemplate, nextYearProposal } from "@/lib/domain/course-adoption";
 
 /** A study year of the template: one theory phase, one practice phase and two events. */
 const template: AdoptionTemplate = {
@@ -90,5 +90,30 @@ describe("planAdoption", () => {
     expect(planAdoption(template, { ...target, withPhases: false }).phases).toEqual([]);
     // The shift is a property of the two study starts and stays named whatever is adopted.
     expect(planAdoption(template, { ...target, withPhases: false, withEvents: false }).shiftWeeks).toBe(52);
+  });
+});
+
+describe("nextYearProposal", () => {
+  it("counts the year of the code up and moves the study period by twelve months", () => {
+    expect(nextYearProposal({ code: "TIF25A", studyStart: "2025-10-01", studyEnd: "2028-09-30" }, "2026-11-16"))
+      .toEqual({ code: "TIF26A", studyStart: "2026-10-01", studyEnd: "2029-09-30" });
+    expect(nextYearProposal({ code: "WIN2025A-B", studyStart: "2025-09-29", studyEnd: "2029-03-29" }, "2026-11-16"))
+      .toEqual({ code: "WIN2026A-B", studyStart: "2026-09-29", studyEnd: "2030-03-29" });
+  });
+
+  // The period is anchored to dates, so it stays on them across a leap year instead of drifting by a day.
+  it("keeps the dates of the study period across a leap year", () => {
+    expect(nextYearProposal({ code: "TIF27A", studyStart: "2027-10-01", studyEnd: "2030-09-30" }, "2026-11-16"))
+      .toMatchObject({ studyStart: "2028-10-01", studyEnd: "2031-09-30" });
+  });
+
+  // A code repeated unchanged would only be refused when saved; none at all asks to be typed.
+  it("proposes no code where the template names no year to count up", () => {
+    expect(nextYearProposal({ code: "SONDERKURS", studyStart: "2025-10-01", studyEnd: "2028-09-30" }, "2026-11-16").code).toBe("");
+    expect(nextYearProposal({ code: "RAUM07", studyStart: "2025-10-01", studyEnd: "2028-09-30" }, "2026-11-16").code).toBe("");
+  });
+
+  it("carries the century over within a two-digit year", () => {
+    expect(nextYearProposal({ code: "TIF99A", studyStart: "2099-10-01", studyEnd: "2102-09-30" }, "2099-01-01").code).toBe("TIF00A");
   });
 });

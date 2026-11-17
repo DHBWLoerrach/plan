@@ -5,8 +5,9 @@ import { useActionState, useId, useState } from "react";
 import { type CourseFormState, createCourseAction, deleteCourseAction, updateCourseAction } from "@/app/intern/kurse/actions";
 import { ConfirmAction } from "@/components/editor-controls";
 import { isCalendarDay } from "@/lib/domain/calendar-day";
+import { formatCalendarPeriod } from "@/lib/domain/calendar-format";
 import { phaseTypeLabel } from "@/lib/domain/phase-type";
-import { planAdoption, proposedStudyEnd, type TemplatePhase } from "@/lib/domain/course-adoption";
+import { planAdoption, proposedStudyEnd, type AdoptionProposal, type TemplatePhase } from "@/lib/domain/course-adoption";
 // A type-only import: the module is erased here rather than pulled into the client bundle.
 import type { AdoptionTemplateCourse } from "@/lib/services/course-adoption";
 
@@ -46,7 +47,7 @@ function PhaseList({ heading, phases }: { heading: string; phases: { semester: n
   if (!phases.length) return null;
   return <>
     <p>{heading}</p>
-    <ul>{phases.map((phase) => <li key={`${phase.semester}-${phase.startDate}`}>Semester {phase.semester} · {phaseTypeLabel(phase.type)} · {phase.startDate} bis {phase.endDate}</li>)}</ul>
+    <ul>{phases.map((phase) => <li key={`${phase.semester}-${phase.startDate}`}>Semester {phase.semester} · {phaseTypeLabel(phase.type)} · {formatCalendarPeriod(phase.startDate, phase.endDate)}</li>)}</ul>
   </>;
 }
 
@@ -80,12 +81,15 @@ function AdoptionPreview({ template, studyStart, studyEnd, withPhases, withEvent
 /**
  * Creating a course as an adoption. The preview follows the entered study period, so the shift in weeks and the phases
  * that get cut are named before saving. What is written is computed again on the server from the same pure module.
+ *
+ * `proposal` fills the form in advance — the same course for the following year, as a rule. It is treated like a
+ * study end typed by hand: a study start changed afterwards no longer overwrites it.
  */
-export function AdoptCourseForm({ programs, template }: { programs: Program[]; template: AdoptionTemplateCourse }) {
+export function AdoptCourseForm({ programs, template, proposal }: { programs: Program[]; template: AdoptionTemplateCourse; proposal?: AdoptionProposal & { programId: string } }) {
   const [state, formAction, isPending] = useActionState<CourseFormState, FormData>(createCourseAction, {});
-  const [studyStart, setStudyStart] = useState("");
-  const [studyEnd, setStudyEnd] = useState("");
-  const [studyEndEdited, setStudyEndEdited] = useState(false);
+  const [studyStart, setStudyStart] = useState(proposal?.studyStart ?? "");
+  const [studyEnd, setStudyEnd] = useState(proposal?.studyEnd ?? "");
+  const [studyEndEdited, setStudyEndEdited] = useState(Boolean(proposal));
   const [withPhases, setWithPhases] = useState(true);
   const [withEvents, setWithEvents] = useState(true);
 
@@ -105,14 +109,16 @@ export function AdoptCourseForm({ programs, template }: { programs: Program[]; t
 
   return <form action={formAction} className="account-form">
     <input type="hidden" name="templateCourseId" value={template.id} />
-    <p>Vorlage: <strong>{template.code}</strong> — {template.program} ({template.areaName}), {template.semesters} Semester, Studienzeitraum {template.studyStart} – {template.studyEnd}. Sie enthält {template.phases.length === 1 ? "1 Kursphase" : `${template.phases.length} Kursphasen`} und {template.events.length === 1 ? "1 Termin" : `${template.events.length} Termine`}.</p>
+    <p>Vorlage: <strong>{template.code}</strong> — {template.program} ({template.areaName}), {template.semesters} Semester, Studienzeitraum {formatCalendarPeriod(template.studyStart, template.studyEnd)}. Sie enthält {template.phases.length === 1 ? "1 Kursphase" : `${template.phases.length} Kursphasen`} und {template.events.length === 1 ? "1 Termin" : `${template.events.length} Termine`}.</p>
     <fieldset className="account-fieldset">
       <legend>Was übernommen wird</legend>
       <label><input type="checkbox" name="withPhases" checked={withPhases} onChange={(event) => setWithPhases(event.target.checked)} /> Kursverlauf</label>
       <label><input type="checkbox" name="withEvents" checked={withEvents} onChange={(event) => setWithEvents(event.target.checked)} /> Prüfungsrelevante Termine</label>
     </fieldset>
-    <CourseFields programs={programs} period={{ studyStart, studyEnd, onStudyStart: changeStudyStart, onStudyEnd: changeStudyEnd }} />
-    <p>Das Studienende ist aus der Dauer des Studienzeitraums der Vorlage vorgeschlagen. Sobald Sie es selbst setzen, bleibt Ihr Wert stehen.</p>
+    <CourseFields programs={programs} course={proposal} period={{ studyStart, studyEnd, onStudyStart: changeStudyStart, onStudyEnd: changeStudyEnd }} />
+    {proposal
+      ? <p>Kurskennung, Studiengang und Studienzeitraum sind für den nächsten Jahrgang vorbelegt. Jede Angabe bleibt änderbar.</p>
+      : <p>Das Studienende ist aus der Dauer des Studienzeitraums der Vorlage vorgeschlagen. Sobald Sie es selbst setzen, bleibt Ihr Wert stehen.</p>}
     <AdoptionPreview template={template} studyStart={studyStart} studyEnd={studyEnd} withPhases={withPhases} withEvents={withEvents} />
     {state.error ? <p role="alert">{state.error}</p> : null}
     <button className="button" type="submit" disabled={isPending}>{isPending ? "Kurs wird angelegt …" : "Kurs übernehmen und anlegen"}</button>

@@ -6,6 +6,8 @@ import { AdoptCourseForm } from "@/components/course-forms";
 import { InternalNav } from "@/components/internal-nav";
 import { SiteShell } from "@/components/site-shell";
 import { sqlite } from "@/lib/db";
+import { berlinCalendarDay } from "@/lib/domain/calendar-day";
+import { nextYearProposal } from "@/lib/domain/course-adoption";
 import { getActiveAccount, managesAnyArea } from "@/lib/internal-auth";
 import { adoptionTemplateChoices, readAdoptionTemplate } from "@/lib/services/course-adoption";
 
@@ -18,12 +20,18 @@ export default async function NewCourseFromTemplatePage({ searchParams }: PagePr
   const account = await getActiveAccount();
   if (!account) redirect("/intern/anmelden");
   if (!managesAnyArea(account)) redirect("/intern");
-  const requestedTemplate = searchParam(await searchParams, "vorlage");
+  const raw = await searchParams;
+  const requestedTemplate = searchParam(raw, "vorlage");
   const template = requestedTemplate ? readAdoptionTemplate(sqlite, requestedTemplate) : undefined;
   // An adoption requires template and target to agree on the number of semesters, so only those are offered — on both
   // sides of the choice, which is why the template list is narrowed by the same rule.
   const programs = programOptions(sqlite, account, template?.semesters);
   const templates = adoptionTemplateChoices(sqlite, account);
+  /* Reached from the planning state of a course, the form arrives filled in for the following year of that course —
+     the adoption most of them are. The study program is proposed only where this account may create a course in it. */
+  const proposal = template && searchParam(raw, "jahrgang") === "naechster"
+    ? { ...nextYearProposal(template, berlinCalendarDay()), programId: programs.some((program) => program.id === template.programId) ? template.programId : "" }
+    : undefined;
 
   return <SiteShell nav={<InternalNav account={account} current="kurse" />}><section className="search-panel narrow-panel" aria-labelledby="new-course-heading">
     <p className="eyebrow">Kurs anlegen</p>
@@ -44,7 +52,7 @@ export default async function NewCourseFromTemplatePage({ searchParams }: PagePr
 
     {template
       ? programs.length
-        ? <AdoptCourseForm programs={programs} template={template} />
+        ? <AdoptCourseForm key={template.id} programs={programs} template={template} proposal={proposal} />
         : <p className="empty-note">Ihnen ist kein Studiengang mit {template.semesters} Semestern zugeordnet. Eine Übernahme setzt dieselbe Anzahl Semester voraus wie die Vorlage.</p>
       : <p className="empty-note">{templates.length
         ? "Wählen Sie zuerst die Vorlage. Danach werden die Angaben des neuen Kurses erfasst."

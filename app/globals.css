@@ -847,6 +847,9 @@ p[role="status"] { margin: 0; color: var(--success); }
 .plan-create .disclosure { border-left: 4px solid var(--red); }
 .plan-create .notice { margin: 0; }
 .plan-create__note { margin: 0; color: var(--gray-strong); font-size: .9rem; }
+/* The step to the following year stands after the plan it copies, as one line: the action and what it will do. */
+.course-next { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; margin: 2.5rem 0 0; color: var(--gray-strong); font-size: .95rem; }
+.course-next + .course-settings { margin-top: 1rem; }
 /* Course details and deletion rest behind one line at the end of the page. */
 .course-settings { margin-top: 2.5rem; }
 .course-settings h2 { margin: 0 0 .5rem; font-size: 1.1rem; font-weight: 700; }
@@ -865,7 +868,7 @@ p[role="status"] { margin: 0; color: var(--success); }
 .entry-action:focus-visible { outline: none; }
 .entry-action:focus-visible::after { outline: 3px solid #1a1a1a; outline-offset: -3px; }
 .plan-junction .entry-action { font-weight: 600; }
-@media print { .entry-action { text-decoration: none; } .plan-create, .course-settings { display: none; } }
+@media print { .entry-action { text-decoration: none; } .plan-create, .course-next, .course-settings { display: none; } }
 /* The part of a form that is rarely needed, behind one line inside it. */
 .form-more > summary { width: max-content; padding: .3rem 0; color: var(--gray-strong); font-size: .9rem; font-weight: 700; cursor: pointer; }
 .form-more > summary:focus-visible { outline: 3px solid #1a1a1a; outline-offset: 2px; }

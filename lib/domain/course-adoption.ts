@@ -1,4 +1,5 @@
-import { inclusiveDays, plusDays } from "@/lib/domain/calendar-day";
+import { inclusiveDays, plusDays, plusMonths } from "@/lib/domain/calendar-day";
+import { nextYearCourseCode } from "@/lib/domain/generated-course-plan";
 import type { EventCategory } from "@/lib/domain/event-category";
 import type { PhaseType } from "@/lib/domain/phase-type";
 
@@ -31,6 +32,19 @@ export function adoptionShiftDays(templateStudyStart: string, studyStart: string
   const weeks = Math.round(difference / daysPerWeek);
   // Rounding a small negative difference down to no week at all yields -0, and a shift of no days has no direction.
   return weeks === 0 ? 0 : weeks * daysPerWeek;
+}
+
+/** What the adoption form is filled with before anyone has typed. Every value is a proposal and stays editable. */
+export type AdoptionProposal = { code: string; studyStart: string; studyEnd: string };
+
+/**
+ * The same course for the following year, which is what most adoptions are: its code counted up by one year and its
+ * study period moved by twelve months. The period is moved by the calendar rather than by its length in days, because
+ * it is anchored to dates — 1 October to 30 September stays that across a leap year. The code is left empty where it
+ * names no year to count up.
+ */
+export function nextYearProposal(template: { code: string; studyStart: string; studyEnd: string }, today: string): AdoptionProposal {
+  return { code: nextYearCourseCode(template.code, today) ?? "", studyStart: plusMonths(template.studyStart, 12), studyEnd: plusMonths(template.studyEnd, 12) };
 }
 
 /** The study end an adoption proposes: the study period of the template, in days, measured from the new study start. */

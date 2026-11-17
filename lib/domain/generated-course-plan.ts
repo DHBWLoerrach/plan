@@ -43,6 +43,17 @@ export function courseCodeYear(code: string, today: string): number | undefined 
 }
 
 /**
+ * The code of the same course one year on: „TIF25A“ becomes „TIF26A“, „TIF2025A“ becomes „TIF2026A“. Only the number
+ * `courseCodeYear` reads as the year is counted up, everything around it stays — and a code that names no year yields
+ * none, because a proposal that merely repeats the code of an existing course would be refused when saved.
+ */
+export function nextYearCourseCode(code: string, today: string): string | undefined {
+  if (courseCodeYear(code, today) === undefined) return undefined;
+  if (fourDigitYear.test(code)) return code.replace(fourDigitYear, (year) => String(Number(year) + 1));
+  return code.replace(twoDigitYear, (year) => String((Number(year) + 1) % 100).padStart(2, "0"));
+}
+
+/**
  * The study start the generation proposes: the first of October of the year in the course code, and without one the
  * next first of October from today onwards. It is a proposal and stays editable.
  */

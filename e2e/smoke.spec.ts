@@ -393,6 +393,32 @@ test("edits a change, a phase and a date from the lines of the plan", async ({ p
   await eventPanel.getByRole("button", { name: "Endgültig löschen" }).click();
   await expect(page.getByText("Der Termin wurde gelöscht.")).toBeFocused();
   await expect(page.getByText("Listentermin geändert")).toHaveCount(0);
+
+  /* The yearly case in one step: the planning state leads straight into an adoption of this course, with code, study
+     program and study period proposed for the following year. Nothing is created here — the adoption itself has its
+     own test. */
+  /* The code is read from the page rather than assumed: another test renames this course, and this one has to hold
+     whether or not that one ran before it. */
+  const code = (await page.getByRole("heading", { level: 1 }).innerText()).replace(/^Kurs /u, "");
+  expect(code).toMatch(/^TIF26/u);
+  await page.getByRole("link", { name: "Für nächsten Jahrgang übernehmen" }).click();
+  await expect(page).toHaveURL(/\/intern\/kurse\/neu\/vorlage\?vorlage=e2e-course&jahrgang=naechster$/u);
+  await expect(page.getByLabel("Kurskennung")).toHaveValue(code.replace("TIF26", "TIF27"));
+  await expect(page.getByLabel("Studiengang")).toHaveValue("program-own");
+  await expect(page.getByLabel("Studienbeginn")).toHaveValue("2027-10-01");
+  await expect(page.getByLabel("Studienende")).toHaveValue("2030-09-30");
+  await expect(page.getByRole("status")).toContainText("um 52 Wochen nach später");
+  await page.goto("/intern/kurse/e2e-course");
+
+  /* At 320 CSS pixels the plan and an open form stay within the display: nothing makes the page itself scroll
+     sideways (BARRIEREFREIHEIT.md). */
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.reload();
+  const overflow = () => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(await overflow()).toBeLessThanOrEqual(0);
+  await page.getByRole("button", { name: /Kursphase bearbeiten$/u }).nth(1).click();
+  await expect(phasePanel).toBeVisible();
+  expect(await overflow()).toBeLessThanOrEqual(0);
 });
 
 /* The course code is the one filter that reaches its address late: it waits out a typing pause, so between the

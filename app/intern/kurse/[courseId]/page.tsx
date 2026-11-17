@@ -17,12 +17,13 @@ import { formatCalendarPeriod } from "@/lib/domain/calendar-format";
 import { comparisonScope, comparisonScopes, coursePath, defaultComparisonScope, type ComparisonScope } from "@/lib/domain/course-comparison";
 import { calendarEventsForView, courseCalendarView, normalizeCalendarAnchor, type CourseCalendarView } from "@/lib/domain/course-calendar";
 import { publicationStateLabels } from "@/lib/domain/course-status";
+import { nextYearCourseCode } from "@/lib/domain/generated-course-plan";
 import { validatePublication, type PlanEvent, type PlanPhase } from "@/lib/domain/publication";
 import { getActiveAccount, managesAnyArea } from "@/lib/internal-auth";
 import { readCourseCalendar } from "@/lib/services/course-calendar-feed";
 
 import { searchParam } from "../../search-params";
-import { coursePlanData, findInternalCourse, programOptions, type InternalCourse, type PlanCourse } from "../data";
+import { coursePlanData, findCourseIdByCode, findInternalCourse, programOptions, type InternalCourse, type PlanCourse } from "../data";
 
 /**
  * How wide the comparison view reaches. It is chosen anew on every visit and never stored, so it lives in the address
@@ -74,6 +75,22 @@ async function CourseCalendarContent({ courseId, courseCode, anchor, view }: { c
     ? { kind: "available" as const, events: calendarEventsForView(result.events, anchor, view) }
     : result;
   return <CourseCalendar courseId={courseId} initialAnchor={anchor} initialView={view} initialResult={initialResult} />;
+}
+
+/**
+ * The way from a course to the same course of the following year — the one adoption every course of study needs once
+ * a year. It leads into the adoption form with this course as the template and everything else proposed, instead of
+ * through the choice of a way and a list of every course there is. Where that course exists already, it is linked
+ * rather than offered a second time: creating it again would only be refused for its code.
+ */
+function NextYear({ course }: { course: PlanCourse }) {
+  const nextCode = nextYearCourseCode(course.code, berlinCalendarDay());
+  const existingId = nextCode ? findCourseIdByCode(sqlite, nextCode) : undefined;
+  if (existingId) return <p className="course-next">Nächster Jahrgang: <Link className="text-link" href={coursePath(existingId)}>{nextCode}</Link></p>;
+  return <p className="course-next">
+    <Link className="button button--ghost" href={`/intern/kurse/neu/vorlage?vorlage=${encodeURIComponent(course.id)}&jahrgang=naechster`}>Für nächsten Jahrgang übernehmen</Link>
+    <span>Legt {nextCode ? <strong>{nextCode}</strong> : "einen neuen Kurs"} mit diesem Kursverlauf und diesen Terminen an, um ein Jahr versetzt.</span>
+  </p>;
 }
 
 const backToList = <p className="plan-detail__back"><Link className="text-link" href="/intern/kurse">Zurück zur Kursliste</Link></p>;
@@ -148,6 +165,8 @@ export default async function CoursePage({ params, searchParams }: PageProps<"/i
       : <p className="notice">Dieser Kurs gehört zum Bereich {course.areaName}, der Ihnen nicht zugeordnet ist: Sie können ihn lesen, aber nicht bearbeiten, löschen oder veröffentlichen.</p>}
 
     <CoursePlanWorkspace course={course} parallels={comparison} phases={phases} events={events} />
+
+    {course.editable ? <NextYear course={course} /> : null}
 
     {/* Code, study program and study period are set once and hardly ever again, and deleting is rarer still. Both
         rest behind one line at the end of the page instead of holding a section of their own. */}

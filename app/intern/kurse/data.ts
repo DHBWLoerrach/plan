@@ -4,7 +4,7 @@ import type Database from "better-sqlite3";
 
 import { berlinCalendarDay } from "@/lib/domain/calendar-day";
 import type { ComparisonScope } from "@/lib/domain/course-comparison";
-import { matchesCodePrefix, normalizeCodePrefix } from "@/lib/domain/course-code";
+import { matchesCodePrefix, normalizeCodePrefix, normalizeCourseCode } from "@/lib/domain/course-code";
 import { courseStanding, type CourseStanding, type StandingPhase } from "@/lib/domain/course-progress";
 import { publicationState, type PublicationState } from "@/lib/domain/course-status";
 import { type CoursePlan, type PlanEvent, type PlanPhase } from "@/lib/domain/publication";
@@ -200,6 +200,14 @@ function ownAreaPrograms(sqlite: Database.Database, account: AccountScope, today
     });
   }
   return programs;
+}
+
+/**
+ * The course that carries a given code, if one does. Codes are unique in their normalized form, which is what a
+ * proposed code has to be looked up by — as it will be compared when it is saved.
+ */
+export function findCourseIdByCode(sqlite: Database.Database, code: string): string | undefined {
+  return sqlite.prepare("SELECT id FROM courses WHERE normalized_code = ?").pluck().get(normalizeCourseCode(code)) as string | undefined;
 }
 
 export function findInternalCourse(sqlite: Database.Database, courseId: string, account: AccountScope): InternalCourse | undefined {

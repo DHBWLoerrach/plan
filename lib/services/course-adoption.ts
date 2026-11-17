@@ -5,7 +5,7 @@ import type Database from "better-sqlite3";
 import { planAdoption, type AdoptionTemplate, type TemplateEvent, type TemplatePhase } from "@/lib/domain/course-adoption";
 
 /** What the creation form needs to preview an adoption, and what the creation itself copies from. */
-export type AdoptionTemplateCourse = AdoptionTemplate & { id: string; code: string; program: string; areaName: string; semesters: number };
+export type AdoptionTemplateCourse = AdoptionTemplate & { id: string; code: string; programId: string; program: string; areaName: string; semesters: number };
 export type AdoptionInput = { templateCourseId: string; withPhases: boolean; withEvents: boolean };
 /** An entry of the template select: the course it stands for and the text that decides the choice. */
 export type AdoptionTemplateChoice = { id: string; label: string };
@@ -17,7 +17,7 @@ export type AdoptionAccount = { id: string; systemAdmin: boolean };
  * study program: the template worth copying is usually the one of another area, and it is only ever read (ADR 0011).
  */
 export function readAdoptionTemplate(sqlite: Database.Database, courseId: string): AdoptionTemplateCourse | undefined {
-  const course = sqlite.prepare(`SELECT course.id, course.code, program.name AS program, program.semesters, area.name AS areaName,
+  const course = sqlite.prepare(`SELECT course.id, course.code, program.id AS programId, program.name AS program, program.semesters, area.name AS areaName,
       course.study_start AS studyStart, course.study_end AS studyEnd
     FROM courses course JOIN programs program ON program.id = course.program_id JOIN areas area ON area.id = program.area_id
     WHERE course.id = ?`).get(courseId) as Omit<AdoptionTemplateCourse, "phases" | "events"> | undefined;
