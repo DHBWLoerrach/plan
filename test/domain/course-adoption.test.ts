@@ -60,17 +60,36 @@ describe("planAdoption", () => {
     expect(weekday(adoption.events[0].startDate)).toBe(weekday(template.events[0].startDate));
   });
 
-  it("cuts a phase that reaches beyond the study period to its boundary and marks it", () => {
+  /* A study year begins on 1 October, whatever weekday that is. Shifted by 364 days the first phase would start on
+     2026-09-30 and the last would end on 2027-09-29 — each one day beside the study period they began and ended with
+     in the template. Both are put back on its borders, so the adopted progression covers it without a correction. */
+  it("keeps the first and the last day on the borders of the study period they were anchored to", () => {
     const adoption = planAdoption(template, target);
-    // Shifted by 364 days the first phase would start on 2026-09-30, one day before the new study period.
-    expect(adoption.phases[0]).toEqual({ semester: 1, type: "THEORY", startDate: "2026-10-01", endDate: "2026-12-30", truncated: true });
-    expect(adoption.phases[1]).toEqual({ semester: 2, type: "PRACTICE", startDate: "2026-12-31", endDate: "2027-09-29", truncated: false });
+    expect(adoption.phases[0]).toEqual({ semester: 1, type: "THEORY", startDate: "2026-10-01", endDate: "2026-12-30", truncated: false });
+    expect(adoption.phases[1]).toEqual({ semester: 2, type: "PRACTICE", startDate: "2026-12-31", endDate: "2027-09-30", truncated: false });
+    expect(adoption).toMatchObject({ movedToStudyStart: true, movedToStudyEnd: true });
   });
 
-  it("leaves the gap the rounding opens at the end instead of closing it", () => {
-    const adoption = planAdoption(template, target);
+  it("moves nothing where the shift lands on the borders by itself", () => {
+    const adoption = planAdoption(template, { ...target, studyStart: "2026-09-30", studyEnd: "2027-09-29" });
+    expect(adoption.phases.map((phase) => [phase.startDate, phase.endDate])).toEqual([["2026-09-30", "2026-12-30"], ["2026-12-31", "2027-09-29"]]);
+    expect(adoption).toMatchObject({ movedToStudyStart: false, movedToStudyEnd: false });
+  });
+
+  // A template that left its first days unplanned did so on purpose; the adoption does not plan them for it.
+  it("leaves an edge alone that was not on the border of the study period in the template", () => {
+    const later = { ...template, phases: [{ ...template.phases[0], startDate: "2025-10-06" }, template.phases[1]] };
+    const adoption = planAdoption(later, target);
+    expect(adoption.phases[0].startDate).toBe("2026-10-05");
+    expect(adoption.movedToStudyStart).toBe(false);
+  });
+
+  // Only the remainder of the rounding is closed. A study end set weeks later is a decision, and its gap stays to be seen.
+  it("does not stretch the last phase to a study end a week or more away", () => {
+    const adoption = planAdoption(template, { ...target, studyEnd: "2027-10-06" });
     expect(adoption.phases.at(-1)!.endDate).toBe("2027-09-29");
-    expect(target.studyEnd).toBe("2027-09-30");
+    expect(adoption.movedToStudyEnd).toBe(false);
+    expect(planAdoption(template, { ...target, studyEnd: "2027-10-05" }).phases.at(-1)!.endDate).toBe("2027-10-05");
   });
 
   it("drops a phase the shorter study period leaves no day for and names it", () => {

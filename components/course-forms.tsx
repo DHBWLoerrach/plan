@@ -70,6 +70,10 @@ function AdoptionPreview({ template, studyStart, studyEnd, withPhases, withEvent
   return <div className="notice" role="status">
     <p>{shiftSentence(adoption.shiftWeeks)}</p>
     <p>Übernommen werden {adoption.phases.length === 1 ? "1 Kursphase" : `${adoption.phases.length} Kursphasen`} und {adoption.events.length === 1 ? "1 Termin" : `${adoption.events.length} Termine`}.</p>
+    {adoption.movedToStudyStart || adoption.movedToStudyEnd ? <p>Wie in der Vorlage {[
+      adoption.movedToStudyStart ? "beginnt die erste Kursphase am Studienbeginn" : "",
+      adoption.movedToStudyEnd ? "endet die letzte Kursphase am Studienende" : "",
+    ].filter(Boolean).join(" und ")}.</p> : null}
     <PhaseList heading={`Auf den Studienzeitraum gekürzt ${truncated.length === 1 ? "wird diese Kursphase" : "werden diese Kursphasen"}:`} phases={truncated} />
     <PhaseList heading={`Außerhalb des Studienzeitraums ${adoption.droppedPhases.length === 1 ? "liegt diese Kursphase; sie wird nicht übernommen" : "liegen diese Kursphasen; sie werden nicht übernommen"}:`} phases={adoption.droppedPhases} />
     {truncated.length || adoption.droppedPhases.length

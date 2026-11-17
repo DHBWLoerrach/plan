@@ -136,11 +136,12 @@ test("adopts the progression of an existing course into a new one", async ({ pag
 
   await page.getByLabel("Kurskennung").fill("E2E2027ADOPT");
   await page.getByLabel("Studiengang").selectOption("program-own");
-  /* A shift is rounded to whole weeks, because course phases are anchored to weekdays while a study period is anchored
-     to dates. A study start exactly 52 weeks past the one of the template is where the two agree, so the adopted
-     progression covers the new study period exactly instead of missing its borders by up to three days. */
-  await page.getByLabel("Studienbeginn").fill("2027-09-30");
-  await expect(page.getByLabel("Studienende")).toHaveValue("2030-09-29");
+  /* A study year begins on 1 October. The shift is rounded to whole weeks, because course phases are anchored to
+     weekdays, and would leave the progression one day beside the new study period — its first and last day are put
+     back on the borders they were anchored to, so the adopted progression covers the study period exactly. */
+  await page.getByLabel("Studienbeginn").fill("2027-10-01");
+  await expect(page.getByLabel("Studienende")).toHaveValue("2030-09-30");
+  await expect(page.getByRole("status")).toContainText("beginnt die erste Kursphase am Studienbeginn und endet die letzte Kursphase am Studienende");
   await page.getByRole("button", { name: "Kurs übernehmen und anlegen" }).click();
   await expect(page.getByText("Der Kurs wurde angelegt.")).toBeVisible();
   const courseId = new URL(page.url()).pathname.split("/").pop();

@@ -45,12 +45,12 @@ afterEach(() => {
 });
 
 describe("createCourse with an adoption", () => {
-  it("copies the course progression of a template of another area, shifted by whole weeks and cut to the study period", () => {
+  it("copies the course progression of a template of another area, shifted by whole weeks and kept on the borders of the study period", () => {
     const sqlite = database();
     const id = createCourse(sqlite, { ...newCourse, adoption: adoptAll });
     expect(phasesOf(sqlite, id)).toEqual([
       { semester: 1, type: "THEORY", startDate: "2026-10-01", endDate: "2026-12-30" },
-      { semester: 2, type: "PRACTICE", startDate: "2026-12-31", endDate: "2027-09-29" },
+      { semester: 2, type: "PRACTICE", startDate: "2026-12-31", endDate: "2027-09-30" },
     ]);
   });
 
