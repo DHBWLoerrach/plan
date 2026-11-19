@@ -1,11 +1,12 @@
 /**
- * How far the comparison beside an edited course reaches. It never leaves the year of that course, because the plan
- * matrix compares semesters over one shared time axis and the same semester of two years lies years apart (ADR 0010).
+ * How far the comparison view of a course reaches. It never leaves the year of that course, because the plan matrix
+ * compares semesters over one shared time axis and the same semester of two years lies years apart (ADR 0010).
  *
- * A comparison is a view, not an object: it is read from the address on every request and never stored. Unlike a
- * public cut it does not address the page — the course does — it only decides which courses stand beside it.
+ * A comparison is a view, not an object: it is read from the address on every request and never stored. It is a view
+ * of its own beside the planning state of the course — there the course is edited and only told where its parallel
+ * courses differ, here the courses stand side by side in full and nothing is written.
  */
-export type ComparisonScope = "program" | "area" | "year" | "none";
+export type ComparisonScope = "program" | "area" | "year";
 
 export interface ComparisonScopeEntry {
   scope: ComparisonScope;
@@ -16,12 +17,11 @@ export interface ComparisonScopeEntry {
   description: string;
 }
 
-/** Offered from the closest comparison outwards, with the undisturbed single course last. */
+/** Offered from the closest comparison outwards. */
 export const comparisonScopes: readonly ComparisonScopeEntry[] = [
   { scope: "program", parameter: "studiengang", label: "Studiengang", description: "Die Parallelkurse desselben Studiengangs im selben Jahrgang." },
   { scope: "area", parameter: "bereich", label: "Bereich", description: "Alle Kurse des Bereichs im selben Jahrgang." },
   { scope: "year", parameter: "jahrgang", label: "Jahrgang", description: "Alle Kurse des Jahrgangs, über alle Bereiche hinweg." },
-  { scope: "none", parameter: "keiner", label: "Kein Vergleich", description: "Nur dieser Kurs, ohne weitere Spalten." },
 ];
 
 /**
@@ -48,12 +48,11 @@ export function comparisonScopeLabel(scope: ComparisonScope): string {
 }
 
 /**
- * The address of one course, optionally with the comparison it is seen against. A course has exactly one internal
- * address: everything that may be done to it is done there, and a foreign course shows the same page without the
- * parts that would write. The default scope carries no parameter, so the plain course address stays the one that gets
- * linked and bookmarked.
+ * The address of one course. Without a scope it is the planning state, the page a course is edited on and the one that
+ * gets linked and bookmarked. With a scope it is the comparison view in that width, which always names its scope in
+ * the address: the parameter is what tells the two views apart.
  */
-export function coursePath(courseId: string, scope: ComparisonScope = defaultComparisonScope): string {
+export function coursePath(courseId: string, scope?: ComparisonScope): string {
   const path = `/intern/kurse/${encodeURIComponent(courseId)}`;
-  return scope === defaultComparisonScope ? path : `${path}?vergleich=${comparisonScopeParameter(scope)}`;
+  return scope ? `${path}?vergleich=${comparisonScopeParameter(scope)}` : path;
 }

@@ -18,7 +18,7 @@ async function signIn(page: Page, email: string) {
     await page.waitForTimeout(signInWindow);
     await attemptSignIn(page, email, rejection);
   }
-  await expect(page).toHaveURL(/\/intern$/u);
+  await expect(page).toHaveURL(/\/intern\/heute$/u);
 }
 
 /** One attempt, filled anew each time: a rejected submission leaves the form reset, so a retry starts from empty fields. */
@@ -27,7 +27,7 @@ async function attemptSignIn(page: Page, email: string, rejection: Locator) {
   await page.getByLabel("Passwort").fill(password);
   await page.getByRole("button", { name: "Anmelden" }).click();
   await Promise.race([
-    page.waitForURL(/\/intern$/u).catch(() => {}),
+    page.waitForURL(/\/intern\/heute$/u).catch(() => {}),
     rejection.waitFor({ state: "visible" }).catch(() => {}),
   ]);
 }
@@ -41,7 +41,7 @@ test("sets a password from a link and signs in", async ({ page }) => {
   await page.getByLabel("Dienstliche E-Mail-Adresse").fill("link@test.invalid");
   await page.getByLabel("Passwort").fill(password);
   await page.getByRole("button", { name: "Anmelden" }).click();
-  await expect(page).toHaveURL(/\/intern$/u);
+  await expect(page).toHaveURL(/\/intern\/heute$/u);
 });
 
 /** The disclosure an entry or a form rests behind, addressed by its summary line. */
@@ -136,11 +136,12 @@ test("adopts the progression of an existing course into a new one", async ({ pag
 
   await page.getByLabel("Kurskennung").fill("E2E2027ADOPT");
   await page.getByLabel("Studiengang").selectOption("program-own");
-  /* A shift is rounded to whole weeks, because course phases are anchored to weekdays while a study period is anchored
-     to dates. A study start exactly 52 weeks past the one of the template is where the two agree, so the adopted
-     progression covers the new study period exactly instead of missing its borders by up to three days. */
-  await page.getByLabel("Studienbeginn").fill("2027-09-30");
-  await expect(page.getByLabel("Studienende")).toHaveValue("2030-09-29");
+  /* A study year begins on 1 October. The shift is rounded to whole weeks, because course phases are anchored to
+     weekdays, and would leave the progression one day beside the new study period — its first and last day are put
+     back on the borders they were anchored to, so the adopted progression covers the study period exactly. */
+  await page.getByLabel("Studienbeginn").fill("2027-10-01");
+  await expect(page.getByLabel("Studienende")).toHaveValue("2030-09-30");
+  await expect(page.getByRole("status")).toContainText("beginnt die erste Kursphase am Studienbeginn und endet die letzte Kursphase am Studienende");
   await page.getByRole("button", { name: "Kurs übernehmen und anlegen" }).click();
   await expect(page.getByText("Der Kurs wurde angelegt.")).toBeVisible();
   const courseId = new URL(page.url()).pathname.split("/").pop();
@@ -150,11 +151,22 @@ test("adopts the progression of an existing course into a new one", async ({ pag
   await expect(page.getByText("Planungsstand ist vollständig.")).toBeVisible();
 });
 
-/* The overview is asserted here rather than in a test of its own: every sign-in beyond the rate limit costs the suite a
-   waited-out window. This test already signs in as the editor, and what the overview shows it — the own areas and
-   nothing beyond them — is the same boundary its remaining steps read from the other end. */
+/* The day page and the overview are asserted here rather than in tests of their own: every sign-in beyond the rate
+   limit costs the suite a waited-out window. This test already signs in as the editor, and what both pages show it —
+   the own areas and nothing beyond them — is the same boundary its remaining steps read from the other end. */
 test("opens on the own areas and keeps foreign courses read-only, confirming with the keyboard", async ({ page }) => {
   await signIn(page, "editor@test.invalid");
+  await expect(page.getByRole("heading", { level: 1, name: "Heute" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Heute" })).toHaveAttribute("aria-current", "page");
+  const dayRow = page.getByRole("listitem").filter({ has: page.getByRole("link", { name: /^TIF26/u }) });
+  await expect(dayRow.getByRole("link")).toHaveAttribute("href", "/intern/kurse/e2e-course?kalender=woche");
+  /* The seeded course code is no DHBW calendar name, so its row settles on the not-found state without a request
+     leaving the suite — what is asserted is that the row resolves rather than staying on its loading line. */
+  await expect(dayRow.getByText("Kein Vorlesungskalender gefunden.")).toBeVisible();
+  await expect(page.getByText("FRM26E2E")).toHaveCount(0);
+
+  await page.getByRole("link", { name: "Übersicht" }).first().click();
+  await expect(page).toHaveURL(/\/intern$/u);
   await expect(page.getByRole("heading", { name: "E2E Testinformatik" })).toBeVisible();
   /* The publishing test renames the course, so only the part of the code that survives it is matched. */
   await expect(page.getByRole("link", { name: /^TIF26/u })).toBeVisible();
@@ -196,20 +208,27 @@ test("opens on the own areas and keeps foreign courses read-only, confirming wit
   await expect(page).toHaveURL(/\/intern\/kurse\/e2e-foreign-course$/u);
   await expect(page.getByText(/lesen, aber nicht bearbeiten/u)).toBeVisible();
   await expect(page.getByRole("button", { name: "Kurs veröffentlichen" })).toHaveCount(0);
-  // Nothing that writes, and therefore no list that would only repeat the matrix and the chronology above it.
+  // Nothing that writes: the plan is a presentation here and no line of it offers a way into a form.
+  await expect(page.locator("[data-entry]")).toHaveCount(0);
   await expect(disclosure(page, "Termin erfassen")).toHaveCount(0);
   await expect(disclosure(page, "Kursangaben ändern")).toHaveCount(0);
 
-  /* The comparison is switched inside the running page rather than loaded fresh: the matrix keeps its column
-     selection across that navigation, so a course newly brought in has to arrive shown instead of hidden. The foreign
-     course is the one the widened comparison adds, and no test renames it. */
+  /* The comparison is a view of its own, reached from the planning state. Its width is switched inside the running
+     page rather than loaded fresh: the matrix keeps its column selection across that navigation, so a course newly
+     brought in has to arrive shown instead of hidden. The foreign course is the one the widened comparison adds, and
+     no test renames it. */
   await page.goto("/intern/kurse/e2e-course");
+  await page.getByRole("navigation", { name: "Kursansicht" }).getByRole("link", { name: "Vergleich" }).click();
+  await expect(page).toHaveURL(/vergleich=studiengang/u);
+  // Side by side the courses are only read: nothing here opens a form.
+  await expect(page.locator("[data-entry]")).toHaveCount(0);
   const foreignColumn = page.getByRole("columnheader", { name: /FRM26E2E/u });
   await expect(foreignColumn).toHaveCount(0);
   await page.getByRole("link", { name: "Jahrgang", exact: true }).click();
   await expect(page).toHaveURL(/vergleich=jahrgang/u);
   await expect(foreignColumn.first()).toBeVisible();
   await expect(page.getByRole("checkbox", { name: /FRM26E2E/u })).toBeChecked();
+  await page.goto("/intern/kurse/e2e-course");
 
   /* A server action is a public endpoint: whoever holds its identifier reaches it without ever passing the page whose
      permission check would have stopped them. The captured request is therefore replayed without the session cookie,
@@ -263,6 +282,144 @@ test("opens on the own areas and keeps foreign courses read-only, confirming wit
   await expect(page.getByRole("group", { name: confirmationName })).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(control).toBeFocused();
+});
+
+/**
+ * Saves a form whose button depends on the state of its course: a plain save where nothing public is touched, a
+ * review followed by a confirmation where it is. The review button submits on its own when there is nothing to
+ * confirm. A confirmation once opened stays open, and confirming it after the inputs changed only renews the preview
+ * and asks again — so a form saved twice without being reopened is confirmed a second time.
+ */
+async function save(form: Locator, reviewName: string, plain: string, confirmation: string) {
+  const confirm = form.getByRole("button", { name: confirmation });
+  const review = form.getByRole("button", { name: reviewName });
+  if (await review.count()) {
+    await review.click();
+    if (await confirm.isVisible()) await confirm.click();
+  } else if (confirmation !== plain && await confirm.count()) {
+    await confirm.click();
+    if (await form.getByText("Die Eingaben haben sich nach der Vorschau geändert.").count()) await confirm.click();
+  } else {
+    await form.getByRole("button", { name: plain }).click();
+  }
+}
+
+/* The plan is one list, and each of its lines is the way into editing it: the form opens directly below the line and
+   takes focus, and closing it leads back to the line. The change between two phases is moved as one day, which is
+   moved back again; the date is captured, changed and deleted — so the course is left as it was found. */
+test("edits a change, a phase and a date from the lines of the plan", async ({ page }) => {
+  await signIn(page, "admin@test.invalid");
+  await page.goto("/intern/kurse/e2e-course");
+
+  const phaseLine = page.getByRole("button", { name: /Kursphase bearbeiten$/u }).first();
+  await phaseLine.click();
+  const phasePanel = page.getByRole("region", { name: /^Kursphase bearbeiten/u });
+  await expect(phasePanel).toBeFocused();
+  await expect(phaseLine).toHaveAttribute("aria-expanded", "true");
+  await phasePanel.getByRole("button", { name: "Schließen" }).click();
+  await expect(phasePanel).toHaveCount(0);
+  await expect(phaseLine).toBeFocused();
+
+  /* The period of a phase between two changes rests closed inside its form. A day emptied there and closed away again
+     must not block saving out of sight: the section opens and the browser points at the field. */
+  await page.getByRole("button", { name: /Kursphase bearbeiten$/u }).nth(1).click();
+  const period = phasePanel.locator("details").filter({ hasText: "Zeitraum ändern" });
+  await expect(period).not.toHaveAttribute("open");
+  await period.locator("summary").click();
+  await phasePanel.getByLabel("Startdatum").fill("");
+  await period.locator("summary").click();
+  await expect(period).not.toHaveAttribute("open");
+  await save(phasePanel.locator("form").first(), "Kursphase prüfen", "Kursphase speichern", "Änderung speichern und veröffentlichen");
+  await expect(period).toHaveAttribute("open");
+  await expect(phasePanel.getByLabel("Startdatum")).toBeFocused();
+  await expect(phasePanel.getByRole("status")).toHaveCount(0);
+  await phasePanel.getByRole("button", { name: "Schließen" }).click();
+
+  /* Whoever aims at the dates of a phase means to change the dates: opened by its period, the form arrives with the
+     period laid open — and a form that is open already stays open. The control covers the whole line, so the pointer
+     is set down on the period rather than a locator clicked through the layer above it. */
+  const periodBox = (await page.locator(".plan-phase > .plan-line > .plan-line__when").nth(1).boundingBox())!;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    await page.mouse.click(periodBox.x + 20, periodBox.y + periodBox.height / 2);
+    await expect(phasePanel).toBeVisible();
+    await expect(period).toHaveAttribute("open");
+  }
+  await expect(phasePanel.getByText("Den Wechsel zur Nachbarphase verschieben Sie")).toBeVisible();
+  await phasePanel.getByRole("button", { name: "Schließen" }).click();
+  await expect(page.getByText("Gepunktet unterstrichene Angaben lassen sich bearbeiten.")).toBeVisible();
+
+  /* The form is opened anew for every save and what it then offers is read after a reload: a message left over from
+     an earlier save and the value just typed would both be there whether or not anything was stored. */
+  const changePanel = page.getByRole("region", { name: /^Wechsel verschieben/u });
+  const day = changePanel.getByLabel(/^Erster Tag der folgenden Kursphase/u);
+  const openChange = async () => {
+    await page.getByRole("button", { name: /Wechsel von \S+ zu \S+ verschieben$/u }).first().click();
+    await expect(changePanel).toBeFocused();
+  };
+  await openChange();
+  const original = await day.inputValue();
+  const [year, month, date] = original.split("-").map(Number);
+  const moved = new Date(Date.UTC(year, month - 1, date + 7)).toISOString().slice(0, 10);
+  for (const value of [moved, original]) {
+    await day.fill(value);
+    await save(changePanel.locator("form"), "Wechsel prüfen", "Wechsel speichern", "Änderung speichern und veröffentlichen");
+    await expect(changePanel.getByRole("status")).toContainText("gespeichert");
+    await page.reload();
+    // Both phases moved together: the plan names one day of change and reports neither a gap nor an overlap.
+    await expect(page.getByText(/^(Lücke|Überschneidung):/u)).toHaveCount(0);
+    await openChange();
+    await expect(day).toHaveValue(value);
+  }
+  await changePanel.getByRole("button", { name: "Schließen" }).click();
+
+  await disclosure(page, "Termin erfassen").click();
+  const createForm = page.locator("details").filter({ hasText: "Termin erfassen" }).locator("form");
+  await createForm.getByLabel("Titel").fill("Listentermin");
+  await createForm.getByLabel("Kategorie").selectOption("EXAM");
+  await createForm.getByLabel("Startdatum").fill("2027-05-06");
+  await save(createForm, "Termin prüfen", "Termin speichern", "Termin speichern");
+  await expect(createForm.getByRole("status")).toContainText("gespeichert");
+
+  await page.getByRole("button", { name: /^Listentermin\b.*Termin bearbeiten$/u }).click();
+  const eventPanel = page.getByRole("region", { name: /^Termin bearbeiten/u });
+  await expect(eventPanel).toBeFocused();
+  const editForm = eventPanel.locator("form").first();
+  await editForm.getByLabel("Titel").fill("Listentermin geändert");
+  await save(editForm, "Termin prüfen", "Termin speichern", "Änderung speichern und veröffentlichen");
+  await expect(editForm.getByRole("status")).toContainText("gespeichert");
+  // The form stays open on the entry it was opened for and names it by its new title.
+  await expect(eventPanel).toHaveAccessibleName(/Listentermin geändert/u);
+
+  await eventPanel.getByRole("button", { name: "Termin löschen" }).click();
+  await eventPanel.getByRole("button", { name: "Endgültig löschen" }).click();
+  await expect(page.getByText("Der Termin wurde gelöscht.")).toBeFocused();
+  await expect(page.getByText("Listentermin geändert")).toHaveCount(0);
+
+  /* The yearly case in one step: the planning state leads straight into an adoption of this course, with code, study
+     program and study period proposed for the following year. Nothing is created here — the adoption itself has its
+     own test. */
+  /* The code is read from the page rather than assumed: another test renames this course, and this one has to hold
+     whether or not that one ran before it. */
+  const code = (await page.getByRole("heading", { level: 1 }).innerText()).replace(/^Kurs /u, "");
+  expect(code).toMatch(/^TIF26/u);
+  await page.getByRole("link", { name: "Für nächsten Jahrgang übernehmen" }).click();
+  await expect(page).toHaveURL(/\/intern\/kurse\/neu\/vorlage\?vorlage=e2e-course&jahrgang=naechster$/u);
+  await expect(page.getByLabel("Kurskennung")).toHaveValue(code.replace("TIF26", "TIF27"));
+  await expect(page.getByLabel("Studiengang")).toHaveValue("program-own");
+  await expect(page.getByLabel("Studienbeginn")).toHaveValue("2027-10-01");
+  await expect(page.getByLabel("Studienende")).toHaveValue("2030-09-30");
+  await expect(page.getByRole("status")).toContainText("um 52 Wochen nach später");
+  await page.goto("/intern/kurse/e2e-course");
+
+  /* At 320 CSS pixels the plan and an open form stay within the display: nothing makes the page itself scroll
+     sideways (BARRIEREFREIHEIT.md). */
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.reload();
+  const overflow = () => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(await overflow()).toBeLessThanOrEqual(0);
+  await page.getByRole("button", { name: /Kursphase bearbeiten$/u }).nth(1).click();
+  await expect(phasePanel).toBeVisible();
+  expect(await overflow()).toBeLessThanOrEqual(0);
 });
 
 /* The course code is the one filter that reaches its address late: it waits out a typing pause, so between the

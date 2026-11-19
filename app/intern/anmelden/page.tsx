@@ -9,7 +9,7 @@ export default async function SignInPage({ searchParams }: { searchParams: Promi
   await connection();
   // A valid session belongs in the internal area, not in front of the sign-in form again — whoever returns from the
   // public pages stays signed in.
-  if (await getActiveAccount()) redirect("/intern");
+  if (await getActiveAccount()) redirect("/intern/heute");
   const { passwort } = await searchParams;
   return <SiteShell><section className="search-panel narrow-panel" aria-labelledby="sign-in-heading">
     <p className="eyebrow">Interner Bereich</p><h1 id="sign-in-heading">Anmelden</h1>

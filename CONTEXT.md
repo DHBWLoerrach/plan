@@ -49,6 +49,9 @@ _Avoid_: Blockphase, Phase, Urlaubsphase
 
 **Semester**: Die fortlaufende Studienperiode einer Kursphase, beginnend mit Semester 1.
 
+**Wechsel**: Der Tag, an dem ein Kurs von einer Kursphase in die unmittelbar anschließende übergeht — der erste Tag der folgenden Kursphase. Er ist eine Angabe, die zwei Kursphasen gemeinsam tragen, und wird als diese eine Angabe verschoben.
+_Avoid_: Phasengrenze, Start- und Enddatum getrennt verschieben
+
 **Prüfungsrelevanter Termin**: Eine Planangabe genau eines Kurses mit Titel, Kategorie und einem Startdatum sowie optionalem Enddatum, beispielsweise Anmeldung, Abgabe, Präsentation oder Prüfung. Er kann als vorläufig gekennzeichnet sein, solange seine Zeitangabe noch nicht verbindlich ist.
 
 **Kalendertag**: Ein zeitzonenloses Datum im gregorianischen Kalender.
@@ -69,7 +72,7 @@ _Avoid_: Blockplan als eigenständiges Planungs- oder Veröffentlichungsobjekt
 **Zuschnitt**: Die Auswahl von Kursen genau eines Jahrgangs, über die eine öffentliche Ansicht — ein Blockplan — gebildet und adressiert wird: ein einzelner Kurs, der ganze Jahrgang oder ein Studiengang beziehungsweise ein Bereich darin.
 _Avoid_: Zuschnitt über mehrere Jahrgänge, Zuschnitt als interner Bearbeitungsgegenstand
 
-**Vergleich**: Die Kurse desselben Jahrgangs, die bei der internen Betrachtung oder Bearbeitung eines Kurses nur lesend neben ihm dargestellt werden. Sein Umfang — Studiengang, Bereich oder ganzer Jahrgang — wird bei jedem Aufruf gewählt und nicht gespeichert; bearbeitet wird ausschließlich der Kurs, um den es geht.
+**Vergleich**: Die interne Ansicht eines Kurses, die ihn nur lesend neben die Kurse desselben Jahrgangs stellt. Ihr Umfang — Studiengang, Bereich oder ganzer Jahrgang — wird bei jedem Aufruf gewählt und nicht gespeichert; bearbeitet wird ausschließlich im Planungsstand des jeweiligen Kurses, der von seinen Parallelkursen nur die Abweichungen nennt.
 _Avoid_: gemeinsame Bearbeitung mehrerer Kurse, interner Zuschnitt
 
 **Übertragung**: Das gleichzeitige Anlegen derselben Kursphase oder desselben Termins beim bearbeiteten Kurs und bei ausgewählten Kursen seines Vergleichs. Es entstehen eigenständige Angaben je Kurs; spätere Änderungen wirken nur auf den jeweiligen Kurs.

@@ -74,13 +74,10 @@ describe("PlanEventTable", () => {
     expect(markup.match(/<tbody>[\s\S]*?<tr>/g)).toHaveLength(1);
   });
 
-  /* Where one course stands alone with its editable list of dates below, the chronology would hold the same entries
-     in the same order. The section and what the caller writes into it remain. */
-  it("drops the chronology on request but keeps the section around it", () => {
-    const markup = renderToStaticMarkup(createElement(PlanEventTable, { courses, phases, events, chronology: false }));
+  it("says in the words of its caller that there is no date yet", () => {
+    const markup = renderToStaticMarkup(createElement(PlanEventTable, { courses, phases, events: [], emptyNote: "Für TIF26A ist noch kein prüfungsrelevanter Termin gespeichert." }));
 
-    expect(markup).toContain("Termine");
-    expect(markup).not.toContain("Raum A");
+    expect(markup).toContain("Für TIF26A ist noch kein prüfungsrelevanter Termin gespeichert.");
     expect(markup).not.toContain("<table");
   });
 });

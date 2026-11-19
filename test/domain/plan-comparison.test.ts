@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { groupComparableCourses, groupComparableEvents } from "@/lib/domain/plan-comparison";
+import { describeDeviations, groupComparableCourses, groupComparableEvents } from "@/lib/domain/plan-comparison";
 import type { CoursePlan, CourseEvent, CoursePhase } from "@/lib/domain/publication";
 
 const courses: CoursePlan[] = [
@@ -76,5 +76,28 @@ describe("groupComparableEvents", () => {
       event("event-d", "course-d", { endDate: "2027-03-16" }),
       event("event-e", "course-e", { title: "Mündliche Prüfung" }),
     ])).toHaveLength(5);
+  });
+});
+
+describe("describeDeviations", () => {
+  const exam = (id: string, courseId: string, startDate = "2027-03-15"): CourseEvent => ({ id, title: "Klausur", description: null, category: "EXAM", startDate, endDate: null, provisional: false, courseIds: [courseId] });
+
+  it("lists a course that agrees, with nothing to report", () => {
+    expect(describeDeviations(courses[0], [courses[1]], [...phases("course-a"), ...phases("course-b")], [exam("a", "course-a"), exam("b", "course-b")]))
+      .toEqual([{ courseId: "course-b", code: "TIF26B", semesters: [], eventsOnlyHere: 0, eventsOnlyThere: 0 }]);
+  });
+
+  it("names the semesters that run differently with the phases the other course has there", () => {
+    const shifted = phases("course-b").map((phase) => (phase.semester === 2 ? { ...phase, startDate: "2027-03-08" } : phase));
+    const [deviation] = describeDeviations(courses[0], [courses[1]], [...phases("course-a"), ...shifted], []);
+
+    expect(deviation.semesters).toEqual([{ semester: 2, phases: [shifted[1]] }]);
+  });
+
+  it("counts the dates only one of the two courses has, each as often as it occurs", () => {
+    const [deviation] = describeDeviations(courses[0], [courses[1]], [],
+      [exam("a1", "course-a"), exam("a2", "course-a"), exam("b1", "course-b"), exam("b2", "course-b", "2027-04-01")]);
+
+    expect(deviation).toMatchObject({ eventsOnlyHere: 1, eventsOnlyThere: 1 });
   });
 });

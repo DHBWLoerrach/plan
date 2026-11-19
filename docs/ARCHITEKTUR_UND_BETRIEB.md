@@ -19,14 +19,18 @@ Scheduler.
 
 Die Vorlesungskalender sind eine externe Lesesicht. Die Anwendung ruft den ICS-Feed
 eines verwalteten Kurses ausschließlich serverseitig aus dem konfigurierten
-DHBW-Kalendersystem ab, hält erfolgreiche Antworten höchstens zehn Minuten im
-Arbeitsspeicher und speichert keine Kalendertermine in SQLite. Ansicht und interne
+DHBW-Kalendersystem ab, hält gefundene und fehlende Feeds höchstens zehn Minuten,
+einen fehlgeschlagenen Abruf eine Minute im Arbeitsspeicher und speichert keine
+Kalendertermine in SQLite. Ansicht und interne
 JSON-Route prüfen dieselbe Anmeldung und systemweite Kurseinsicht; Veröffentlichung
 oder Nichtveröffentlichung eines Kurses ändert daran nichts. Eine öffentliche
 Kalenderansicht oder Kalender-API gehört nicht zur Systemgrenze. Wochen-, Monats-
 und Listenansicht tragen Ansicht und Bezugsdatum in der Adresse; die interne Route
 liefert dafür höchstens die Termine des sichtbaren Zeitraums beziehungsweise 200
-kommende Listeneinträge.
+kommende Listeneinträge. Die Seite „Heute“ liest die Feeds aller Kurse der eigenen
+Bereiche, die heute studieren, parallel und über denselben Zwischenspeicher; jeder Kurs
+wird für sich nachgeladen, sodass ein langsamer oder nicht erreichbarer Feed nur seine
+eigene Zeile verzögert.
 
 Die vorgesehene produktive Basis-URL ist
 `https://plan.apps.szi.dhbw-loerrach.de`. TLS-Terminierung, HSTS und die Weiterleitung an den

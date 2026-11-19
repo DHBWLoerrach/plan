@@ -25,13 +25,12 @@ describe("comparisonScope", () => {
 describe("coursePath", () => {
   it("leaves the default comparison out of the address, so the plain course address is the one that gets linked", () => {
     expect(coursePath("course-1")).toBe("/intern/kurse/course-1");
-    expect(coursePath("course-1", "program")).toBe("/intern/kurse/course-1");
+    expect(coursePath("course-1", "program")).toBe("/intern/kurse/course-1?vergleich=studiengang");
   });
 
   it("carries every other comparison as a parameter", () => {
     expect(coursePath("course-1", "area")).toBe("/intern/kurse/course-1?vergleich=bereich");
     expect(coursePath("course-1", "year")).toBe("/intern/kurse/course-1?vergleich=jahrgang");
-    expect(coursePath("course-1", "none")).toBe("/intern/kurse/course-1?vergleich=keiner");
   });
 
   it("encodes the course id, because it reaches the path from a table row unchecked", () => {

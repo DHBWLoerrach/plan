@@ -10,13 +10,14 @@ export function SignInForm() {
     const response = await fetch("/api/auth/sign-in/email", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email: formData.get("email"), password: formData.get("password"), callbackURL: "/intern" }),
+      body: JSON.stringify({ email: formData.get("email"), password: formData.get("password"), callbackURL: "/intern/heute" }),
     });
     if (!response.ok) {
       setError("Die Anmeldung war nicht erfolgreich. Prüfen Sie E-Mail-Adresse und Passwort.");
       return;
     }
-    window.location.assign("/intern");
+    // The day page is the entry page; an account without an area is sent on from there to the overview.
+    window.location.assign("/intern/heute");
   }
 
   return <form action={signIn} className="sign-in-form">

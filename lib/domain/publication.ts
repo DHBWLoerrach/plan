@@ -137,6 +137,14 @@ export function validatePublication({
 /** What a matrix cell says where a course has no phase covering the period of its row. */
 export const noPhaseLabel = "Nicht in diesem Semester";
 
+/**
+ * The phase of one course a matrix row stands for: the first one of that semester covering the whole row.
+ */
+export function phaseCoveringPeriod<TPhase extends CoursePhase>(phases: TPhase[], courseId: string, semester: number, startDate: string, endDate: string): TPhase | undefined {
+  return phases.find((candidate) => candidate.courseId === courseId && candidate.semester === semester
+    && candidate.startDate <= startDate && candidate.endDate >= endDate);
+}
+
 export function buildSemesterMatrix(courses: CoursePlan[], phases: CoursePhase[], semester: number): MatrixRow[] {
   const semesterPhases = phases.filter((phase) => phase.semester === semester);
   const boundaries = new Set<string>();
@@ -151,9 +159,7 @@ export function buildSemesterMatrix(courses: CoursePlan[], phases: CoursePhase[]
     const startDate = orderedBoundaries[index];
     const endDate = plusDays(orderedBoundaries[index + 1], -1);
     const cells = courses.map((course) => {
-      const phase = semesterPhases.find(
-        (candidate) => candidate.courseId === course.id && candidate.startDate <= startDate && candidate.endDate >= endDate,
-      );
+      const phase = phaseCoveringPeriod(semesterPhases, course.id, semester, startDate, endDate);
       return phase ? phaseTypeLabel(phase.type) : noPhaseLabel;
     });
     const previous = rows.at(-1);

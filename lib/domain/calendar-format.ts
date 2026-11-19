@@ -8,6 +8,7 @@ const abbreviatedWeekdays = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
 const fullWeekdays = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
 
 const dayFormatter = new Intl.DateTimeFormat("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" });
+const longDayFormatter = new Intl.DateTimeFormat("de-DE", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 
 function utcDate(day: string): Date {
   return new Date(`${day}T00:00:00Z`);
@@ -23,6 +24,11 @@ export function formatCalendarDay(day: string, options?: { weekday?: boolean }):
   const date = utcDate(day);
   const formatted = dayFormatter.format(date);
   return options?.weekday ? `${abbreviatedWeekdays[date.getUTCDay()]} ${formatted}` : formatted;
+}
+
+/** A calendar day written out in full, „Donnerstag, 5. November 2026“ — the way a page that is about one day names it. */
+export function formatLongCalendarDay(day: string): string {
+  return `${weekdayName(day)}, ${longDayFormatter.format(utcDate(day))}`;
 }
 
 function weeksAndDays(startDate: string, endDate: string): { weeks: number; days: number } {

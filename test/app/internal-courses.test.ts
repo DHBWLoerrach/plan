@@ -1,7 +1,7 @@
 import Database from "better-sqlite3";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { coursePlanData, courseListData, findInternalCourse, overviewPrograms, programOptions, type CourseListFilters } from "@/app/intern/kurse/data";
+import { coursePlanData, courseListData, findInternalCourse, overviewPrograms, programOptions, studyingPrograms, type CourseListFilters } from "@/app/intern/kurse/data";
 import { applySchema } from "@/test/schema";
 
 const databases: Database.Database[] = [];
@@ -236,6 +236,24 @@ describe("overviewPrograms", () => {
   });
 });
 
+describe("studyingPrograms", () => {
+  /* Courses whose study period does not include the day have no lectures that day, and each one left in would cost
+     the day page a request to the calendar system. Both ends of the study period still count as studying. */
+  it("keeps only the courses of the own areas that study on the given day", () => {
+    const sqlite = database();
+    sqlite.prepare(`INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, published_at, updated_at, updated_by_account_id) VALUES
+      ('course-tif22', 'prog-tif', 'TIF22A', 'tif22a', '2022-10-01', '2025-09-30', NULL, '2026-01-01T00:00:00.000Z', 'editor'),
+      ('course-tif27', 'prog-tif', 'TIF27A', 'tif27a', '2027-10-01', '2030-09-30', NULL, '2026-01-01T00:00:00.000Z', 'editor')`).run();
+    const codes = (account: typeof editor | typeof admin, day: string) => studyingPrograms(sqlite, account, day)
+      .flatMap((program) => program.years.flatMap((year) => year.courses.map((course) => course.code)));
+
+    expect(codes(editor, "2026-11-15")).toEqual(["TIF26A"]);
+    expect(codes(editor, "2026-10-01")).toEqual(["TIF26A"]);
+    expect(codes(editor, "2025-09-30")).toEqual(["TIF22A"]);
+    expect(codes(admin, "2027-10-01")).toEqual(["TIF26A", "TIF27A", "WWI27A"]);
+  });
+});
+
 describe("coursePlanData", () => {
   /**
    * Around `course-tif`: a parallel course of its own study program, a second study program inside its own area, a
@@ -287,12 +305,6 @@ describe("coursePlanData", () => {
     for (const scope of ["program", "area", "year"] as const) {
       expect(coursePlanData(sqlite, editor, "course-tif", scope)?.comparison.map((course) => course.code)).not.toContain("TIF27A");
     }
-  });
-
-  it("stands the course alone when no comparison is asked for", () => {
-    const sqlite = withParallelCourses(database());
-    const plan = coursePlanData(sqlite, editor, "course-tif", "none");
-    expect(plan?.comparison).toEqual([]);
   });
 
   it("reads the plan of every shown course, so the matrix can draw all of its columns", () => {
