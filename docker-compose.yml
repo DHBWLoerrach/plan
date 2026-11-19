@@ -25,6 +25,8 @@ services:
       start_period: 15s
     networks:
       network_szi:
+        ipv4_address: 172.20.10.8
+        ipv6_address: fd62:c4ca:dc82:2::8
     volumes:
       - type: bind
         source: ./data
