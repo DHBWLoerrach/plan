@@ -1,0 +1,57 @@
+services:
+  app:
+    image: ghcr.io/dhbwloerrach/dhbw-mgmt:${APP_VERSION:?APP_VERSION ist nicht gesetzt}
+    container_name: dhbw-mgmt
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    expose:
+      - '3000'
+    env_file:
+      - ./.env.local
+    environment:
+      DATABASE_URL: '/app/data/dhbw-mgmt.sqlite'
+      BETTER_AUTH_URL: 'https://plan.apps.szi.dhbw-loerrach.de'
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:3000/').then(response => { if (!response.ok) process.exit(1) }).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      network_szi:
+        ipv4_address: 172.20.10.8
+        ipv6_address: fd62:c4ca:dc82:2::8
+    volumes:
+      - type: bind
+        source: ./data
+        target: /app/data
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./backup
+        target: /backup
+        bind:
+          create_host_path: false
+    tmpfs:
+      - /tmp:uid=1002,gid=1002,mode=0700
+      - /app/.next/cache:uid=1002,gid=1002,mode=0700
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.docker.network=network_szi'
+      - 'traefik.http.routers.dhbw-mgmt.rule=Host(`plan.apps.szi.dhbw-loerrach.de`)'
+      - 'traefik.http.routers.dhbw-mgmt.entrypoints=websecure'
+      - 'traefik.http.routers.dhbw-mgmt.tls.certresolver=letsencrypt'
+      - 'traefik.http.routers.dhbw-mgmt.middlewares=dhbw-mgmt-ratelimit'
+      - 'traefik.http.middlewares.dhbw-mgmt-ratelimit.ratelimit.average=30'
+      - 'traefik.http.middlewares.dhbw-mgmt-ratelimit.ratelimit.burst=60'
+      - 'traefik.http.services.dhbw-mgmt.loadbalancer.server.port=3000'
+
+networks:
+  network_szi:
+    external: true

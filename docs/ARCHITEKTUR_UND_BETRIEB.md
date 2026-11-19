@@ -36,8 +36,10 @@ Die vorgesehene produktive Basis-URL ist
 `https://plan.apps.szi.dhbw-loerrach.de`. TLS-Terminierung, HSTS und die Weiterleitung an den
 Anwendungscontainer übernimmt Traefik. Der Container ist nicht unmittelbar öffentlich erreichbar.
 Traefik überschreibt eingehende Forwarding-Header oder seine Adressen werden über
-`TRUSTED_PROXY_IPS` eng begrenzt. Die konkrete Container-, Proxy- und Healthcheck-Konfiguration
-liegt außerhalb dieses Repositorys und muss vor dem Go-live bereitgestellt und geprüft werden.
+`TRUSTED_PROXY_IPS` eng begrenzt. Container-, Traefik- und Healthcheck-Konfiguration stehen in
+`docker-compose.yml`; ihren Betrieb beschreibt das [Betriebshandbuch](BETRIEBSHANDBUCH.md). Traefik
+selbst und das externe Netzwerk `network_szi` stellt der VPS bereit; beides muss vor dem Go-live
+geprüft werden.
 
 ## Betrieb, Backups und Datenschutz
 
