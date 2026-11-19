@@ -14,3 +14,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Write documentation and domain language in German.
 - Use English identifiers and comments in code.
 - Name database objects in English.
+
+# ui-sdk
+
+Before using ui-sdk (`@ui-sdk/react`, `@ui-sdk/core`), follow the `ui-sdk` skill if it is installed, and read `node_modules/@ui-sdk/react/docs/llms.txt`. To build a new component, also search `node_modules/@ui-sdk/react/docs/core.md` by heading, and read `node_modules/@ui-sdk/react/docs/rendering.md` next to it.
