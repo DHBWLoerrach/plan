@@ -51,6 +51,72 @@ function disclosure(page: Page, summary: string): Locator {
 
 test("edits, publishes and publicly reads a course", async ({ page }) => {
   await signIn(page, "admin@test.invalid");
+  const area = page.getByRole("combobox", { name: "Bereich", exact: true });
+  const showArea = page.getByRole("button", { name: "Anzeigen" });
+  const ownCourse = page.getByRole("link", { name: "TIF26E2E", exact: true });
+  const foreignCourse = page.getByRole("link", { name: "FRM26E2E" });
+  const finishedCourse = page.getByRole("link", { name: "FRM20E2E1", exact: true });
+  const foreignArea = area.getByRole("option", { name: /^Fremder Bereich \(\d+ Kurse\)$/u });
+
+  await test.step("start with all areas on Today and remember a selected area", async () => {
+    await expect(area.locator("option:checked")).toHaveText("Alle Bereiche");
+    await expect(foreignArea).toHaveCount(1);
+    await expect(ownCourse).toBeVisible();
+    await expect(foreignCourse).toBeVisible();
+    await expect(finishedCourse).toHaveCount(0);
+
+    await area.selectOption("area-foreign");
+    await showArea.click();
+    await expect(ownCourse).toHaveCount(0);
+    await expect(foreignCourse).toBeVisible();
+    await page.reload();
+    await expect(area).toHaveValue("area-foreign");
+    await expect(ownCourse).toHaveCount(0);
+  });
+
+  await test.step("select and remember the area of a large course overview", async () => {
+    await page.goto("/intern");
+
+    await expect(area, "The seeded course count should enable the area picker").toHaveValue("");
+    await expect(area).toHaveAccessibleDescription("Die Kurskacheln erscheinen nach der Bereichsauswahl.");
+    await expect(foreignArea).toHaveCount(1);
+    await expect(ownCourse).toHaveCount(0);
+    await expect(foreignCourse).toHaveCount(0);
+
+    await area.selectOption("area-foreign");
+    await showArea.press("Enter");
+    await expect(foreignCourse).toBeVisible();
+    await expect(finishedCourse).toBeVisible();
+    await expect(ownCourse).toHaveCount(0);
+    await page.reload();
+    await expect(area).toHaveValue("area-foreign");
+    await expect(foreignCourse).toBeVisible();
+
+    await area.selectOption("area-own");
+    await showArea.click();
+    await expect(ownCourse).toBeVisible();
+    await expect(foreignCourse).toHaveCount(0);
+    await page.getByRole("link", { name: "Alle Kurse", exact: true }).click();
+    await expect(page).toHaveURL(/\/intern\/kurse$/u);
+    await expect(page.getByRole("checkbox", { name: "Kurse anderer Bereiche einbeziehen" })).not.toBeChecked();
+    await expect(ownCourse).toBeVisible();
+    await expect(foreignCourse).toBeVisible();
+  });
+
+  await test.step("restore all areas on Today independently of the overview", async () => {
+    await page.goto("/intern/heute");
+    await expect(area).toHaveValue("area-foreign");
+    await expect(ownCourse).toHaveCount(0);
+
+    await area.selectOption({ label: "Alle Bereiche" });
+    await showArea.click();
+    await expect(ownCourse).toBeVisible();
+    await expect(foreignCourse).toBeVisible();
+    await page.reload();
+    await expect(area.locator("option:checked")).toHaveText("Alle Bereiche");
+    await expect(ownCourse).toBeVisible();
+  });
+
   await page.goto("/intern/kurse/e2e-course");
   // The course details rest closed, so the page opens as a plan and not as a stack of forms.
   await expect(page.getByLabel("Kurskennung")).not.toBeVisible();
@@ -158,6 +224,7 @@ test("opens on the own areas and keeps foreign courses read-only, confirming wit
   await signIn(page, "editor@test.invalid");
   await expect(page.getByRole("heading", { level: 1, name: "Heute" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Heute" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("combobox", { name: "Bereich", exact: true })).toHaveCount(0);
   const dayRow = page.getByRole("listitem").filter({ has: page.getByRole("link", { name: /^TIF26/u }) });
   await expect(dayRow.getByRole("link")).toHaveAttribute("href", "/intern/kurse/e2e-course?kalender=woche");
   /* The seeded course code is no DHBW calendar name, so its row settles on the not-found state without a request
@@ -167,6 +234,7 @@ test("opens on the own areas and keeps foreign courses read-only, confirming wit
 
   await page.getByRole("link", { name: "Übersicht" }).first().click();
   await expect(page).toHaveURL(/\/intern$/u);
+  await expect(page.getByRole("combobox", { name: "Bereich", exact: true })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "E2E Testinformatik" })).toBeVisible();
   /* The publishing test renames the course, so only the part of the code that survives it is matched. */
   await expect(page.getByRole("link", { name: /^TIF26/u })).toBeVisible();

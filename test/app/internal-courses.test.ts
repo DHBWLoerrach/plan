@@ -1,7 +1,7 @@
 import Database from "better-sqlite3";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { coursePlanData, courseListData, findInternalCourse, overviewPrograms, programOptions, studyingPrograms, type CourseListFilters } from "@/app/intern/kurse/data";
+import { coursePlanData, courseListData, findInternalCourse, managedCourseAreaCounts, overviewPrograms, programOptions, studyingPrograms, type CourseListFilters } from "@/app/intern/kurse/data";
 import { applySchema } from "@/test/schema";
 
 const databases: Database.Database[] = [];
@@ -28,6 +28,12 @@ function database() {
       ('course-tif', 'prog-tif', 'TIF26A', 'tif26a', '2026-10-01', '2029-09-30', NULL, '2026-01-01T00:00:00.000Z', 'editor'),
       ('course-wwi', 'prog-wwi', 'WWI27A', 'wwi27a', '2027-10-01', '2030-09-30', NULL, '2026-01-01T00:00:00.000Z', 'editor');`);
   return sqlite;
+}
+
+/** A second course in the study program of the editor, in a year before the seeded one. */
+function addEarlierCourse(sqlite: Database.Database) {
+  sqlite.prepare(`INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, published_at, updated_at, updated_by_account_id)
+    VALUES ('course-tif25', 'prog-tif', 'TIF25A', 'tif25a', '2025-10-01', '2028-09-30', NULL, '2026-01-01T00:00:00.000Z', 'editor')`).run();
 }
 
 /** Marks the current course data as published without running the whole publication service. */
@@ -171,20 +177,34 @@ describe("programOptions", () => {
   });
 });
 
+describe("managedCourseAreaCounts", () => {
+  it("counts courses by manageable area, optionally within their study period", () => {
+    const sqlite = database();
+    addEarlierCourse(sqlite);
+    expect(managedCourseAreaCounts(sqlite, admin)).toEqual([
+      { id: "area-technik", name: "Technik", courseCount: 2 },
+      { id: "area-wirtschaft", name: "Wirtschaft", courseCount: 1 },
+    ]);
+    expect(managedCourseAreaCounts(sqlite, editor)).toEqual([{ id: "area-technik", name: "Technik", courseCount: 2 }]);
+    expect(managedCourseAreaCounts(sqlite, admin, "2026-11-15")).toEqual([{ id: "area-technik", name: "Technik", courseCount: 2 }]);
+    expect(managedCourseAreaCounts(sqlite, admin, "2029-10-01")).toEqual([{ id: "area-wirtschaft", name: "Wirtschaft", courseCount: 1 }]);
+  });
+});
+
 describe("overviewPrograms", () => {
   /** A day inside the first semester of the seeded 2026 course. */
   const today = "2026-11-15";
-
-  /** A second course in the study program of the editor, in a year before the seeded one. */
-  function addEarlierCourse(sqlite: Database.Database) {
-    sqlite.prepare(`INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, published_at, updated_at, updated_by_account_id)
-      VALUES ('course-tif25', 'prog-tif', 'TIF25A', 'tif25a', '2025-10-01', '2028-09-30', NULL, '2026-01-01T00:00:00.000Z', 'editor')`).run();
-  }
 
   it("keeps the overview inside the own areas, unlike the course list", () => {
     const sqlite = database();
     expect(overviewPrograms(sqlite, editor, today).map((program) => program.id)).toEqual(["prog-tif"]);
     expect(overviewPrograms(sqlite, admin, today).map((program) => program.id)).toEqual(["prog-tif", "prog-wwi"]);
+  });
+
+  it("limits the overview to the selected area within the account's scope", () => {
+    const sqlite = database();
+    expect(overviewPrograms(sqlite, admin, today, "area-wirtschaft").map((program) => program.id)).toEqual(["prog-wwi"]);
+    expect(overviewPrograms(sqlite, editor, today, "area-wirtschaft")).toEqual([]);
   });
 
   it("groups the courses of a study program by year, ascending", () => {
@@ -244,13 +264,15 @@ describe("studyingPrograms", () => {
     sqlite.prepare(`INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, published_at, updated_at, updated_by_account_id) VALUES
       ('course-tif22', 'prog-tif', 'TIF22A', 'tif22a', '2022-10-01', '2025-09-30', NULL, '2026-01-01T00:00:00.000Z', 'editor'),
       ('course-tif27', 'prog-tif', 'TIF27A', 'tif27a', '2027-10-01', '2030-09-30', NULL, '2026-01-01T00:00:00.000Z', 'editor')`).run();
-    const codes = (account: typeof editor | typeof admin, day: string) => studyingPrograms(sqlite, account, day)
+    const codes = (account: typeof editor | typeof admin, day: string, areaId?: string) => studyingPrograms(sqlite, account, day, areaId)
       .flatMap((program) => program.years.flatMap((year) => year.courses.map((course) => course.code)));
 
     expect(codes(editor, "2026-11-15")).toEqual(["TIF26A"]);
     expect(codes(editor, "2026-10-01")).toEqual(["TIF26A"]);
     expect(codes(editor, "2025-09-30")).toEqual(["TIF22A"]);
     expect(codes(admin, "2027-10-01")).toEqual(["TIF26A", "TIF27A", "WWI27A"]);
+    expect(codes(admin, "2027-10-01", "area-wirtschaft")).toEqual(["WWI27A"]);
+    expect(codes(editor, "2027-10-01", "area-wirtschaft")).toEqual([]);
   });
 });
 

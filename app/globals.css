@@ -205,6 +205,12 @@ p[role="status"] { margin: 0; color: var(--success); }
 @media (max-width: 60rem) { .filter-bar--public .filter-bar__fields { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 30rem) { .filter-bar--public .filter-bar__fields { grid-template-columns: minmax(0, 1fr); } }
 
+.course-area-selector { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .65rem 1rem; margin-bottom: 1.5rem; }
+.course-area-selector__field { display: grid; grid-template-columns: minmax(0, 1fr); flex: 1 1 16rem; min-width: 0; max-width: 26rem; gap: .3rem; }
+.course-area-selector__field label { font-size: .85rem; font-weight: 700; }
+.course-area-selector__hint { margin: 0 0 .65rem; color: var(--gray-strong); font-size: .9rem; }
+.course-area-selector .text-link { display: inline-flex; align-items: center; min-height: 2.75rem; }
+
 .filter-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.3rem; margin-top: 1.5rem; }
 .filter-actions > a:not(.text-link) { color: var(--gray); font-size: .9rem; text-underline-offset: .25rem; }
 

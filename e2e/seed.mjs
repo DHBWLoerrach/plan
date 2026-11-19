@@ -43,11 +43,18 @@ try {
   sqlite.prepare(`INSERT INTO password_links (id, user_id, token_hash, expires_at, created_at)
     VALUES ('e2e-password-link', 'password-link-user', ?, '2099-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z')`)
     .run(createHash("sha256").update(linkToken).digest("hex"));
-  const addCourse = sqlite.prepare(`INSERT INTO courses
+  const insertCourse = sqlite.prepare(`INSERT INTO courses
     (id, program_id, code, normalized_code, study_start, study_end, published_at, updated_at, updated_by_account_id)
-    VALUES (?, ?, ?, ?, '2026-10-01', '2029-09-30', NULL, '2026-01-01T00:00:00.000Z', 'system-admin')`);
-  addCourse.run("e2e-course", "program-own", "TIF26E2E", "tif26e2e");
-  addCourse.run("e2e-foreign-course", "program-foreign", "FRM26E2E", "frm26e2e");
+    VALUES (?, ?, ?, ?, ?, ?, NULL, '2026-01-01T00:00:00.000Z', 'system-admin')`);
+  insertCourse.run("e2e-course", "program-own", "TIF26E2E", "tif26e2e", "2026-10-01", "2029-09-30");
+  insertCourse.run("e2e-foreign-course", "program-foreign", "FRM26E2E", "frm26e2e", "2026-10-01", "2029-09-30");
+  // Seed enough courses for both selectors, with earlier cohorts outside the 2026 comparisons.
+  for (let number = 1; number <= 14; number++) {
+    insertCourse.run(`e2e-running-${number}`, "program-foreign", `FRM25E2E${number}`, `frm25e2e${number}`, "2025-10-01", "2029-09-30");
+  }
+  for (let number = 1; number <= 4; number++) {
+    insertCourse.run(`e2e-earlier-${number}`, "program-foreign", `FRM20E2E${number}`, `frm20e2e${number}`, "2020-10-01", "2023-09-30");
+  }
   const addPhase = sqlite.prepare(`INSERT INTO course_phases
     (id, course_id, semester, phase_type, start_date, end_date) VALUES (?, 'e2e-course', ?, ?, ?, ?)`);
   [

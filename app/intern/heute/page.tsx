@@ -5,6 +5,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 
 import { CalendarLocation } from "@/components/calendar-location";
+import { CourseAreaSelector } from "@/components/course-area-selector";
 import { InternalNav } from "@/components/internal-nav";
 import { SiteShell } from "@/components/site-shell";
 import { sqlite } from "@/lib/db";
@@ -14,6 +15,7 @@ import { calendarDescriptionParts, calendarEventTimeOnDay, eventsOnCalendarDay, 
 import { getActiveAccount, managesAnyArea } from "@/lib/internal-auth";
 import { readCourseCalendar } from "@/lib/services/course-calendar-feed";
 
+import { readCourseAreaSelection, selectCourseAreaAction } from "../course-area";
 import { studyingPrograms } from "../kurse/data";
 
 export const metadata: Metadata = { title: "Heute" };
@@ -66,9 +68,8 @@ async function CourseDay({ courseCode, day }: { courseCode: string; day: string 
 }
 
 /**
- * The entry page after signing in: what every course of the own areas has in its lecture calendar today. It reads
- * only the courses studying today — before its study start or after its study end a course has no lectures — and
- * stays inside the own areas like the overview, since it is the way into one's own day rather than a system wide view.
+ * The entry page after sign-in shows lecture calendars for courses whose study period includes today.
+ * The area selector can narrow the day to one of the account's managed areas.
  */
 export default async function TodayPage() {
   await connection();
@@ -77,7 +78,8 @@ export default async function TodayPage() {
   // Without an area there are no own courses, and the overview is where that is explained.
   if (!managesAnyArea(account)) redirect("/intern");
   const today = berlinCalendarDay();
-  const programs = studyingPrograms(sqlite, account, today);
+  const { areas, selectedArea } = await readCourseAreaSelection(account, "today", today);
+  const programs = studyingPrograms(sqlite, account, today, selectedArea?.id);
   /* As on the overview: the area is named only once more than one is shown, since only then can a study program name
      occur twice. */
   const namesAreas = new Set(programs.map((program) => program.areaName)).size > 1;
@@ -87,6 +89,8 @@ export default async function TodayPage() {
       <div className="course-overview__title"><h1 id="today-heading">Heute</h1><span className="course-overview__separator" aria-hidden="true">·</span>
         <p className="course-overview__count"><time dateTime={today}>{formatLongCalendarDay(today)}</time></p></div>
     </header>
+    {areas.length > 0 ? <CourseAreaSelector areas={areas} selectedArea={selectedArea}
+      allowAll action={selectCourseAreaAction.bind(null, "today")} /> : null}
     {programs.length
       ? programs.map((program) => <section className="program-group" key={program.id}>
         <h2 className="program-group__name">

@@ -131,48 +131,64 @@ export function courseListData(sqlite: Database.Database, account: AccountScope,
 }
 
 type OverviewRow = Omit<MarkingColumns, "areaId"> & { id: string; code: string; studyStart: string; studyEnd: string; programId: string; programName: string; abbreviation: string; areaName: string };
+export type CourseAreaCount = { id: string; name: string; courseCount: number };
+
+const managedAreaCondition = "(@systemAdmin = 1 OR program.area_id IN (SELECT area_id FROM area_assignments WHERE user_id = @accountId))";
+const studyPeriodCondition = "(@studyingOn IS NULL OR @studyingOn BETWEEN course.study_start AND course.study_end)";
+
+/** Areas with courses the account manages, optionally limited to courses studying on a given day. */
+export function managedCourseAreaCounts(sqlite: Database.Database, account: AccountScope, studyingOn?: string): CourseAreaCount[] {
+  return sqlite.prepare(`SELECT area.id, area.name, count(*) AS courseCount
+    FROM courses course JOIN programs program ON program.id = course.program_id JOIN areas area ON area.id = program.area_id
+    WHERE ${managedAreaCondition} AND ${studyPeriodCondition}
+    GROUP BY area.id, area.name
+    ORDER BY area.name COLLATE NOCASE, area.id`)
+    .all({ systemAdmin: Number(account.systemAdmin), accountId: account.id, studyingOn: studyingOn ?? null }) as CourseAreaCount[];
+}
 
 /**
  * The courses of the areas this account may write in, grouped the way the overview shows them: by study program, and
  * within it by year ascending. Unlike the course list this stays inside the own areas — the overview is the way into
  * one's own work, while reading across every area is what the list is for (ADR 0011).
+ * The optional areaId limits the results to one area within the account's scope.
  *
  * The grouping walks the rows in the order the query returns them, so the sorting lives in the `ORDER BY` alone. The
  * study program is grouped by its id rather than by its designation, because the same name may occur in more than one
  * area; the id is therefore also what settles the order within an area.
  */
-export function overviewPrograms(sqlite: Database.Database, account: AccountScope, today: string): OverviewProgram[] {
-  return ownAreaPrograms(sqlite, account, today, false);
+export function overviewPrograms(sqlite: Database.Database, account: AccountScope, today: string, areaId?: string): OverviewProgram[] {
+  return ownAreaPrograms(sqlite, account, today, false, areaId);
 }
 
 /**
  * The same grouping, narrowed to the courses whose study period includes `today` — the ones the day page reads the
  * lecture calendars of. A course that has not begun or has finished has no lectures to show, and reading its calendar
  * would only cost a request to the DHBW calendar system per course.
+ * The optional areaId limits the results to one area within the account's scope.
  */
-export function studyingPrograms(sqlite: Database.Database, account: AccountScope, today: string): OverviewProgram[] {
-  return ownAreaPrograms(sqlite, account, today, true);
+export function studyingPrograms(sqlite: Database.Database, account: AccountScope, today: string, areaId?: string): OverviewProgram[] {
+  return ownAreaPrograms(sqlite, account, today, true, areaId);
 }
 
-function ownAreaPrograms(sqlite: Database.Database, account: AccountScope, today: string, studyingOnly: boolean): OverviewProgram[] {
-  const scope = [account.systemAdmin ? 1 : 0, account.id, studyingOnly ? 1 : 0, today, today];
+function ownAreaPrograms(sqlite: Database.Database, account: AccountScope, today: string, studyingOnly: boolean, areaId?: string): OverviewProgram[] {
+  const scope = { systemAdmin: Number(account.systemAdmin), accountId: account.id, studyingOn: studyingOnly ? today : null, areaId: areaId ?? null };
+  const where = `WHERE ${managedAreaCondition} AND ${studyPeriodCondition}
+    AND (@areaId IS NULL OR program.area_id = @areaId)`;
   const rows = sqlite.prepare(`SELECT course.id, course.code, course.study_start AS studyStart, course.study_end AS studyEnd,
       program.id AS programId, program.name AS programName, program.abbreviation, area.name AS areaName,
       course.published_at AS publishedAt
     FROM courses course JOIN programs program ON program.id = course.program_id JOIN areas area ON area.id = program.area_id
-    WHERE (? = 1 OR program.area_id IN (SELECT area_id FROM area_assignments WHERE user_id = ?))
-      AND (? = 0 OR (course.study_start <= ? AND course.study_end >= ?))
+    ${where}
     ORDER BY area.name COLLATE NOCASE, program.abbreviation COLLATE NOCASE, program.id,
       substr(course.study_start, 1, 4), course.code COLLATE NOCASE`)
-    .all(...scope) as OverviewRow[];
+    .all(scope) as OverviewRow[];
 
   /* The phases of all those courses at once: one query per course would repeat the area predicate for every tile. */
   const phaseRows = sqlite.prepare(`SELECT phase.course_id AS courseId, phase.semester, phase.phase_type AS type,
       phase.start_date AS startDate, phase.end_date AS endDate
     FROM course_phases phase JOIN courses course ON course.id = phase.course_id JOIN programs program ON program.id = course.program_id
-    WHERE (? = 1 OR program.area_id IN (SELECT area_id FROM area_assignments WHERE user_id = ?))
-      AND (? = 0 OR (course.study_start <= ? AND course.study_end >= ?))
-    ORDER BY phase.start_date`).all(...scope) as (StandingPhase & { courseId: string })[];
+    ${where}
+    ORDER BY phase.start_date`).all(scope) as (StandingPhase & { courseId: string })[];
   const phasesByCourse = new Map<string, StandingPhase[]>();
   for (const { courseId, ...phase } of phaseRows) {
     const phases = phasesByCourse.get(courseId);
@@ -226,8 +242,10 @@ export function findInternalCourse(sqlite: Database.Database, courseId: string, 
  */
 export function programOptions(sqlite: Database.Database, account: AccountScope, semesters?: number): ProgramOption[] {
   const rows = sqlite.prepare(`SELECT program.id, program.name, program.abbreviation, program.semesters, area.name AS areaName FROM programs program JOIN areas area ON area.id = program.area_id
-    WHERE (? = 1 OR program.area_id IN (SELECT area_id FROM area_assignments WHERE user_id = ?)) AND (? IS NULL OR program.semesters = ?)
-    ORDER BY area.name COLLATE NOCASE, program.name COLLATE NOCASE`).all(account.systemAdmin ? 1 : 0, account.id, semesters ?? null, semesters ?? null) as { id: string; name: string; abbreviation: string; semesters: number; areaName: string }[];
+    WHERE ${managedAreaCondition} AND (@semesters IS NULL OR program.semesters = @semesters)
+    ORDER BY area.name COLLATE NOCASE, program.name COLLATE NOCASE`)
+    .all({ systemAdmin: Number(account.systemAdmin), accountId: account.id, semesters: semesters ?? null }) as
+    { id: string; name: string; abbreviation: string; semesters: number; areaName: string }[];
   return rows.map((program) => ({ id: program.id, label: `${programLabel(program)} (${program.areaName})`, semesters: program.semesters }));
 }
 

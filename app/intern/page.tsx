@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 
+import { CourseAreaSelector } from "@/components/course-area-selector";
 import { InternalNav } from "@/components/internal-nav";
 import { SiteShell } from "@/components/site-shell";
 import { sqlite } from "@/lib/db";
@@ -10,6 +11,7 @@ import { berlinCalendarDay } from "@/lib/domain/calendar-day";
 import { publicationStateLabels } from "@/lib/domain/course-status";
 import { getActiveAccount, managesAnyArea } from "@/lib/internal-auth";
 
+import { readCourseAreaSelection, selectCourseAreaAction } from "./course-area";
 import { overviewPrograms } from "./kurse/data";
 
 /** The page carries no visible title, so the tab is where it states which of the internal pages is open. */
@@ -20,7 +22,14 @@ export default async function InternalHome() {
   const account = await getActiveAccount();
   if (!account) redirect("/intern/anmelden");
   const manages = managesAnyArea(account);
-  const programs = manages ? overviewPrograms(sqlite, account, berlinCalendarDay()) : [];
+  const today = berlinCalendarDay();
+  const { areas, selectedArea } = manages
+    ? await readCourseAreaSelection(account, "overview", today)
+    : { areas: [], selectedArea: undefined };
+  const showAreaSelection = areas.length > 0;
+  const programs = manages && (!showAreaSelection || selectedArea)
+    ? overviewPrograms(sqlite, account, today, selectedArea?.id)
+    : [];
   /* The area is named once the grouping spans more than one of them, because the same study program name may then
      occur twice. With a single area it would repeat that name above every group and distinguish nothing. */
   const namesAreas = new Set(programs.map((program) => program.areaName)).size > 1;
@@ -32,6 +41,9 @@ export default async function InternalHome() {
         own instead of opening the outline in the middle. */}
     <h1 className="sr-only">Übersicht</h1>
     {manages ? <>
+      {showAreaSelection ? <CourseAreaSelector areas={areas} selectedArea={selectedArea} action={selectCourseAreaAction.bind(null, "overview")}>
+        <Link className="text-link" href="/intern/kurse">Alle Kurse</Link>
+      </CourseAreaSelector> : null}
       {programs.length
         ? programs.map((program) => <section className="program-group" key={program.id}>
           {/* The spaces are written out, because they belong to the accessible name of the heading just as much as
@@ -53,10 +65,9 @@ export default async function InternalHome() {
             </li>)}</ul>
           </div>)}
         </section>)
-        /* The only way on this page ever offers: with courses shown, the section navigation leads to the list and the
-           list carries the same button, so it would stand here a third time. */
-        : <><p className="empty-note">In Ihren Bereichen gibt es noch keine Kurse.</p>
-          <p className="internal-overview__actions"><Link className="button" href="/intern/kurse/neu">Kurs anlegen</Link></p></>}
+        /* The area picker already indicates that courses exist while it waits for a selection. */
+        : !showAreaSelection ? <><p className="empty-note">In Ihren Bereichen gibt es noch keine Kurse.</p>
+          <p className="internal-overview__actions"><Link className="button" href="/intern/kurse/neu">Kurs anlegen</Link></p></> : null}
     </> : <p className="empty-note">Ihnen ist noch kein Bereich zugeordnet. Bis dahin können Sie keine Kurse bearbeiten; die Systemadministration ordnet Ihnen Bereiche zu.</p>}
   </div></SiteShell>;
 }
