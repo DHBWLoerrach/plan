@@ -26,7 +26,8 @@ import {
   suggestPublicOverview,
   type OverviewChip,
   type OverviewEmptyReason,
-  type OverviewProgram,
+  type OverviewSelection,
+  type OverviewYear,
   type PublicOverview as Overview,
 } from "@/lib/domain/public-overview";
 
@@ -54,15 +55,57 @@ function Highlighted({ text, query }: { text: string; query: string }) {
   return <>{text.slice(0, start)}<strong>{text.slice(start, start + needle.length)}</strong>{text.slice(start + needle.length)}</>;
 }
 
-function Chip({ chip }: { chip: OverviewChip }) {
-  return <Link className={styles.chip} href={chip.href}>
-    <span className={styles.chipCode}>{chip.label}</span>
-    {chip.status ? <span className={styles.chipStatus} data-phase={chip.status.type === "THEORY" ? "theory" : "practice"}>{chip.status.text}</span> : null}
-  </Link>;
+function CourseLinks({ chips }: { chips: OverviewChip[] }) {
+  return <div className={styles.chips}>
+    {chips.map((chip) => <Link className={styles.chip} href={chip.href} key={chip.codes.join(" ")}>
+      <span className={styles.chipCode}>{chip.label}</span>
+      {chip.status ? <span className={styles.chipStatus} data-phase={chip.status.type === "THEORY" ? "theory" : "practice"}>{chip.status.text}</span> : null}
+    </Link>)}
+  </div>;
 }
 
-function ProgramHeader({ program }: { program: OverviewProgram }) {
-  return <th scope="row" className={styles.programName}>{program.name}</th>;
+function YearLabel({ year }: { year: OverviewYear }) {
+  return <>
+    <span className={styles.yearLabel}>{year.label}</span>
+    {year.detail ? <span className={styles.yearDetail}>{year.detail}</span> : null}
+  </>;
+}
+
+function ProgramList({ programs, years }: Pick<OverviewSelection, "programs" | "years">) {
+  const newestFirst = years.toReversed();
+  return <div className={styles.programList}>
+    {programs.map((program) => <section className={styles.program} key={program.abbreviation}>
+      <h3 className={styles.programName}>{program.name}</h3>
+      {newestFirst.map((year) => {
+        const chips = program.cells[year.year];
+        if (!chips) return null;
+        return <div className={styles.programYear} key={year.year}>
+          <h4 className={styles.programYearHeading}><YearLabel year={year} /></h4>
+          <CourseLinks chips={chips} />
+        </div>;
+      })}
+    </section>)}
+  </div>;
+}
+
+function ProgramTable({ programs, years }: Pick<OverviewSelection, "programs" | "years">) {
+  return <div className={styles.tableWrap} role="region" aria-labelledby="results-heading" tabIndex={0}>
+    <table className={styles.table} style={{ "--years": years.length } as React.CSSProperties}>
+      <thead><tr>
+        <th scope="col">Studiengang</th>
+        {years.map((year) => <th scope="col" key={year.year}><YearLabel year={year} /></th>)}
+      </tr></thead>
+      <tbody>{programs.map((program) => <tr key={program.abbreviation}>
+        <th scope="row" className={styles.programName}>{program.name}</th>
+        {years.map((year) => {
+          const chips = program.cells[year.year];
+          return <td key={year.year}>{chips
+            ? <CourseLinks chips={chips} />
+            : <><span aria-hidden="true" className={styles.none}>–</span><span className="sr-only">Kein Plan veröffentlicht</span></>}</td>;
+        })}
+      </tr>)}</tbody>
+    </table>
+  </div>;
 }
 
 function EmptyState({ reason, query, year, exampleCode, onReset }: {
@@ -98,9 +141,8 @@ function EmptyState({ reason, query, year, exampleCode, onReset }: {
 }
 
 /**
- * Search, study start and the table they narrow. The whole table is on the page already, so narrowing happens here
- * without a request; the address follows once typing rests, so a narrowed table stays a link that can be shared.
- * Without scripting the form is a plain GET form, and the server renders the table for the address it sends.
+ * The address follows once typing rests so filtered results can be shared.
+ * Without scripting the GET form lets the server render the same selection from the address.
  */
 export function PublicOverview({ overview, initialQuery, initialYear }: { overview: Overview; initialQuery: string; initialYear: string }) {
   const knownYear = (value: string) => overview.years.some((candidate) => String(candidate.year) === value) ? value : allYears;
@@ -232,26 +274,10 @@ export function PublicOverview({ overview, initialQuery, initialYear }: { overvi
 
       {selection.emptyReason
         ? <EmptyState reason={selection.emptyReason} query={query} year={year} exampleCode={overview.exampleCode} onReset={reset} />
-        : <div className={styles.tableWrap} role="region" aria-labelledby="results-heading" tabIndex={0}>
-          <table className={styles.table} style={{ "--years": selection.years.length } as React.CSSProperties}>
-            <thead><tr>
-              <th scope="col">Studiengang</th>
-              {selection.years.map((candidate) => <th scope="col" key={candidate.year}>
-                <span className={styles.yearLabel}>{candidate.label}</span>
-                {candidate.detail ? <span className={styles.yearDetail}>{candidate.detail}</span> : null}
-              </th>)}
-            </tr></thead>
-            <tbody>{selection.programs.map((program) => <tr key={program.abbreviation}>
-              <ProgramHeader program={program} />
-              {selection.years.map((candidate) => {
-                const chips = program.cells[candidate.year];
-                return <td key={candidate.year}>{chips
-                  ? <div className={styles.chips}>{chips.map((chip) => <Chip chip={chip} key={chip.codes.join(" ")} />)}</div>
-                  : <><span aria-hidden="true" className={styles.none}>–</span><span className="sr-only">Kein Plan veröffentlicht</span></>}</td>;
-              })}
-            </tr>)}</tbody>
-          </table>
-        </div>}
+        : <>
+          <ProgramTable programs={selection.programs} years={selection.years} />
+          <ProgramList programs={selection.programs} years={selection.years} />
+        </>}
     </section>
   </>;
 }

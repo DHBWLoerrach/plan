@@ -50,11 +50,24 @@ describe("PublicOverview", () => {
     expect(markup).toContain('<span class="sr-only">Kein Plan veröffentlicht</span>');
   });
 
-  it("renders the table the address narrows", () => {
+  it("lists each program's available years newest first", () => {
+    const markup = render();
+    const programs = markup.match(/<section[^>]*><h3[^>]*>[\s\S]*?<\/section>/g) ?? [];
+
+    expect(programs).toHaveLength(2);
+    expect(programs[0]).toMatch(/>BWL – Personalmanagement<\/h3>/);
+    expect(programs[0]).toMatch(/<h4[^>]*><span[^>]*>Start Okt\. 2025<[^]*href="\/WPM25A"[^]*<h4[^>]*><span[^>]*>Start Okt\. 2024<[^]*href="\/WPM24A"/);
+    expect(programs[1]).toContain('href="/TIF25A"');
+    expect(programs[1]).not.toContain("Start Okt. 2024");
+    expect(programs[1]).not.toContain("Kein Plan veröffentlicht");
+  });
+
+  it("renders both views from the selection in the address", () => {
     const markup = render("pers", "2025");
 
     expect(markup).toContain("<strong>1</strong> Studiengang passt zu „pers“");
     expect(markup).toMatch(/<input[^>]*value="pers"/);
+    expect(markup).toMatch(/<h4[^>]*><span[^>]*>Start Okt\. 2025<[^]*href="\/WPM25A"/);
     expect(markup).not.toContain(">Start Okt. 2024<");
     expect(markup).not.toContain(">Informatik<");
   });
