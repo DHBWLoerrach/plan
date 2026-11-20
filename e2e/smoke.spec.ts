@@ -133,6 +133,34 @@ test("edits, publishes and publicly reads a course", async ({ page }) => {
   await page.getByRole("table").getByRole("link", { name: "TIF26EDIT" }).click();
   await expect(page).toHaveURL(/\/TIF26EDIT$/u);
   await expect(page.getByRole("heading", { name: "TIF26EDIT" })).toBeVisible();
+
+  // Back from the plan, the overview shows the search it left, not the one it was first loaded with.
+  await page.goBack();
+  await expect(page).toHaveURL(/\/\?q=TIF26$/u);
+  await expect(page.getByRole("combobox", { name: "Studiengang oder Kurs suchen" })).toHaveValue("TIF26");
+  await expect(page.getByRole("table").getByRole("link", { name: "TIF26EDIT" })).toBeVisible();
+
+  // A hit opened right after typing, before the address has followed: the plan stays open, and back finds the search.
+  await page.goto("/");
+  await page.getByRole("combobox", { name: "Studiengang oder Kurs suchen" }).fill("TIF26");
+  await page.getByRole("table").getByRole("link", { name: "TIF26EDIT" }).click();
+  await expect(page).toHaveURL(/\/TIF26EDIT$/u);
+  await expect(page.getByRole("heading", { name: "TIF26EDIT" })).toBeVisible();
+  await page.waitForTimeout(500);
+  await expect(page).toHaveURL(/\/TIF26EDIT$/u);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/\?q=TIF26$/u);
+  await expect(page.getByRole("combobox", { name: "Studiengang oder Kurs suchen" })).toHaveValue("TIF26");
+
+  // The same plan by keyboard alone: a course suggestion chosen with the arrow keys opens on Enter.
+  await page.goto("/");
+  const search = page.getByRole("combobox", { name: "Studiengang oder Kurs suchen" });
+  await search.fill("tif26");
+  const suggestion = page.getByRole("option", { name: /TIF26EDIT/u });
+  await expect(suggestion).toBeVisible();
+  while (await suggestion.getAttribute("data-highlighted") === null) await search.press("ArrowDown");
+  await search.press("Enter");
+  await expect(page).toHaveURL(/\/TIF26EDIT$/u);
 });
 
 /**

@@ -16,7 +16,7 @@ import { Field, FieldLabel } from "@ui-sdk/react/field";
 import { SegmentedControl, SegmentedControlIndicator, SegmentedControlItem } from "@ui-sdk/react/segmented-control";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type MouseEvent } from "react";
 
 import { ExternalLinkText } from "@/components/external-link-text";
 import { typingDelay } from "@/components/filter-bar";
@@ -46,10 +46,6 @@ function addressFor(query: string, year: string): string {
   return search ? `/?${search}` : "/";
 }
 
-function ArrowIcon() {
-  return <svg className={styles.chipIcon} viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6" /></svg>;
-}
-
 /* The suggestions are filtered here rather than by the autocomplete, which therefore marks no match of its own. */
 function Highlighted({ text, query }: { text: string; query: string }) {
   const needle = query.trim().toLocaleLowerCase("de-DE");
@@ -59,17 +55,14 @@ function Highlighted({ text, query }: { text: string; query: string }) {
 }
 
 function Chip({ chip }: { chip: OverviewChip }) {
-  return <Link className={styles.chip} href={chip.href}><span>{chip.label}</span><ArrowIcon /></Link>;
+  return <Link className={styles.chip} href={chip.href}>
+    <span className={styles.chipCode}>{chip.label}</span>
+    {chip.status ? <span className={styles.chipStatus} data-phase={chip.status.type === "THEORY" ? "theory" : "practice"}>{chip.status.text}</span> : null}
+  </Link>;
 }
 
 function ProgramHeader({ program }: { program: OverviewProgram }) {
-  return <th scope="row"><div className={styles.programCell}>
-    <span className={styles.programName}>{program.name}</span>
-    {program.center ? <span className={styles.center}>
-      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16M15 9h4a1 1 0 0 1 1 1v11M3 21h18M8 8h3M8 12h3M8 16h3" /></svg>
-      {program.center}
-    </span> : null}
-  </div></th>;
+  return <th scope="row" className={styles.programName}>{program.name}</th>;
 }
 
 function EmptyState({ reason, query, year, exampleCode, onReset }: {
@@ -111,16 +104,18 @@ function EmptyState({ reason, query, year, exampleCode, onReset }: {
  */
 export function PublicOverview({ overview, initialQuery, initialYear }: { overview: Overview; initialQuery: string; initialYear: string }) {
   const knownYear = (value: string) => overview.years.some((candidate) => String(candidate.year) === value) ? value : allYears;
-  const [query, setQuery] = useState(initialQuery);
-  const [year, setYear] = useState(knownYear(initialYear));
-  const scripted = useSyncExternalStore(neverChanges, runningInBrowser, renderedOnServer);
-
-  /* A navigation within this page, like the logo's link to „/“ or the browser's back button, keeps the component and its
-     state, so the state follows the address whenever it changes — except for the one change this component wrote itself. */
   const parameters = useSearchParams();
   const fromAddress = parameters
     ? { query: parameters.get("q") ?? "", year: knownYear(parameters.get("year") ?? "") }
     : null;
+  /* The address, not the server's props, sets the start: back from a plan, the router renders this page from the props
+     of its first load, while the address holds the search written since. */
+  const [query, setQuery] = useState(fromAddress?.query ?? initialQuery);
+  const [year, setYear] = useState(fromAddress?.year ?? knownYear(initialYear));
+  const scripted = useSyncExternalStore(neverChanges, runningInBrowser, renderedOnServer);
+
+  /* A navigation within this page, like the logo's link to „/“ or the browser's back button, keeps the component and its
+     state, so the state follows the address whenever it changes — except for the one change this component wrote itself. */
   const address = fromAddress ? addressFor(fromAddress.query, fromAddress.year) : null;
   const [seenAddress, setSeenAddress] = useState(address);
   const [writtenAddress, setWrittenAddress] = useState<string | null>(null);
@@ -133,15 +128,24 @@ export function PublicOverview({ overview, initialQuery, initialYear }: { overvi
     }
   }
 
+  const pendingAddress = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const writeAddress = (next: string) => {
+    if (next === `${window.location.pathname}${window.location.search}`) return;
+    setWrittenAddress(next);
+    window.history.replaceState(null, "", next);
+  };
   useEffect(() => {
     const next = addressFor(query, year);
-    if (next === `${window.location.pathname}${window.location.search}`) return;
-    const timer = setTimeout(() => {
-      setWrittenAddress(next);
-      window.history.replaceState(null, "", next);
-    }, typingDelay);
-    return () => clearTimeout(timer);
+    pendingAddress.current = setTimeout(() => writeAddress(next), typingDelay);
+    return () => clearTimeout(pendingAddress.current);
   }, [query, year]);
+  /* A link followed before typing rests would leave the address to a timer that fires mid-navigation and replaces the
+     plan's address with the search. The search is written at once instead, so that back returns to it. */
+  const settleAddress = (event: MouseEvent) => {
+    if (!(event.target instanceof Element) || !event.target.closest("a[href]")) return;
+    clearTimeout(pendingAddress.current);
+    writeAddress(addressFor(query, year));
+  };
 
   const selection = selectPublicOverview(overview, { query, year });
   const suggestions = suggestPublicOverview(overview, query, year);
@@ -149,7 +153,7 @@ export function PublicOverview({ overview, initialQuery, initialYear }: { overvi
   const reset = () => { setQuery(""); setYear(allYears); };
 
   return <>
-    <form className={styles.panel} role="search" aria-label="Blockpläne suchen" method="get" action="/"
+    <form className={styles.panel} role="search" aria-label="Blockpläne suchen" method="get" action="/" onClickCapture={settleAddress}
       onSubmit={(event) => { if (scripted) event.preventDefault(); }}>
       <div className={styles.searchField}>
         <Autocomplete name="q" value={query} onValueChange={setQuery} filter={false}>
@@ -215,7 +219,7 @@ export function PublicOverview({ overview, initialQuery, initialYear }: { overvi
       {scripted ? null : <button className="button" type="submit">Suchen</button>}
     </form>
 
-    <section className={styles.results} aria-labelledby="results-heading">
+    <section className={styles.results} aria-labelledby="results-heading" onClickCapture={settleAddress}>
       <h2 className="sr-only" id="results-heading">Blockpläne</h2>
       <div className={styles.resultsHead}>
         <p role="status"><strong>{count}</strong> {count === 1 ? "Studiengang" : "Studiengänge"}
@@ -229,7 +233,7 @@ export function PublicOverview({ overview, initialQuery, initialYear }: { overvi
       {selection.emptyReason
         ? <EmptyState reason={selection.emptyReason} query={query} year={year} exampleCode={overview.exampleCode} onReset={reset} />
         : <div className={styles.tableWrap} role="region" aria-labelledby="results-heading" tabIndex={0}>
-          <table className={styles.table}>
+          <table className={styles.table} style={{ "--years": selection.years.length } as React.CSSProperties}>
             <thead><tr>
               <th scope="col">Studiengang</th>
               {selection.years.map((candidate) => <th scope="col" key={candidate.year}>

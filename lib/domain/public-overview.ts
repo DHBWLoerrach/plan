@@ -1,13 +1,18 @@
+import { plusDays } from "@/lib/domain/calendar-day";
 import { courseCodeYear } from "@/lib/domain/generated-course-plan";
 import { groupComparableCourses } from "@/lib/domain/plan-comparison";
 import { publicCutPath } from "@/lib/domain/public-cut";
+import type { PhaseType } from "@/lib/domain/phase-type";
 import type { CoursePhase, CoursePlan } from "@/lib/domain/publication";
 
-/** A published course that has not ended yet, with the current designations of its program and area. */
-export type OverviewCourse = CoursePlan & { area: string; program: string; programAbbreviation: string; year: number };
+/** A published course that has not ended yet, with the current designations of its program. */
+export type OverviewCourse = CoursePlan & { program: string; programAbbreviation: string; year: number };
+
+/** Where a course stands: the phase it is in, or the next one where it is between phases or yet to begin. */
+export interface OverviewPhaseStatus { type: PhaseType; text: string }
 
 /** One link of a cell: a single course, or parallel courses that share their whole progression. */
-export interface OverviewChip { label: string; href: string; codes: string[] }
+export interface OverviewChip { label: string; href: string; codes: string[]; status: OverviewPhaseStatus | null }
 
 /** `detail` is left out where the courses of a year stand at different points, like one begun and one still to begin. */
 export interface OverviewYear { year: number; label: string; detail: string | null }
@@ -16,8 +21,6 @@ export interface OverviewYear { year: number; label: string; detail: string | nu
 export interface OverviewProgram {
   abbreviation: string;
   name: string;
-  /** The area, where it names something the program name does not, like a study center. */
-  center: string | null;
   cells: Record<number, OverviewChip[]>;
   codes: string[];
   /** The earliest study start of this program whose courses are still studying, by the program's duration. */
@@ -107,18 +110,48 @@ export function cutKey(abbreviation: string, year: number): string {
   return `${abbreviation.toLowerCase()} ${year}`;
 }
 
+function dayAndMonth(day: string): string {
+  return `${day.slice(8, 10)}.${day.slice(5, 7)}.`;
+}
+
+/* Where the students are, as partners ask it, rather than the planners' „Theorie“ and „Praxis“. */
+const phasePlace: Record<PhaseType, string> = { THEORY: "An der DHBW", PRACTICE: "Im Unternehmen" };
+
+function phaseStatus(courseId: string, phases: CoursePhase[], today: string): OverviewPhaseStatus | null {
+  const own = phases.filter((phase) => phase.courseId === courseId).toSorted((left, right) => left.startDate.localeCompare(right.startDate));
+  const index = own.findIndex((phase) => phase.startDate <= today && today <= phase.endDate);
+  if (index >= 0) {
+    /* Phases of one type that follow each other without a day between, like practice across a semester boundary, are
+       one stay in one place. */
+    const { type } = own[index];
+    let end = own[index].endDate;
+    for (const phase of own.slice(index + 1)) {
+      if (phase.type !== type || phase.startDate !== plusDays(end, 1)) break;
+      end = phase.endDate;
+    }
+    return { type, text: `${phasePlace[type]} bis ${dayAndMonth(end)}` };
+  }
+  const next = own.find((phase) => phase.startDate > today);
+  return next ? { type: next.type, text: `${phasePlace[next.type]} ab ${dayAndMonth(next.startDate)}` } : null;
+}
+
 /* The program's cut of a year shows all of its published courses, ended ones included, so one link stands for a group
    only where the group is exactly what that cut shows. */
-function chipsFor(courses: OverviewCourse[], groups: ReturnType<typeof groupComparableCourses>, cutSize: number): OverviewChip[] {
+function chipsFor(
+  courses: OverviewCourse[], groups: ReturnType<typeof groupComparableCourses>, cutSize: number, phases: CoursePhase[], today: string,
+): OverviewChip[] {
   if (groups.length === 1 && courses.length > 1 && courses.length === cutSize) {
     const codes = groups[0].courses.map((course) => course.code);
     return [{
       label: `${codes[0]} + ${suffixes(codes).slice(1).join(" + ")}`,
       href: publicCutPath({ kind: "program", year: courses[0].year, abbreviation: courses[0].programAbbreviation }),
       codes,
+      status: phaseStatus(groups[0].courses[0].id, phases, today),
     }];
   }
-  return courses.map((course) => ({ label: course.code, href: publicCutPath({ kind: "course", code: course.code }), codes: [course.code] }));
+  return courses.map((course) => ({
+    label: course.code, href: publicCutPath({ kind: "course", code: course.code }), codes: [course.code], status: phaseStatus(course.id, phases, today),
+  }));
 }
 
 /**
@@ -137,17 +170,16 @@ export function buildPublicOverview(
   const byProgram = new Map<string, OverviewCourse[]>();
   for (const course of sorted) byProgram.set(course.programAbbreviation, [...(byProgram.get(course.programAbbreviation) ?? []), course]);
   const programs = [...byProgram.values()].map((programCourses): OverviewProgram => {
-    const { programAbbreviation, program, area } = programCourses[0];
+    const { programAbbreviation, program } = programCourses[0];
     const cells: Record<number, OverviewChip[]> = {};
     for (const year of yearNumbers) {
       const inYear = programCourses.filter((course) => course.year === year);
       if (!inYear.length) continue;
-      cells[year] = chipsFor(inYear, groupComparableCourses(inYear, phases), cutSizes?.get(cutKey(programAbbreviation, year)) ?? inYear.length);
+      cells[year] = chipsFor(inYear, groupComparableCourses(inYear, phases), cutSizes?.get(cutKey(programAbbreviation, year)) ?? inYear.length, phases, today);
     }
     return {
       abbreviation: programAbbreviation,
       name: program,
-      center: normalizeSearch(area) === normalizeSearch(program) ? null : area,
       cells,
       codes: programCourses.map((course) => course.code),
       runningFrom: earliestRunningYear(Math.max(...programCourses.map((course) => course.semesters)), today),

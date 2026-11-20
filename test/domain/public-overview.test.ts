@@ -13,11 +13,11 @@ const today = "2026-11-20";
 
 function course(code: string, overrides: Partial<OverviewCourse> = {}): OverviewCourse {
   const year = 2000 + Number(code.slice(3, 5));
-  const programs: Record<string, [string, string]> = {
-    WWI: ["Wirtschaftsinformatik", "Studienzentrum IT-Management und Informatik (SZI)"],
-    TIF: ["Informatik", "Studienzentrum IT-Management und Informatik (SZI)"],
-    WHC: ["BWL – Gesundheitsmanagement", "Studienzentrum Gesundheit Tourismus"],
-    WPM: ["BWL – Personalmanagement", "BWL – Personalmanagement"],
+  const programs: Record<string, string> = {
+    WWI: "Wirtschaftsinformatik",
+    TIF: "Informatik",
+    WHC: "BWL – Gesundheitsmanagement",
+    WPM: "BWL – Personalmanagement",
   };
   const abbreviation = code.slice(0, 3);
   return {
@@ -27,8 +27,7 @@ function course(code: string, overrides: Partial<OverviewCourse> = {}): Overview
     studyEnd: `${year + 3}-09-30`,
     semesters: 6,
     programAbbreviation: abbreviation,
-    program: programs[abbreviation][0],
-    area: programs[abbreviation][1],
+    program: programs[abbreviation],
     year,
     ...overrides,
   };
@@ -67,7 +66,9 @@ describe("buildPublicOverview", () => {
   });
 
   it("joins parallel courses with the same progression into one link to the program cut", () => {
-    expect(program("WHC").cells[2025]).toEqual([{ label: "WHC25A + B", href: "/jahrgang/2025/studiengang/WHC", codes: ["WHC25A", "WHC25B"] }]);
+    expect(program("WHC").cells[2025]).toEqual([{
+      label: "WHC25A + B", href: "/jahrgang/2025/studiengang/WHC", codes: ["WHC25A", "WHC25B"], status: { type: "THEORY", text: "An der DHBW bis 20.12." },
+    }]);
   });
 
   it("links every course of a year on its own where its courses form more than one group", () => {
@@ -86,13 +87,28 @@ describe("buildPublicOverview", () => {
       .toEqual(["/WHC25A", "/WHC25B"]);
   });
 
-  it("keeps parallel courses with different progressions apart", () => {
-    expect(program("WWI").cells[2024].map((chip) => [chip.label, chip.href])).toEqual([["WWI24A", "/WWI24A"], ["WWI24B", "/WWI24B"]]);
+  it("tells for each link the phase its course is in, or the next one", () => {
+    const status = (start: string, end: string, type: "THEORY" | "PRACTICE" = "PRACTICE") => buildPublicOverview(
+      [course("TIF26A")], [{ courseId: "TIF26A", semester: 1, type, startDate: start, endDate: end }], today,
+    ).programs[0].cells[2026][0].status;
+
+    expect(status("2026-10-01", "2026-12-31")).toEqual({ type: "PRACTICE", text: "Im Unternehmen bis 31.12." });
+    expect(status("2027-01-04", "2027-03-28", "THEORY")).toEqual({ type: "THEORY", text: "An der DHBW ab 04.01." });
+    expect(status("2026-01-01", "2026-03-31")).toBeNull();
   });
 
-  it("names the area only where it says more than the program name", () => {
-    expect(program("WWI").center).toBe("Studienzentrum IT-Management und Informatik (SZI)");
-    expect(program("WPM").center).toBeNull();
+  it("joins phases of one type that follow each other into one stay, like practice across a semester boundary", () => {
+    const stay = buildPublicOverview([course("TIF26A")], [
+      { courseId: "TIF26A", semester: 1, type: "PRACTICE", startDate: "2026-10-01", endDate: "2027-03-31" },
+      { courseId: "TIF26A", semester: 2, type: "PRACTICE", startDate: "2027-04-01", endDate: "2027-06-30" },
+      { courseId: "TIF26A", semester: 2, type: "THEORY", startDate: "2027-07-01", endDate: "2027-09-30" },
+    ], today).programs[0].cells[2026][0].status;
+
+    expect(stay).toEqual({ type: "PRACTICE", text: "Im Unternehmen bis 30.06." });
+  });
+
+  it("keeps parallel courses with different progressions apart", () => {
+    expect(program("WWI").cells[2024].map((chip) => [chip.label, chip.href])).toEqual([["WWI24A", "/WWI24A"], ["WWI24B", "/WWI24B"]]);
   });
 
   it("marks a year that has not started and keeps it out of the next study start", () => {

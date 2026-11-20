@@ -5,15 +5,15 @@ import { describe, expect, it } from "vitest";
 import { PublicOverview } from "@/components/public-overview";
 import { buildPublicOverview, type OverviewCourse } from "@/lib/domain/public-overview";
 
-function course(code: string, program: string, area: string): OverviewCourse {
+function course(code: string, program: string): OverviewCourse {
   const year = 2000 + Number(code.slice(3, 5));
-  return { id: code, code, studyStart: `${year}-10-01`, studyEnd: `${year + 3}-09-30`, semesters: 6, programAbbreviation: code.slice(0, 3), program, area, year };
+  return { id: code, code, studyStart: `${year}-10-01`, studyEnd: `${year + 3}-09-30`, semesters: 6, programAbbreviation: code.slice(0, 3), program, year };
 }
 
 const overview = buildPublicOverview([
-  course("TIF25A", "Informatik", "Studienzentrum IT-Management und Informatik (SZI)"),
-  course("WPM24A", "BWL – Personalmanagement", "BWL – Personalmanagement"),
-  course("WPM25A", "BWL – Personalmanagement", "BWL – Personalmanagement"),
+  course("TIF25A", "Informatik"),
+  course("WPM24A", "BWL – Personalmanagement"),
+  course("WPM25A", "BWL – Personalmanagement"),
 ], [], "2026-11-20");
 
 function render(initialQuery = "", initialYear = "") {
@@ -44,9 +44,9 @@ describe("PublicOverview", () => {
 
     expect(markup).toContain("<strong>2</strong> Studiengänge mit laufenden Jahrgängen");
     expect(markup).toMatch(/<th scope="col"><span[^>]*>Start Okt. 2024<\/span><span[^>]*>3. Studienjahr<\/span><\/th>/);
-    expect(markup).toMatch(/<th scope="row">.*BWL – Personalmanagement/);
-    expect(markup).toMatch(/<a[^>]*href="\/WPM24A"[^>]*><span>WPM24A<\/span>/);
-    expect(markup).toContain("Studienzentrum IT-Management und Informatik (SZI)");
+    expect(markup).toMatch(/<th scope="row"[^>]*>BWL – Personalmanagement<\/th>/);
+    expect(markup).toMatch(/<a[^>]*href="\/WPM24A"[^>]*><span[^>]*>WPM24A<\/span>/);
+    expect(markup).not.toContain("Studienzentrum");
     expect(markup).toContain('<span class="sr-only">Kein Plan veröffentlicht</span>');
   });
 
