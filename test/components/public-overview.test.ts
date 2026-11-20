@@ -48,6 +48,9 @@ describe("PublicOverview", () => {
     expect(markup).toMatch(/<a[^>]*href="\/WPM24A"[^>]*><span[^>]*>WPM24A<\/span>/);
     expect(markup).not.toContain("Studienzentrum");
     expect(markup).toContain('<span class="sr-only">Kein Plan veröffentlicht</span>');
+    // Every link of the table keeps its own tab stop, and the arrow hint waits for scripting, which makes the arrows work.
+    expect(markup.match(/<table[^]*<\/table>/)![0]).not.toContain('tabindex="-1"');
+    expect(markup).not.toContain("Pfeiltasten");
   });
 
   it("lists each program's available years newest first", () => {

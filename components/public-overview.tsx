@@ -1,5 +1,6 @@
 "use client";
 
+import { nearestInDirection } from "@ui-sdk/core";
 import {
   Autocomplete,
   AutocompleteClear,
@@ -16,7 +17,7 @@ import { Field, FieldLabel } from "@ui-sdk/react/field";
 import { SegmentedControl, SegmentedControlIndicator, SegmentedControlItem } from "@ui-sdk/react/segmented-control";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState, useSyncExternalStore, type MouseEvent } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent, type MouseEvent } from "react";
 
 import { ExternalLinkText } from "@/components/external-link-text";
 import { typingDelay } from "@/components/filter-bar";
@@ -55,12 +56,16 @@ function Highlighted({ text, query }: { text: string; query: string }) {
   return <>{text.slice(0, start)}<strong>{text.slice(start, start + needle.length)}</strong>{text.slice(start + needle.length)}</>;
 }
 
+function CourseLinkContent({ chip }: { chip: OverviewChip }) {
+  return <>
+    <span className={styles.chipCode}>{chip.label}</span>
+    {chip.status ? <span className={styles.chipStatus} data-phase={chip.status.type === "THEORY" ? "theory" : "practice"}>{chip.status.text}</span> : null}
+  </>;
+}
+
 function CourseLinks({ chips }: { chips: OverviewChip[] }) {
   return <div className={styles.chips}>
-    {chips.map((chip) => <Link className={styles.chip} href={chip.href} key={chip.codes.join(" ")}>
-      <span className={styles.chipCode}>{chip.label}</span>
-      {chip.status ? <span className={styles.chipStatus} data-phase={chip.status.type === "THEORY" ? "theory" : "practice"}>{chip.status.text}</span> : null}
-    </Link>)}
+    {chips.map((chip) => <Link className={styles.chip} href={chip.href} key={chip.codes.join(" ")}><CourseLinkContent chip={chip} /></Link>)}
   </div>;
 }
 
@@ -88,23 +93,55 @@ function ProgramList({ programs, years }: Pick<OverviewSelection, "programs" | "
   </div>;
 }
 
-function ProgramTable({ programs, years }: Pick<OverviewSelection, "programs" | "years">) {
-  return <div className={styles.tableWrap} role="region" aria-labelledby="results-heading" tabIndex={0}>
-    <table className={styles.table} style={{ "--years": years.length } as React.CSSProperties}>
-      <thead><tr>
-        <th scope="col">Studiengang</th>
-        {years.map((year) => <th scope="col" key={year.year}><YearLabel year={year} /></th>)}
-      </tr></thead>
-      <tbody>{programs.map((program) => <tr key={program.abbreviation}>
-        <th scope="row" className={styles.programName}>{program.name}</th>
-        {years.map((year) => {
-          const chips = program.cells[year.year];
-          return <td key={year.year}>{chips
-            ? <CourseLinks chips={chips} />
-            : <><span aria-hidden="true" className={styles.none}>–</span><span className="sr-only">Kein Plan veröffentlicht</span></>}</td>;
-        })}
-      </tr>)}</tbody>
-    </table>
+const arrowDirections: Record<string, readonly [number, number]> = {
+  ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1],
+};
+
+function screenRect(element: Element, vertical: boolean) {
+  const { left, right, top, bottom } = element.getBoundingClientRect();
+  // A wrapped phase label changes the link's height without changing its row.
+  return { left, right, top, bottom: vertical ? top : bottom };
+}
+
+/*
+ * Every link keeps its tab stop, as in any data table; the arrows only add a way across, to the nearest link on screen in
+ * their direction, so they follow the links however they wrap. A screen reader reading the table keeps its own arrows.
+ */
+function moveByArrow(event: KeyboardEvent<HTMLTableElement>) {
+  const direction = arrowDirections[event.key];
+  if (!direction || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+  const from = event.target instanceof Element ? event.target.closest("a[href]") : null;
+  if (!from) return;
+  const vertical = direction[1] !== 0;
+  const links = [...event.currentTarget.querySelectorAll<HTMLAnchorElement>("a[href]")].filter((link) => link !== from);
+  const targets = links.map((link, index) => ({ key: String(index), rect: screenRect(link, vertical) }));
+  const next = nearestInDirection(screenRect(from, vertical), targets, direction);
+  if (next === undefined) return;
+  event.preventDefault();
+  links[Number(next)].focus();
+}
+
+function ProgramTable({ programs, years, scripted }: Pick<OverviewSelection, "programs" | "years"> & { scripted: boolean }) {
+  return <div className={styles.tableView}>
+    {/* For sighted keyboard users only: a screen reader reading the table uses the arrows for itself. */}
+    {scripted ? <p className={styles.arrowHint} aria-hidden="true">Mit den Pfeiltasten zum nächsten Kurs</p> : null}
+    <div className={styles.tableWrap} role="region" aria-labelledby="results-heading" tabIndex={0}>
+      <table className={styles.table} style={{ "--years": years.length } as React.CSSProperties} onKeyDown={moveByArrow}>
+        <thead><tr>
+          <th scope="col">Studiengang</th>
+          {years.map((year) => <th scope="col" key={year.year}><YearLabel year={year} /></th>)}
+        </tr></thead>
+        <tbody>{programs.map((program) => <tr key={program.abbreviation}>
+          <th scope="row" className={styles.programName}>{program.name}</th>
+          {years.map((year) => {
+            const chips = program.cells[year.year];
+            return <td key={year.year}>{chips
+              ? <CourseLinks chips={chips} />
+              : <><span aria-hidden="true" className={styles.none}>–</span><span className="sr-only">Kein Plan veröffentlicht</span></>}</td>;
+          })}
+        </tr>)}</tbody>
+      </table>
+    </div>
   </div>;
 }
 
@@ -275,7 +312,7 @@ export function PublicOverview({ overview, initialQuery, initialYear }: { overvi
       {selection.emptyReason
         ? <EmptyState reason={selection.emptyReason} query={query} year={year} exampleCode={overview.exampleCode} onReset={reset} />
         : <>
-          <ProgramTable programs={selection.programs} years={selection.years} />
+          <ProgramTable programs={selection.programs} years={selection.years} scripted={scripted} />
           <ProgramList programs={selection.programs} years={selection.years} />
         </>}
     </section>
