@@ -49,6 +49,16 @@ describe("content security policy", () => {
     expect(scriptSource).not.toContain("'unsafe-eval'");
   });
 
+  it("lets in style elements only with the nonce, but the style attributes ui-sdk renders on the server", () => {
+    const policy = policyOf();
+
+    const directives = policy.split(";").map((directive) => directive.trim());
+    const styleSource = directives.find((directive) => directive.startsWith("style-src "));
+    expect(styleSource).toContain(`'nonce-${nonceOf(policy)}'`);
+    expect(styleSource).not.toContain("'unsafe-inline'");
+    expect(directives).toContain("style-src-attr 'unsafe-inline'");
+  });
+
   it("upgrades insecure requests where the application is served over TLS", () => {
     expect(policyOf()).toContain("upgrade-insecure-requests");
   });

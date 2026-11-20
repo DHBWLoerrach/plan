@@ -14,6 +14,8 @@ export function proxy(request: NextRequest) {
     // React rebuilds server error stacks with `eval` while developing; production needs neither.
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDevelopment ? " 'unsafe-eval'" : ""}`,
     `style-src 'self' ${isDevelopment ? "'unsafe-inline'" : `'nonce-${nonce}'`}`,
+    // ui-sdk renders a few style attributes on the server, like the one that hides a control's form radios.
+    "style-src-attr 'unsafe-inline'",
     "img-src 'self' blob: data:",
     "font-src 'self'",
     "connect-src 'self'",

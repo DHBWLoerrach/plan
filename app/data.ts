@@ -3,25 +3,18 @@ import "server-only";
 import { cache } from "react";
 
 import { sqlite } from "@/lib/db";
-import {
-  readPublicCut,
-  readPublicFilterOptions,
-  searchPublicPlans,
-  type PublicCutDetail,
-  type PublicFilters,
-  type PublicSearchResult,
-} from "@/lib/services/public-search";
+import { readPublicCut, readPublicOverview, type PublicCutDetail } from "@/lib/services/public-search";
 import { berlinCalendarDay } from "@/lib/domain/calendar-day";
+import { buildPublicOverview } from "@/lib/domain/public-overview";
 import type { PublicCut } from "@/lib/domain/public-cut";
 
-export type { PublicCutDetail, PublicFilters, PublicSearchResult };
+export type { PublicCutDetail };
 
-/** The filter options and the matching page of published plans, grouped for the current Berlin calendar day. */
-export function publicSearchData(request: PublicFilters & { page?: string }) {
-  return {
-    options: readPublicFilterOptions(sqlite),
-    result: searchPublicPlans(sqlite, request, berlinCalendarDay()),
-  };
+/** The landing page's table of every published course that has not ended on the current Berlin calendar day. */
+export function publicOverviewData() {
+  const today = berlinCalendarDay();
+  const { courses, phases, cutSizes } = readPublicOverview(sqlite, today);
+  return buildPublicOverview(courses, phases, today, cutSizes);
 }
 
 /**

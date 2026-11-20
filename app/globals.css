@@ -1,3 +1,4 @@
+@layer ui-sdk;
 @import "tailwindcss";
 
 /* DHBW corporate design: DHBW red #E2001A and grey #5C6971 (see dhbw.de and dhbw-loerrach.de).
@@ -110,24 +111,12 @@ p[role="status"] { margin: 0; color: var(--success); }
 .account-menu__panel .button { width: 100%; }
 
 .site-main { flex: 1 0 auto; padding: 2rem 0 3rem; }
-/* The public search opens with a heading of its own, which brings the space the other pages take from
-   the frame. It therefore starts closer to the header than they do. */
-.site-main:has(> .search-hero) { padding-top: .75rem; }
 .eyebrow { margin: 0 0 .7rem; color: var(--red); font-weight: 700; font-size: .76rem; letter-spacing: .12em; text-transform: uppercase; }
 
-.search-hero { padding: 0 0 1.25rem; }
-.search-hero h1 { margin: 0; font-size: clamp(2rem, 4.5vw, 2.9rem); font-weight: 800; line-height: 1.05; letter-spacing: -.025em; }
-.search-hero__lead { margin: 1rem 0 0; color: var(--gray); font-size: 1.05rem; }
-/* The note carries the same statement as the former panel, but as a line beside the text instead of a
-   block of its own: the restriction to published courses is a caveat, not a second heading. It holds
-   no surface either, since the padding of a filled box would set its text off the column edge that
-   mark, heading and lead all share. */
-.search-hero__note { display: flex; align-items: center; gap: .55rem; margin: .3rem 0 0; color: var(--gray-strong); font-size: .87rem; }
-/* The mark stays grey: the restriction is a statement about the state of the data, not a warning. Red
-   is reserved for what has gone wrong (see the alert and warning colours). Centring sets the circle on
-   the middle of the line box, where it reads a touch low against the letters beside it; the pixel back
-   up is an optical correction and has no computed counterpart. */
-.search-hero__note-icon { width: 1.05rem; height: 1.05rem; flex: none; position: relative; top: -1px; }
+.site-main:has(> .search-hero) { padding-top: 1.5rem; }
+.search-hero { padding: 0 0 .75rem; }
+.search-hero h1 { margin: 0; font-size: clamp(1.9rem, 4vw, 2.4rem); font-weight: 800; line-height: 1.05; letter-spacing: -.025em; }
+.search-hero__lead { max-width: 50rem; margin: .8rem 0 0; color: var(--ink); font-size: clamp(1.05rem, 1.8vw, 1.15rem); line-height: 1.45; text-wrap: pretty; }
 
 /* The red bar gives headings the visual signature of the DHBW sites. */
 .search-hero h1::after, .search-panel h1::after, .plan-detail h1::after, .section-heading h2::after, .not-found h1::after { content: ""; display: block; width: 3rem; height: .28rem; margin-top: .55rem; background: var(--red); }
@@ -179,31 +168,12 @@ p[role="status"] { margin: 0; color: var(--success); }
 /* While filtering, the result steps back instead of being silently replaced by another one. The sibling selector is
    sufficient because the bar precedes what it filters in the markup. Nothing can be clicked in the meantime: the row
    link underneath would still belong to the old result. */
-.filter-bar[aria-busy="true"] ~ .matrix-wrap, .filter-bar[aria-busy="true"] ~ .empty-note,
-.filter-bar[aria-busy="true"] ~ .results { opacity: .5; pointer-events: none; transition: opacity .15s ease; }
+.filter-bar[aria-busy="true"] ~ .matrix-wrap, .filter-bar[aria-busy="true"] ~ .empty-note { opacity: .5; pointer-events: none; transition: opacity .15s ease; }
 
 /* The bar above the internal course list: three fields, with responsibility and reset below them. */
 .course-list-filter { margin-top: .85rem; }
 .course-list-filter .filter-bar__fields { grid-template-columns: minmax(15rem, 1.25fr) minmax(15rem, 1fr) minmax(9rem, .55fr); }
 .course-list-filter .course-list-filter__responsibility { display: inline-flex; align-items: center; gap: .45rem; min-height: 2rem; font-size: .85rem; font-weight: 500; cursor: pointer; }
-
-/* The bar of the public search. It is the way into the whole site and therefore carries taller fields than a form
-   field otherwise has in this application, with text at the size of the page rather than that of a label. */
-.filter-bar--public { margin-top: 1.25rem; }
-/* Four fields on one row, in the proportions of the internal bar: course code and study programme need the room, the
-   year needs a four-digit number. The narrowest column carries „Alle Jahrgänge" together with the space the select's
-   arrow claims — any narrower and the field would cut off its own word. */
-.filter-bar--public .filter-bar__fields { grid-template-columns: minmax(13rem, 1.25fr) minmax(10rem, 1fr) minmax(12rem, 1.1fr) minmax(10rem, .55fr); align-items: end; }
-/* The fields end on one edge whatever stands above them: a label that has to wrap grows upwards and leaves the row of
-   fields where it is, instead of pushing its own field out of that row. */
-.filter-bar--public .filter-bar__fields label { align-content: end; gap: .35rem; font-size: .85rem; font-weight: 700; }
-.filter-bar--public input, .filter-bar--public select { min-height: 3rem; font-size: 1rem; }
-/* How the filters work together is read once and then no more, so it stands below the row that acts. Without a width
-   limit: the sentence stays on one line for as long as the bar allows, and breaks only when it no longer does. */
-.filter-bar__hint { margin: .7rem 0 0; color: var(--gray-strong); font-size: .78rem; }
-/* Below this width the fields would be narrower than the values they carry; they then break into two columns. */
-@media (max-width: 60rem) { .filter-bar--public .filter-bar__fields { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 30rem) { .filter-bar--public .filter-bar__fields { grid-template-columns: minmax(0, 1fr); } }
 
 .course-area-selector { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .65rem 1rem; margin-bottom: 1.5rem; }
 .course-area-selector__field { display: grid; grid-template-columns: minmax(0, 1fr); flex: 1 1 16rem; min-width: 0; max-width: 26rem; gap: .3rem; }
@@ -232,40 +202,16 @@ p[role="status"] { margin: 0; color: var(--success); }
 .text-link { color: var(--red); font-weight: 700; font-size: .92rem; text-decoration-thickness: 1px; text-underline-offset: .25rem; }
 .text-link[aria-current] { color: var(--ink); text-decoration-thickness: 3px; text-decoration-color: var(--red); }
 
-.results { padding-top: 2rem; }
-.results__heading { display: flex; justify-content: space-between; gap: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--line); color: var(--gray); }
-.results__heading p { margin: 0; }
-.results__heading strong { color: var(--ink); }
-.results__heading span { font-size: .88rem; }
-/* A group is the heading and the list under it, so the two stay close together and the distance goes between the
-   groups. The first one keeps the line of the result count above it as its separation and adds nothing to it. */
-.plan-group { margin-top: 2.25rem; }
-.plan-group:first-of-type { margin-top: 1.25rem; }
-.plan-group h3 { margin: 0 0 .6rem; font-size: 1.3rem; font-weight: 800; letter-spacing: -.015em; }
-/* The heading already sets the distance to the list it names; the distance the scrolling region carries elsewhere
-   would come on top of it. */
-.plan-group .matrix-wrap { margin-top: 0; }
-/* On a display this narrow the public list gives up the width the internal one insists on, because a plan is read on
-   a phone as often as at a desk and scrolling a table sideways there costs more than the column it saves. What goes
-   is the year: it stands in the course code in front of it and in the study period behind it, so nothing is lost —
-   not for the eye and not for assistive technology, which no longer finds a column that says nothing new either. The
-   study period may then break; it stays one statement, but on two lines rather than pushed out of sight. */
-@media (max-width: 40rem) {
-  .plan-group .course-table { min-width: 0; }
-  .plan-group .course-table__year { display: none; }
-  .plan-group .course-table__period { white-space: normal; }
-  /* The last few pixels the three remaining columns are still over come out of the space beside them, not out of the
-     text: a column that has to be scrolled to costs more than a narrower gutter. */
-  .plan-group .course-table th, .plan-group .course-table td { padding-right: .5rem; padding-left: .5rem; }
-}
-.empty-state { max-width: 42rem; margin: 1.5rem 0; padding: 1.5rem 1.75rem; background: var(--surface); border-left: 4px solid var(--red); }
-.empty-state h2, .empty-state h3 { margin: 0; font-size: 1.35rem; font-weight: 800; }
-.empty-state p { color: var(--gray); }
 .empty-note { padding: 1rem; background: #fff; border: 1px solid var(--line); color: var(--gray); }
 
-.pagination { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--line); }
-.pagination a { color: var(--red); font-weight: 700; text-underline-offset: .25rem; }
-.pagination span { color: var(--gray); }
+/* What a visitor needs besides the table: how the dual study works, what parallel courses mean, whom to ask. */
+.landing-hints { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr)); gap: 1.25rem; margin-top: 3.5rem; }
+.landing-hints > div { display: grid; align-content: start; gap: .6rem; padding: 1.5rem; background: var(--surface); }
+.landing-hints h2 { margin: 0; font-size: 1.2rem; font-weight: 800; }
+.landing-hints p { margin: 0; line-height: 1.55; }
+.landing-hints a { color: var(--red-dark); text-decoration: underline; text-underline-offset: .2rem; }
+.external-link-text { white-space: nowrap; }
+.external-link-text svg { display: inline-block; width: 1em; height: 1em; margin-left: .2em; vertical-align: -.12em; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 
 .plan-detail { padding-top: 1rem; }
 .plan-detail h1 { max-width: 40ch; margin: 0; font-size: clamp(1.9rem, 4vw, 2.6rem); font-weight: 800; line-height: 1.1; letter-spacing: -.025em; }
@@ -778,7 +724,7 @@ p[role="status"] { margin: 0; color: var(--success); }
   .course-list-filter__year { max-width: 14rem; }
 }
 @media (max-width: 760px) {
-  .site-header__inner, .site-footer, .results__heading { align-items: flex-start; flex-direction: column; }
+  .site-header__inner, .site-footer { align-items: flex-start; flex-direction: column; }
   .site-header__inner { padding: 1rem 0; }
   .site-header__actions { align-items: flex-start; justify-content: flex-start; }
   /* There is no room for the address beside the circle, but `display: none` would take the button its

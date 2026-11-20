@@ -1,90 +1,47 @@
 import { describe, expect, it } from "vitest";
 
 import { areaCut, programCut, yearCut } from "@/lib/domain/public-cut";
-import {
-  plansPerPage,
-  readPublicCut,
-  readPublicFilterOptions,
-  searchPublicPlans,
-} from "@/lib/services/public-search";
+import { readPublicCut, readPublicOverview } from "@/lib/services/public-search";
 import { databaseWithMasterData, unpublishedCourse, publish, courseIdForCode, withdraw } from "@/test/published-plans";
 
 const today = "2026-07-26";
 
-function courses(result: ReturnType<typeof searchPublicPlans>) {
-  return result.groups.flatMap((group) => group.courses);
-}
-
-function courseCodes(result: ReturnType<typeof searchPublicPlans>) {
-  return courses(result).map((course) => course.code);
-}
-
-describe("readPublicFilterOptions", () => {
-  it("forms every option from the current master data of published courses", () => {
+describe("readPublicOverview", () => {
+  it("reads published courses that have not ended, with their phases", () => {
     const sqlite = databaseWithMasterData();
-    publish(sqlite, { id: "tech", courses: [{ code: "TIF24A", studyStart: "2024-10-01" }] });
-    publish(sqlite, { id: "business", area: "Wirtschaft", areaId: "area-2", courses: [{ code: "WWI26A", program: "BWL", studyStart: "2026-10-01" }] });
-    sqlite.exec("UPDATE areas SET name = 'Ingenieurwesen' WHERE id = 'area-1'; UPDATE programs SET name = 'Angewandte Informatik' WHERE id = 'program-1'");
-
-    expect(readPublicFilterOptions(sqlite)).toEqual({
-      areas: ["Ingenieurwesen", "Wirtschaft"],
-      programs: [{ value: "TIF", label: "TIF — Angewandte Informatik" }, { value: "WWI", label: "WWI — BWL" }],
-      years: [2026, 2024],
+    publish(sqlite, { id: "tif21a", courses: [{ code: "TIF21A", studyStart: "2021-10-01", studyEnd: "2024-09-30" }] });
+    publish(sqlite, {
+      id: "tif24a",
+      courses: [{ code: "TIF24A", studyStart: "2024-10-01", phases: [{ semester: 1, startDate: "2024-10-01", endDate: "2024-12-20" }] }],
     });
-  });
-
-  it("omits unpublished courses", () => {
-    const sqlite = databaseWithMasterData();
+    publish(sqlite, { id: "wwi26a", area: "Wirtschaft", areaId: "area-2", courses: [{ code: "WWI26A", studyStart: "2026-10-01" }] });
     unpublishedCourse(sqlite, "WWI99A");
 
-    expect(readPublicFilterOptions(sqlite)).toEqual({ areas: [], programs: [], years: [] });
-  });
-});
+    const { courses, phases } = readPublicOverview(sqlite, today);
 
-describe("searchPublicPlans", () => {
-  function databaseWithCourses() {
+    expect(courses.map((course) => [course.code, course.area, course.program, course.programAbbreviation, course.year])).toEqual([
+      ["TIF24A", "Technik", "Informatik", "TIF", 2024],
+      ["WWI26A", "Wirtschaft", "BWL", "WWI", 2026],
+    ]);
+    expect(phases.map((phase) => phase.courseId)).toEqual([courseIdForCode("TIF24A")]);
+  });
+
+  it("counts the published courses of each program and year, ended ones included, as their cut shows them", () => {
     const sqlite = databaseWithMasterData();
-    publish(sqlite, { id: "tif24a", courses: [{ code: "TIF24A", studyStart: "2024-10-01", studyEnd: "2027-09-30" }] });
-    publish(sqlite, { id: "tif24b", courses: [{ code: "TIF24B", studyStart: "2024-10-01", studyEnd: "2027-09-30" }] });
-    publish(sqlite, { id: "wwi24a", area: "Wirtschaft", areaId: "area-2", courses: [{ code: "WWI24A", program: "BWL", studyStart: "2024-10-01", studyEnd: "2027-09-30" }] });
-    publish(sqlite, { id: "tif26a", courses: [{ code: "TIF26A", studyStart: "2026-10-01", studyEnd: "2029-09-30" }] });
-    return sqlite;
-  }
+    publish(sqlite, { id: "tif23a", courses: [{ code: "TIF23A", studyStart: "2023-10-01" }] });
+    publish(sqlite, { id: "tif23c", courses: [{ code: "TIF23C", studyStart: "2023-10-01", studyEnd: "2026-03-31" }] });
 
-  it("returns published courses, grouped and sorted by their own study period", () => {
-    const result = searchPublicPlans(databaseWithCourses(), {}, today);
+    const { courses, cutSizes } = readPublicOverview(sqlite, today);
 
-    expect(result.groups.map((group) => group.key)).toEqual(["current", "future", "past"]);
-    expect(result.groups[0].courses.map((course) => course.code)).toEqual(["TIF24A", "TIF24B", "WWI24A"]);
-    expect(result.groups[1].courses.map((course) => course.code)).toEqual(["TIF26A"]);
-    expect(result.total).toBe(4);
+    expect(courses.map((course) => course.code)).toEqual(["TIF23A"]);
+    expect(cutSizes.get("tif 2023")).toBe(2);
   });
 
-  it("combines area, program, year and course-prefix filters on the same published course", () => {
-    const sqlite = databaseWithCourses();
-
-    expect(courseCodes(searchPublicPlans(sqlite, { area: "Technik", program: "tif", year: "2024", course: "tif24b" }, today))).toEqual(["TIF24B"]);
-    expect(searchPublicPlans(sqlite, { program: "tif" }, today).filters.program).toBe("TIF");
-    expect(courseCodes(searchPublicPlans(sqlite, { area: "Technik", program: "WWI" }, today))).toEqual([]);
-    expect(courseCodes(searchPublicPlans(sqlite, { course: "IF24" }, today))).toEqual([]);
-    expect(courseCodes(searchPublicPlans(sqlite, { course: "%" }, today))).toEqual([]);
-  });
-
-  it("keeps unknown filter values as an empty, shareable result", () => {
-    const result = searchPublicPlans(databaseWithCourses(), { area: "Gesundheit", year: "2024x" }, today);
-
-    expect(result).toMatchObject({ filters: { area: "Gesundheit", year: "2024x" }, total: 0, page: 1, pages: 1 });
-  });
-
-  it("paginates individual courses rather than their former block plans", () => {
+  it("keeps a course on its last day", () => {
     const sqlite = databaseWithMasterData();
-    for (let index = 0; index < 27; index += 1) {
-      publish(sqlite, { id: `course-${index}`, courses: [{ code: `TIF24${String(index).padStart(2, "0")}`, studyStart: "2024-10-01" }] });
-    }
+    publish(sqlite, { id: "tif23a", courses: [{ code: "TIF23A", studyStart: "2023-10-01", studyEnd: today }] });
 
-    expect(courseCodes(searchPublicPlans(sqlite, {}, today))).toHaveLength(plansPerPage);
-    expect(searchPublicPlans(sqlite, { page: "2" }, today)).toMatchObject({ total: 27, page: 2, pages: 2 });
-    expect(courseCodes(searchPublicPlans(sqlite, { page: "2" }, today))).toEqual(["TIF2425", "TIF2426"]);
+    expect(readPublicOverview(sqlite, today).courses.map((course) => course.code)).toEqual(["TIF23A"]);
   });
 });
 
@@ -148,11 +105,6 @@ describe("readPublicCut", () => {
       .toEqual(["TIF24A", "TIF24B"]);
     expect(readPublicCut(sqlite, programCut("2024", "inf")!)?.courses.map((course) => course.code))
       .toEqual(["INF24A"]);
-    expect(readPublicFilterOptions(sqlite).programs).toEqual([
-      { value: "WWI", label: "WWI — BWL" },
-      { value: "INF", label: "INF — Informatik" },
-      { value: "TIF", label: "TIF — Informatik" },
-    ]);
   });
 
   it("never widens a cut to another year", () => {

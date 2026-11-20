@@ -127,13 +127,10 @@ test("edits, publishes and publicly reads a course", async ({ page }) => {
   await page.getByRole("button", { name: "Kurs veröffentlichen" }).click();
   await page.getByRole("button", { name: "Jetzt veröffentlichen" }).click();
 
-  /* The public row is clickable beyond its code, but its cell-bound surfaces must not escape onto the page. This
-     guards the containing-block difference in Safari that once made an absolute row surface cover unrelated areas. */
   await page.goto("/");
-  await page.getByRole("heading", { name: "Blockpläne" }).click();
-  await expect(page).toHaveURL(/\/$/u);
-  const publicRow = page.getByRole("row").filter({ has: page.getByRole("link", { name: "TIF26EDIT" }) });
-  await publicRow.getByRole("cell").nth(1).click();
+  await page.getByRole("combobox", { name: "Studiengang oder Kurs suchen" }).fill("TIF26");
+  await expect(page).toHaveURL(/\/\?q=TIF26$/u);
+  await page.getByRole("table").getByRole("link", { name: "TIF26EDIT" }).click();
   await expect(page).toHaveURL(/\/TIF26EDIT$/u);
   await expect(page.getByRole("heading", { name: "TIF26EDIT" })).toBeVisible();
 });
