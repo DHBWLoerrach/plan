@@ -1,0 +1,115 @@
+.boardSection { display: grid; gap: .75rem; margin-top: 1rem; }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; }
+.toolbar h2 { margin: 0; }
+.intro { margin: 0; color: var(--gray-strong); }
+
+.zoom { position: relative; display: inline-flex; isolation: isolate; border: 1px solid var(--field-border); background: #fff; }
+.zoomIndicator {
+  position: absolute; z-index: -1; background: var(--ink);
+  top: var(--segmented-control-indicator-top); left: var(--segmented-control-indicator-left);
+  width: var(--segmented-control-indicator-width); height: var(--segmented-control-indicator-height);
+  transition: left .15s ease, width .15s ease;
+}
+.zoomIndicator[data-activation-direction="none"] { transition: none; }
+.zoomItem { min-height: 2.3rem; padding: .35rem .85rem; border: 0; background: none; color: var(--ink); font: inherit; font-size: .88rem; cursor: pointer; }
+.zoomItem[aria-checked="true"] { color: #fff; }
+/* Until the indicator is measured in the browser it has no size, so the chosen item carries the fill itself. */
+.zoom:has(.zoomIndicator:not([style*="--segmented-control-indicator-width"])) .zoomItem[aria-checked="true"] { background: var(--ink); }
+.zoomItem:focus-visible { outline: 3px solid var(--red); outline-offset: 2px; }
+
+.viewport { position: relative; overflow-x: auto; border: 1px solid var(--line); background: #fff; }
+.viewport:focus-visible { outline: 3px solid var(--red); outline-offset: 2px; }
+.canvas { position: relative; min-width: 100%; padding: 0 0 .75rem; }
+
+.band, .months { position: relative; height: 1.6rem; border-bottom: 1px solid var(--line); font-size: .78rem; color: var(--gray-strong); }
+.band span { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; padding-left: .4rem; border-left: 1px solid var(--line); white-space: nowrap; overflow: hidden; }
+.months { height: 1.2rem; font-size: .7rem; }
+.months span { position: absolute; top: 0; bottom: 0; padding-left: .2rem; border-left: 1px solid #eee; }
+
+.today { position: absolute; top: 0; bottom: 0; z-index: 3; width: 0; border-left: 2px solid var(--red); pointer-events: none; }
+.today span { position: absolute; top: 0; left: 3px; padding: 0 .25rem; background: var(--red); color: #fff; font-size: .7rem; font-weight: 700; }
+
+.lane { position: relative; padding: .4rem 0 .2rem; border-bottom: 1px solid var(--line); }
+.lane[data-edited] { background: #fffafa; }
+.laneLabel { position: sticky; left: 0; z-index: 4; display: inline-block; margin: 0 0 .25rem; padding: 0 .5rem; background: rgb(255 255 255 / .9); font-size: .82rem; font-weight: 700; }
+
+.phaseTrack { position: relative; height: 2.4rem; }
+.phase { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; overflow: hidden; border: 1px solid; font-size: .74rem; white-space: nowrap; }
+.phase[data-phase="theory"] { background: var(--theory); border-color: var(--theory-outline); }
+.phase[data-phase="practice"] { background: var(--practice); border-color: var(--practice-edge); }
+.phase[data-differs] { outline: 2px dashed var(--warning-border); outline-offset: -4px; }
+.phaseLabel { padding: 0 .45rem; overflow: hidden; text-overflow: ellipsis; }
+button.phase { padding: 0; color: var(--ink); font: inherit; font-size: .74rem; text-align: left; cursor: default; }
+button.phase:focus-visible { z-index: 5; outline: 3px solid var(--red); outline-offset: -3px; }
+
+.junctions { position: absolute; top: 0; bottom: 0; pointer-events: none; }
+.junctionGesture { display: contents; }
+.junctionControl { position: absolute; inset: 0; pointer-events: none; }
+.junctionTrack { height: 100%; pointer-events: none; }
+.junctionThumb { width: 14px; height: calc(100% + 10px); pointer-events: auto; cursor: ew-resize; touch-action: none; }
+.junctionThumb::before { content: ""; position: absolute; inset: 0 4px; background: var(--ink); border-radius: 3px; box-shadow: 0 0 0 2px #fff; }
+.junctionThumb:hover::before, .junctionThumb[data-dragging]::before { background: var(--red); inset: 0 3px; }
+.junctionThumb:has(:focus-visible) { outline: 3px solid var(--red); outline-offset: 2px; }
+
+.eventsRoot { position: relative; }
+.eventTrack { position: relative; margin-top: .3rem; }
+.event { position: absolute; display: flex; align-items: center; box-sizing: border-box; min-width: 14px; height: 24px; padding: 0 .35rem; overflow: hidden; border: 1px solid var(--gray-strong); border-radius: 3px; background: #fff; color: var(--ink); font: inherit; font-size: .72rem; text-align: left; white-space: nowrap; cursor: grab; touch-action: none; }
+.event[data-category="exam"] { border-color: var(--red); background: #fdecee; }
+.event[data-category="submission"] { border-color: #4a6a85; background: #e8f0f6; }
+.event[data-category="registration"] { border-color: #4f7a4a; background: #edf5eb; }
+.event[data-category="presentation"] { border-color: #7a5a9a; background: #f3eef8; }
+.event[data-provisional] { border-style: dashed; }
+.event[data-readonly] { cursor: default; opacity: .85; touch-action: auto; }
+.event[data-dragging], .event[data-resizing] { z-index: 5; box-shadow: 0 2px 8px rgb(0 0 0 / .25); cursor: grabbing; }
+.event:focus-visible { z-index: 5; outline: 3px solid var(--red); outline-offset: 2px; }
+.eventTitle { min-width: 0; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
+.eventEdge { position: absolute; top: 0; right: 0; bottom: 0; width: 6px; cursor: ew-resize; }
+.event[data-selected] { z-index: 4; overflow: visible; border-width: 2px; }
+/* The pointer's position sets the end, so the handle hangs below the chip exactly where the event ends; a narrow chip is wider than its days. */
+.event[data-selected] .eventEdge { top: calc(100% - 2px); right: auto; bottom: auto; left: calc(var(--span-end) - 8px); width: 12px; height: 11px; border-radius: 0 0 3px 3px; background: var(--ink); box-shadow: 0 0 0 2px #fff; }
+.endField { display: flex; align-items: center; gap: .5rem; }
+.endField input { min-height: 2.1rem; padding: .2rem .4rem; border: 1px solid var(--field-border); font: inherit; }
+.endField input:focus-visible { outline: 3px solid var(--red); outline-offset: 2px; }
+
+.legend { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .5rem; margin: 0; color: var(--gray-strong); font-size: .8rem; }
+.legend span { display: inline-block; width: 1.1rem; height: .8rem; border: 1px solid; margin-left: .5rem; }
+.legend span:first-child { margin-left: 0; }
+.legend [data-phase="theory"] { background: var(--theory); border-color: var(--theory-outline); }
+.legend [data-phase="practice"] { background: var(--practice); border-color: var(--practice-edge); }
+.legend [data-differs] { border: 2px dashed var(--warning-border); }
+.legend [data-provisional] { border-style: dashed; border-color: var(--gray-strong); }
+
+.panels { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 1rem; align-items: start; }
+@media (max-width: 760px) { .panels { grid-template-columns: 1fr; } }
+.details, .changes { padding: .85rem 1rem; border: 1px solid var(--line); background: var(--surface); }
+.details h3, .changes h3 { margin: 0 0 .5rem; font-size: 1rem; }
+.detailsBody p { margin: 0 0 .35rem; }
+.detailsKind { color: var(--gray-strong); font-size: .8rem; }
+.detailsTitle { font-weight: 700; }
+.detailsHint { color: var(--gray-strong); font-size: .85rem; }
+.detailsEmpty { margin: 0; color: var(--gray-strong); }
+
+.changesHead { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .5rem; }
+.changesActions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .5rem; }
+.changesActions [aria-disabled] { opacity: .55; cursor: default; }
+.changeList { margin: .25rem 0 0; padding-left: 1.25rem; }
+.changeList > li { margin-bottom: .5rem; }
+.changeList p { margin: 0; }
+.changeList ul { margin: .2rem 0 0; padding-left: 1.1rem; color: var(--gray-strong); font-size: .88rem; }
+.affected { margin-top: .75rem; }
+.affected h4, .affected h3 { margin: 0 0 .25rem; font-size: .92rem; }
+.outdated { margin: 0; padding: .6rem .8rem; border: 1px solid var(--warning-border); background: var(--warning-bg); }
+.affected ul { margin: 0; padding-left: 1.25rem; }
+.deviations { grid-column: 1 / -1; padding: .85rem 1rem; border: 1px solid var(--line); background: var(--surface); }
+.deviations h3 { margin: 0 0 .25rem; font-size: 1rem; }
+.deviationList { margin: .5rem 0 0; padding-left: 1.25rem; }
+.deviationList > li { margin-bottom: .4rem; }
+.deviationList p { margin: 0; }
+.deviationList ul { margin: .2rem 0 0; padding-left: 1.1rem; color: var(--gray-strong); font-size: .88rem; }
+.openPoints { margin-top: .75rem; padding: .6rem .8rem; border: 1px solid var(--warning-border); background: var(--warning-bg); color: var(--ink); }
+.openPoints p { margin: 0 0 .25rem; }
+.openPoints ul { margin: 0; padding-left: 1.1rem; }
+
+.backdrop { position: fixed; inset: 0; background: rgb(0 0 0 / .35); }
+.dialog { position: fixed; top: 50%; left: 50%; z-index: 20; width: min(36rem, calc(100vw - 2rem)); max-height: calc(100vh - 2rem); overflow: auto; padding: 1.25rem 1.5rem; transform: translate(-50%, -50%); border: 0; background: #fff; box-shadow: 0 10px 40px rgb(0 0 0 / .3); }
+.dialog h2 { margin-top: 0; }
