@@ -17,4 +17,4 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # ui-sdk
 
-Before using ui-sdk (`@ui-sdk/react`, `@ui-sdk/core`), follow the skill at `.claude/skills/ui-sdk/SKILL.md` and read `node_modules/@ui-sdk/react/docs/llms.txt`. To build a new component, also search `node_modules/@ui-sdk/react/docs/core.md` by heading and read `node_modules/@ui-sdk/react/docs/rendering.md`.
+Before using ui-sdk (`@ui-sdk/react`, `@ui-sdk/core`), follow the skill at `.agents/skills/ui-sdk/SKILL.md` and read `node_modules/@ui-sdk/react/docs/llms.txt`. To build a new component, also search `node_modules/@ui-sdk/react/docs/core.md` by heading and read `node_modules/@ui-sdk/react/docs/rendering.md`.
