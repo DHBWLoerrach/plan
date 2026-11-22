@@ -65,6 +65,18 @@ export function yearCut(year: string): PublicCut | null {
   return parsed === null ? null : { kind: "year", year: parsed };
 }
 
+/**
+ * A route segment as written: the router hands it on still percent-encoded, so a course code or an area name with a
+ * space, which `publicCutPath` encodes, arrives as „%20“. A segment that is no valid encoding stays as it came.
+ */
+export function routeSegment(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
 export function areaCut(year: string, name: string): PublicCut | null {
   const parsed = cutYear(year);
   return parsed === null || !name ? null : { kind: "area", year: parsed, name };

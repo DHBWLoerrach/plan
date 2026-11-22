@@ -75,6 +75,33 @@ describe("PublicOverview", () => {
     expect(markup).not.toContain(">Informatik<");
   });
 
+  it("says a year has ended and links its plan, and tells filtered cells from unpublished ones", () => {
+    const withEnded = buildPublicOverview([
+      course("TIF25A", "Informatik"), course("WPM24A", "BWL – Personalmanagement"), course("WPM25A", "BWL – Personalmanagement"),
+    ], [], "2026-11-20", new Map([["tif 2025", 1], ["wpm 2024", 1], ["wpm 2025", 1], ["tif 2022", 1]]),
+    [{ code: "TIF22A", year: 2022 }]);
+    const renderWith = (query: string) => renderToStaticMarkup(createElement(PublicOverview, { overview: withEnded, initialQuery: query, initialYear: "" }));
+
+    const ended = renderWith("TIF22A");
+    expect(ended).toContain("Das Studium von „TIF22A“ ist beendet");
+    expect(ended).toMatch(/<a[^>]*href="\/TIF22A"[^>]*>Plan ansehen<\/a>/);
+
+    const narrowed = renderWith("wpm25");
+    expect(narrowed).not.toContain(">Start Okt. 2024<");
+    expect(narrowed).not.toContain("Kein Plan veröffentlicht");
+  });
+
+  it("tells a cell a course code left out from one without a published plan", () => {
+    const mixed = buildPublicOverview([
+      course("WND24A", "Wind25 Energie"), course("IND24A", "Industrie"), course("IND25A", "Industrie"),
+    ], [], "2026-11-20");
+    const markup = renderToStaticMarkup(createElement(PublicOverview, { overview: mixed, initialQuery: "ind25", initialYear: "" }));
+    const rows = markup.match(/<tr><th scope="row"[^]*?<\/tr>/g) ?? [];
+
+    expect(rows.find((row) => row.includes(">Industrie<"))).toContain("Kein Kurs passt zur Suche");
+    expect(rows.find((row) => row.includes(">Wind25 Energie<"))).toContain("Kein Plan veröffentlicht");
+  });
+
   it("explains an empty result and offers a way back", () => {
     const markup = render("Logistik");
 

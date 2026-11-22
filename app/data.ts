@@ -13,8 +13,8 @@ export type { PublicCutDetail };
 /** The landing page's table of every published course that has not ended on the current Berlin calendar day. */
 export function publicOverviewData() {
   const today = berlinCalendarDay();
-  const { courses, phases, cutSizes } = readPublicOverview(sqlite, today);
-  return buildPublicOverview(courses, phases, today, cutSizes);
+  const { courses, phases, cutSizes, endedCourses } = readPublicOverview(sqlite, today);
+  return buildPublicOverview(courses, phases, today, cutSizes, endedCourses);
 }
 
 /**

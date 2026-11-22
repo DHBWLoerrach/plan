@@ -152,7 +152,74 @@ test("edits, publishes and publicly reads a course", async ({ page }) => {
   await expect(page).toHaveURL(/\/\?q=TIF26$/u);
   await expect(page.getByRole("combobox", { name: "Studiengang oder Kurs suchen" })).toHaveValue("TIF26");
 
-  // The same plan by keyboard alone: a course suggestion chosen with the arrow keys opens on Enter.
+  // The logo right after typing, while the address still reads „/“, empties the search all the same.
+  await page.goto("/");
+  await page.getByRole("combobox", { name: "Studiengang oder Kurs suchen" }).fill("TIF26");
+  await page.getByRole("link", { name: /Startseite/u }).click();
+  await page.waitForTimeout(500);
+  await expect(page).toHaveURL(/\/$/u);
+  await expect(page.getByRole("combobox", { name: "Studiengang oder Kurs suchen" })).toHaveValue("");
+
+  // From one search, another typed and the logo followed at once: back returns to the second search, field and table alike.
+  await page.goto("/?q=TIF");
+  await page.getByRole("combobox", { name: "Studiengang oder Kurs suchen" }).fill("TIF26");
+  await page.getByRole("link", { name: /Startseite/u }).click();
+  await expect(page).toHaveURL(/\/$/u);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/\?q=TIF26$/u);
+  await expect(page.getByRole("combobox", { name: "Studiengang oder Kurs suchen" })).toHaveValue("TIF26");
+  await expect(page.getByRole("table").getByRole("link", { name: "TIF26EDIT" })).toBeVisible();
+
+  // A search cleared before a plan opens stays cleared on the way back, though the page was first loaded with it.
+  await page.goto("/?q=TIF26");
+  await page.getByRole("combobox", { name: "Studiengang oder Kurs suchen" }).fill("");
+  await expect(page).toHaveURL(/\/$/u);
+  await page.getByRole("table").getByRole("link", { name: "TIF26EDIT" }).click();
+  await expect(page).toHaveURL(/\/TIF26EDIT$/u);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/$/u);
+  await expect(page.getByRole("combobox", { name: "Studiengang oder Kurs suchen" })).toHaveValue("");
+
+  // Back right after typing goes to the previous entry as it was: the pending address does not overwrite it.
+  await page.goto("/?q=TIF");
+  await page.getByRole("link", { name: /Startseite/u }).click();
+  await expect(page).toHaveURL(/\/$/u);
+  await page.getByRole("combobox", { name: "Studiengang oder Kurs suchen" }).fill("TIF");
+  await expect(page).toHaveURL(/\/\?q=TIF$/u);
+  await page.getByRole("combobox", { name: "Studiengang oder Kurs suchen" }).fill("TIF26");
+  await page.goBack();
+  await page.waitForTimeout(500);
+  await expect(page).toHaveURL(/\/\?q=TIF$/u);
+  await expect(page.getByRole("combobox", { name: "Studiengang oder Kurs suchen" })).toHaveValue("TIF");
+
+  // The jump to the content right after typing keeps the search: it moves within the page and goes nowhere.
+  await page.goto("/");
+  await page.getByRole("combobox", { name: "Studiengang oder Kurs suchen" }).fill("TIF26");
+  await page.getByRole("link", { name: "Zum Inhalt springen" }).focus();
+  await page.keyboard.press("Enter");
+  await page.waitForTimeout(500);
+  await expect(page.getByRole("combobox", { name: "Studiengang oder Kurs suchen" })).toHaveValue("TIF26");
+  await expect(page).toHaveURL(/\/\?q=TIF26$/u);
+
+  // Back to an entry a fragment link made earlier brings that entry's search back, as any other step back does.
+  await page.goto("/?q=TIF");
+  await page.getByRole("link", { name: "Zum Inhalt springen" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/\?q=TIF#inhalt$/u);
+  await page.getByRole("link", { name: /Startseite/u }).click();
+  await expect(page).toHaveURL(/\/$/u);
+  await page.getByRole("combobox", { name: "Studiengang oder Kurs suchen" }).fill("TIF26");
+  await expect(page).toHaveURL(/\/\?q=TIF26$/u);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/\?q=TIF#inhalt$/u);
+  await expect(page.getByRole("combobox", { name: "Studiengang oder Kurs suchen" })).toHaveValue("TIF");
+
+  // The same plan by keyboard alone: a course suggestion chosen with the arrow keys opens on Enter, even while the plan
+  // takes a second to answer, and no address written meanwhile stops the router on its way.
+  await page.route(/\/TIF26EDIT/u, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await route.continue();
+  });
   await page.goto("/");
   const search = page.getByRole("combobox", { name: "Studiengang oder Kurs suchen" });
   await search.fill("tif26");
@@ -160,6 +227,9 @@ test("edits, publishes and publicly reads a course", async ({ page }) => {
   await expect(suggestion).toBeVisible();
   while (await suggestion.getAttribute("data-highlighted") === null) await search.press("ArrowDown");
   await search.press("Enter");
+  await expect(page).toHaveURL(/\/TIF26EDIT$/u);
+  await expect(page.getByRole("heading", { name: "TIF26EDIT" })).toBeVisible();
+  await page.waitForTimeout(500);
   await expect(page).toHaveURL(/\/TIF26EDIT$/u);
 });
 

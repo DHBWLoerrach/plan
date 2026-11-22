@@ -31,10 +31,11 @@ describe("readPublicOverview", () => {
     publish(sqlite, { id: "tif23a", courses: [{ code: "TIF23A", studyStart: "2023-10-01" }] });
     publish(sqlite, { id: "tif23c", courses: [{ code: "TIF23C", studyStart: "2023-10-01", studyEnd: "2026-03-31" }] });
 
-    const { courses, cutSizes } = readPublicOverview(sqlite, today);
+    const { courses, cutSizes, endedCourses } = readPublicOverview(sqlite, today);
 
     expect(courses.map((course) => course.code)).toEqual(["TIF23A"]);
     expect(cutSizes.get("tif 2023")).toBe(2);
+    expect(endedCourses).toEqual([{ code: "TIF23C", year: 2023 }]);
   });
 
   it("keeps a course on its last day", () => {

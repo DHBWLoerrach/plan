@@ -18,8 +18,7 @@
 /.amp/portals/
 
 # next.js
-/.next/
-/.next-e2e/
+/.next*/
 /out/
 
 # production

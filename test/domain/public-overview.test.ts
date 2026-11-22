@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildPublicOverview,
+  highlightPieces,
   normalizeSearch,
   selectPublicOverview,
   suggestPublicOverview,
@@ -157,6 +158,188 @@ describe("selectPublicOverview", () => {
     expect(normalizeSearch("Künstliche  Intelligenz")).toBe("kunstliche intelligenz");
   });
 
+  it("leaves out the names of the plans and takes the remaining words in any order", () => {
+    expect(codes("Semesterplan Personal")).toEqual(["WPM"]);
+    expect(codes("personal bwl")).toEqual(["WPM"]);
+    expect(codes("Blockpläne für Gesundheit")).toEqual(["WHC"]);
+    expect(codes("Studienzeitplan wwi25")).toEqual(["WWI"]);
+    expect(codes("Blockplan")).toEqual(["WHC", "WPM", "TIF", "WWI"]);
+    expect(selectPublicOverview(overview, { query: "Semesterplan WWI27", year: "all" }).emptyReason).toBe("not-yet-published");
+    expect(suggestPublicOverview(overview, "Vorlesungsplan wwi25").courses.map((candidate) => candidate.code)).toEqual(["WWI25A", "WWI25B"]);
+  });
+
+  it("finds a program whose whole name holds a plan word before leaving the plan words out", () => {
+    const planning = buildPublicOverview([
+      course("TIF26A", { id: "PFR26A", code: "PFR26A", programAbbreviation: "PFR", program: "Planung für Räume" }),
+      course("TIF26A", { id: "PRA26A", code: "PRA26A", programAbbreviation: "PRA", program: "Planung Räume" }),
+    ], [], today);
+
+    expect(selectPublicOverview(planning, { query: "Planung für Räume", year: "all" }).programs.map((candidate) => candidate.abbreviation)).toEqual(["PFR"]);
+  });
+
+  it("shows only the courses a course code begins, not the program's other years", () => {
+    const selection = selectPublicOverview(overview, { query: "WWI25", year: "all" });
+
+    expect(selection.programs.map((candidate) => Object.keys(candidate.cells))).toEqual([["2025"]]);
+    expect(selectPublicOverview(overview, { query: "wwi", year: "all" }).programs[0].cells[2024]).toHaveLength(2);
+  });
+
+  it("leaves out only the plan words around a query, not those inside a name", () => {
+    const planning = buildPublicOverview([
+      course("TIF26A", { id: "PFR26A", code: "PFR26A", programAbbreviation: "PFR", program: "Planung für Räume" }),
+      course("TIF26A", { id: "PRA26A", code: "PRA26A", programAbbreviation: "PRA", program: "Planung Räume" }),
+    ], [], today);
+
+    expect(selectPublicOverview(planning, { query: "Semesterplan für Planung für Räume", year: "all" }).programs.map((candidate) => candidate.abbreviation))
+      .toEqual(["PFR"]);
+    expect(selectPublicOverview(planning, { query: "Planung Räume Blockplan", year: "all" }).programs.map((candidate) => candidate.abbreviation))
+      .toEqual(["PRA"]);
+  });
+
+  it("shows the years a search found something in and names the years a course code left out", () => {
+    const selection = selectPublicOverview(overview, { query: "WWI25", year: "all" });
+
+    expect(selection.years.map((candidate) => candidate.year)).toEqual([2025]);
+    expect(selection.programs[0].omitted).toEqual([2024]);
+    expect(selectPublicOverview(overview, { query: "", year: "all" }).years).toHaveLength(3);
+  });
+
+  it("passes over lone punctuation among the plan words around a query", () => {
+    expect(codes("Semesterplan – für Personalmanagement")).toEqual(["WPM"]);
+  });
+
+  it("reads a course code only from a query of one word", () => {
+    const withEnded = buildPublicOverview(courses, phases, today, new Map([["wwi 2023", 1]]), [{ code: "WWI23A", year: 2023 }]);
+
+    expect(selectPublicOverview(withEnded, { query: "WWI23 irgendwas", year: "all" }).emptyReason).toBe("no-match");
+    expect(selectPublicOverview(withEnded, { query: "Semesterplan WWI23A", year: "all" }).emptyReason).toBe("ended");
+    expect(selectPublicOverview(overview, { query: "WWI27 irgendwas", year: "all" }).emptyReason).toBe("no-match");
+  });
+
+  it("parts a plan word from a program at a hyphen, but not from a course code", () => {
+    expect(codes("Semesterplan-Personal")).toEqual(["WPM"]);
+    expect(codes("Gesundheit-Blockplan")).toEqual(["WHC"]);
+  });
+
+  it("tells a page without running years from one without any published plan", () => {
+    const ended = buildPublicOverview([], [], today, new Map([["wwi 2022", 1]]), [{ code: "WWI22A", year: 2022 }]);
+
+    expect(selectPublicOverview(ended, { query: "", year: "all" }).emptyReason).toBe("nothing-running");
+    expect(selectPublicOverview(ended, { query: "WWI22A", year: "all" }).emptyReason).toBe("ended");
+    expect(selectPublicOverview(ended, { query: "Blockplan", year: "all" }).emptyReason).toBe("nothing-running");
+    expect(selectPublicOverview(buildPublicOverview([], [], today), { query: "", year: "all" }).emptyReason).toBe("nothing-published");
+  });
+
+  it("keeps a plan word that is part of a course code", () => {
+    const planned = buildPublicOverview([course("WWI26A", { code: "WWI26-PLAN" }), course("WWI26A", { id: "WWI26-A", code: "WWI26-A" })], [], today);
+
+    expect(suggestPublicOverview(planned, "WWI26-PLAN").courses.map((candidate) => candidate.code)).toEqual(["WWI26-PLAN"]);
+    expect(suggestPublicOverview(planned, "Semesterplan WWI26-PLAN").courses.map((candidate) => candidate.code)).toEqual(["WWI26-PLAN"]);
+  });
+
+  it("leads an ended course to its plan and a year whose courses have all ended to the year's plan", () => {
+    const withEnded = buildPublicOverview(courses, phases, today, new Map([["wwi 2023", 1], ["wwi 2024", 2], ["wwi 2025", 2]]),
+      [{ code: "WWI23A", year: 2023 }]);
+    const plan = (query: string) => selectPublicOverview(withEnded, { query, year: "all" });
+
+    expect(plan("WWI23A")).toMatchObject({ emptyReason: "ended", endedPlan: "/WWI23A" });
+    expect(plan("WWI23")).toMatchObject({ emptyReason: "ended", endedPlan: "/jahrgang/2023/studiengang/WWI" });
+    expect(plan("WWI23Z")).toMatchObject({ emptyReason: "no-match" });
+    expect(plan("WWI23Z").endedPlan).toBeUndefined();
+    expect(plan("WWI26").emptyReason).toBe("not-published");
+  });
+
+  it("keeps an ended course reachable by its whole code while running courses begin with it", () => {
+    const beside = buildPublicOverview([course("WWI24A", { id: "WWI24A-IT", code: "WWI24A-IT" })], [], today, undefined,
+      [{ code: "WWI24A", year: 2024 }]);
+    const selection = selectPublicOverview(beside, { query: "WWI24A", year: "all" });
+
+    expect(selection.programs.map((candidate) => candidate.abbreviation)).toEqual(["WWI"]);
+    expect(selection.archivedPlan).toEqual({ code: "WWI24A", href: "/WWI24A" });
+  });
+
+  it("answers with an archive hit of the chosen year though running courses of another year begin with it", () => {
+    const dual = buildPublicOverview([course("WWI26A", { id: "WWI26-B", code: "WWI26-B" }), course("TIF24A")], [], today, undefined,
+      [{ code: "WWI2", year: 2024 }]);
+
+    expect(selectPublicOverview(dual, { query: "WWI2", year: "2024" })).toMatchObject({ emptyReason: "ended", endedPlan: "/WWI2" });
+    const plain = buildPublicOverview([course("WWI26A", { id: "DUAL-B", code: "DUAL-B", programAbbreviation: "DUAL" }), course("TIF24A")], [], today, undefined,
+      [{ code: "DUAL", year: 2024 }]);
+    expect(selectPublicOverview(plain, { query: "Blockplan-DUAL", year: "2024" })).toMatchObject({ emptyReason: "ended", endedPlan: "/DUAL" });
+    expect(selectPublicOverview(dual, { query: "WWI2", year: "all" }).archivedPlan).toEqual({ code: "WWI2", href: "/WWI2" });
+    expect(selectPublicOverview(dual, { query: "WWI2", year: "2026" }).archivedPlan).toBeUndefined();
+  });
+
+  it("finds an ended course by a code with hyphens and without digits", () => {
+    const campus = buildPublicOverview(courses, phases, today, undefined, [{ code: "CAMPUS-WEST", year: 2023 }]);
+
+    expect(selectPublicOverview(campus, { query: "CAMPUS-WEST", year: "all" })).toMatchObject({ emptyReason: "ended", endedPlan: "/CAMPUS-WEST" });
+    expect(selectPublicOverview(campus, { query: "Blockplan CAMPUS-WEST", year: "all" }).endedPlan).toBe("/CAMPUS-WEST");
+    expect(selectPublicOverview(campus, { query: "Blockplan-CAMPUS-WEST", year: "all" }).endedPlan).toBe("/CAMPUS-WEST");
+  });
+
+  it("takes the query as typed before leaving out plan words, so a code holding one finds itself", () => {
+    const plans = buildPublicOverview(courses, phases, today, undefined,
+      [{ code: "FRM22", year: 2022 }, { code: "FRM22 PLAN", year: 2022 }, { code: "FRM22 ALT", year: 2022 }, { code: "FRM22  ALT", year: 2022 }]);
+    const plan = (query: string) => selectPublicOverview(plans, { query, year: "all" }).endedPlan;
+
+    expect(plan("FRM22 PLAN")).toBe("/FRM22%20PLAN");
+    expect(plan("Semesterplan für FRM22 PLAN")).toBe("/FRM22%20PLAN");
+    expect(plan("Semesterplan FRM22")).toBe("/FRM22");
+    expect(plan("FRM22  ALT")).toBe("/FRM22%20%20ALT");
+    expect(plan("FRM22 ALT")).toBe("/FRM22%20ALT");
+  });
+
+  it("finds an ended course by a code with a space", () => {
+    const spaced = buildPublicOverview(courses, phases, today, undefined, [{ code: "FRM22 ALT", year: 2022 }]);
+
+    expect(selectPublicOverview(spaced, { query: "FRM22 ALT", year: "all" })).toMatchObject({ emptyReason: "ended", endedPlan: "/FRM22%20ALT" });
+    expect(selectPublicOverview(spaced, { query: "Semesterplan FRM22 ALT", year: "all" }).endedPlan).toBe("/FRM22%20ALT");
+  });
+
+  it("finds a program by its abbreviation typed exactly, before one that reads the same once normalized", () => {
+    const twins = buildPublicOverview([
+      course("TIF26A", { id: "ABC26A", code: "ABC26A", programAbbreviation: "ABC", program: "Informatik" }),
+      course("TIF26A", { id: "AB-C26A", code: "AB-C26A", programAbbreviation: "AB-C", program: "Informatik" }),
+    ], [], today);
+    const found = (query: string) => selectPublicOverview(twins, { query, year: "all" }).programs.map((candidate) => candidate.abbreviation);
+
+    expect(found("ABC")).toEqual(["ABC"]);
+    expect(found("AB-C")).toEqual(["AB-C"]);
+
+    const withOlder = buildPublicOverview([
+      course("TIF26A", { id: "AB-C26Q", code: "AB-C26Q", programAbbreviation: "AB-C", program: "Informatik" }),
+      course("TIF25A", { id: "ALT25WEST", code: "ALT25WEST", programAbbreviation: "AB-C", program: "Informatik" }),
+      course("TIF26A", { id: "ABC26A", code: "ABC26A", programAbbreviation: "ABC", program: "Informatik" }),
+    ], [], today);
+    const chosen = selectPublicOverview(withOlder, { query: "AB-C", year: "all" });
+    expect(chosen.programs.map((candidate) => Object.values(candidate.cells).flat().map((chip) => chip.label))).toEqual([["ALT25WEST", "AB-C26Q"]]);
+    expect(selectPublicOverview(withOlder, { query: "AB-C", year: "2025" }).programs[0].cells[2025].map((chip) => chip.label)).toEqual(["ALT25WEST"]);
+    expect(suggestPublicOverview(twins, "Informatik").programs.map((candidate) => candidate.label).toSorted()).toEqual(["AB-C", "ABC"]);
+  });
+
+  it("offers an archive hit only for the chosen study start", () => {
+    const withEnded = buildPublicOverview(courses, phases, today, new Map([["wwi 2023", 1]]), [{ code: "WWI23A", year: 2023 }]);
+
+    expect(selectPublicOverview(withEnded, { query: "WWI23A", year: "2026" })).toMatchObject({ emptyReason: "not-in-year" });
+    expect(selectPublicOverview(withEnded, { query: "WWI23A", year: "2026" }).endedPlan).toBeUndefined();
+    expect(selectPublicOverview(withEnded, { query: "WWI23", year: "2026" }).endedPlan).toBeUndefined();
+    expect(selectPublicOverview(withEnded, { query: "WWI23A", year: "all" }).endedPlan).toBe("/WWI23A");
+  });
+
+  it("leads an ended course to its plan while a parallel course of its year still runs", () => {
+    const parallel = buildPublicOverview([course("WWI24B")], [], today, new Map([["wwi 2024", 2]]), [{ code: "WWI24A", year: 2024 }]);
+
+    expect(selectPublicOverview(parallel, { query: "WWI24A", year: "all" })).toMatchObject({ emptyReason: "ended", endedPlan: "/WWI24A" });
+  });
+
+  it("prefers the abbreviation typed exactly over one that only reads the same once normalized", () => {
+    const similar = buildPublicOverview([], [], today, new Map([["ab-c 2023", 1], ["abc 2023", 1]]));
+
+    expect(selectPublicOverview(similar, { query: "ABC23", year: "all" }).endedPlan).toBe("/jahrgang/2023/studiengang/ABC");
+    expect(selectPublicOverview(similar, { query: "AB-C23", year: "all" }).endedPlan).toBe("/jahrgang/2023/studiengang/AB-C");
+  });
+
   it("finds programs by abbreviation and by the start of a course code", () => {
     expect(codes("wwi")).toEqual(["WWI"]);
     expect(codes("TIF26")).toEqual(["TIF"]);
@@ -253,7 +436,47 @@ describe("suggestPublicOverview", () => {
     expect(suggestPublicOverview(overlapping, "TIF").courses.map((candidate) => candidate.code)).toEqual(["TIF26A"]);
   });
 
+  it("counts all years of a program a course code found, and does not take its narrowed copy for a namesake", () => {
+    const [suggestion] = suggestPublicOverview(overview, "WWI25").programs;
+
+    expect(suggestion).toEqual({ abbreviation: "WWI", name: "Wirtschaftsinformatik", label: "Wirtschaftsinformatik", detail: "2 Jahrgänge" });
+  });
+
+  it("puts the abbreviation into the field where the name would find another program", () => {
+    const clash = buildPublicOverview([
+      course("TIF26A", { id: "WBA26X", code: "WBA26X", programAbbreviation: "WBA", program: "BWL" }),
+      course("TIF26A", { id: "BWL26X", code: "BWL26X", programAbbreviation: "BWL", program: "Betriebswirtschaft" }),
+    ], [], today);
+
+    expect(suggestPublicOverview(clash, "WBA").programs).toEqual([{ abbreviation: "WBA", name: "BWL", label: "WBA", detail: "WBA · 1 Jahrgang" }]);
+    expect(suggestPublicOverview(clash, "Betriebs").programs[0].label).toBe("Betriebswirtschaft");
+  });
+
   it("suggests nothing for an empty field", () => {
     expect(suggestPublicOverview(overview, "  ")).toEqual({ programs: [], courses: [] });
+  });
+});
+
+describe("highlightPieces", () => {
+  const marks = (text: string, query: string) => highlightPieces(text, query).filter((piece) => piece.marked).map((piece) => piece.text);
+
+  it("marks each word of the query wherever it stands, accents and plan words aside", () => {
+    expect(marks("BWL – Personalmanagement", "personal bwl")).toEqual(["BWL", "Personal"]);
+    expect(marks("Data Science und Künstliche Intelligenz", "kunstl")).toEqual(["Künstl"]);
+    expect(marks("BWL – Personalmanagement", "Semesterplan")).toEqual([]);
+  });
+
+  it("keeps the marks in place after a letter of two units, like an emoji", () => {
+    expect(marks("🌱 Umwelttechnik", "umwelt")).toEqual(["Umwelt"]);
+  });
+
+  it("marks a name that arrives decomposed as it would composed", () => {
+    expect(marks("Ku\u0308nstliche Intelligenz", "kunst")).toEqual(["Künst"]);
+  });
+
+  it("keeps the whole text in its pieces, each with where it starts", () => {
+    expect(highlightPieces("BWL – Personal", "pers")).toEqual([
+      { text: "BWL – ", marked: false, start: 0 }, { text: "Pers", marked: true, start: 6 }, { text: "onal", marked: false, start: 10 },
+    ]);
   });
 });

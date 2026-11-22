@@ -20,7 +20,8 @@
 .suggestionsEmpty[data-empty] { padding: .9rem 1.1rem; }
 .groupLabel { padding: .7rem 1.1rem .3rem; color: var(--gray-strong); font-size: .8rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .suggestion { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .1rem .75rem; margin: 0 .35rem; padding: .6rem .75rem; color: var(--ink); font-size: 1.05rem; text-decoration: none; cursor: pointer; }
-.suggestion[data-highlighted] { background: var(--theory); }
+/* The tint alone would not hold 3:1 against the list; the red edge does, for the pointer as well as the keys. */
+.suggestion[data-highlighted] { background: var(--theory); box-shadow: inset 3px 0 0 var(--red); }
 .suggestions[data-modality="keyboard"] .suggestion[data-highlighted] { outline: 2px solid var(--ink); outline-offset: -2px; }
 .suggestion strong { font-weight: 700; }
 .suggestion > span { min-width: 0; overflow-wrap: anywhere; }
@@ -67,6 +68,8 @@
 .tableView { margin-top: 1rem; }
 .arrowHint { visibility: hidden; width: fit-content; margin: 0 0 .35rem auto; padding: .15rem .5rem; background: var(--ink); color: #fff; font-size: .8rem; }
 .tableView:has(a:focus-visible) .arrowHint { visibility: visible; }
+.archived { margin: 1rem 0 0; padding: .7rem .9rem; border-left: 3px solid var(--practice-edge); background: var(--surface); }
+.archived a { color: var(--red-dark); font-weight: 700; }
 .tableWrap { position: relative; overflow-x: auto; border: 1px solid var(--line); }
 .table { width: 100%; min-width: calc(7rem + var(--years, 3) * 10rem); table-layout: fixed; border-collapse: collapse; background: #fff; text-align: left; }
 .table th, .table td { padding: .7rem .75rem; border-bottom: 1px solid var(--line); vertical-align: top; }

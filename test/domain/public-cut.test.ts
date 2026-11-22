@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { areaCut, programCut, publicCutPath, publicCutTitle, relatedCuts, yearCut } from "@/lib/domain/public-cut";
+import { areaCut, programCut, publicCutPath, publicCutTitle, relatedCuts, yearCut, routeSegment } from "@/lib/domain/public-cut";
 
 describe("publicCutPath", () => {
   it("addresses a course by its course code", () => {
@@ -66,5 +66,17 @@ describe("relatedCuts", () => {
 
   it("leads nowhere further from a whole year", () => {
     expect(relatedCuts({ kind: "year", year: 2024 }, course)).toEqual([]);
+  });
+});
+
+describe("routeSegment", () => {
+  it("decodes what the router hands on encoded, so codes and names with spaces find their plan", () => {
+    expect(routeSegment("FRM22%20ALT")).toBe("FRM22 ALT");
+    expect(routeSegment("Studienbereich%20Technik")).toBe("Studienbereich Technik");
+    expect(routeSegment("TIF25A")).toBe("TIF25A");
+  });
+
+  it("keeps a segment that is no valid encoding as it came", () => {
+    expect(routeSegment("100%")).toBe("100%");
   });
 });

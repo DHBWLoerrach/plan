@@ -22,7 +22,7 @@ beforeAll(() => {
   Element.prototype.getClientRects = () => [] as unknown as DOMRectList;
   document.elementFromPoint = () => null;
   document.elementsFromPoint = () => [];
-  globalThis.ResizeObserver ??= class {
+  globalThis.ResizeObserver = class {
     observe() {}
     unobserve() {}
     disconnect() {}
@@ -70,4 +70,21 @@ it("lets a ui-sdk agent search for plans and filter by study start", async () =>
   expect(results.getByRole("link", { name: "WPM25A" }).getAttribute("href")).toBe("/WPM25A");
   expect(results.queryByRole("link", { name: "WPM24A" })).toBeNull();
   expect(results.queryByRole("link", { name: "TIF25A" })).toBeNull();
+
+  await act(async () => {
+    const result = await agent.act({ steps: [{ ref: searchLabel, action: "setOpen", args: [true] }] });
+    expect(result.ok, result.error?.message).toBe(true);
+  });
+  const found = await agent.query({ within: searchLabel });
+  if ("error" in found) throw new Error(found.error);
+  expect(found[0].items?.map((item) => item.label)).toEqual(["BWL – Personalmanagement 2 Jahrgänge", "WPM25A Start Okt. 2025 · 2. Studienjahr"]);
+
+  await act(async () => {
+    const result = await agent.act({ steps: [{ ref: searchLabel, action: "clear" }] });
+    expect(result.ok, result.error?.message).toBe(true);
+  });
+  expect(screen.getByRole<HTMLInputElement>("combobox", { name: searchLabel }).value).toBe("");
+  const cleared = within(screen.getByRole("table"));
+  expect(cleared.getByRole("link", { name: "TIF25A" })).toBeTruthy();
+  expect(cleared.queryByRole("link", { name: "WPM24A" })).toBeNull();
 });

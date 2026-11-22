@@ -1,6 +1,6 @@
 import type Database from "better-sqlite3";
 
-import { cutKey } from "@/lib/domain/public-overview";
+import { cutKey, type EndedCourse } from "@/lib/domain/public-overview";
 import type { PublicCut } from "@/lib/domain/public-cut";
 import { normalizeCourseCode } from "@/lib/domain/course-code";
 import type { CoursePlan, CourseEvent, CoursePhase } from "@/lib/domain/publication";
@@ -18,10 +18,11 @@ type StoredEventRow = Omit<CourseEvent, "courseIds" | "provisional"> & { courseI
 
 /**
  * Every published course that has not ended by `today`, with its phases: what the landing page lays out. `cutSizes`
- * counts the published courses of each program and year, ended ones included, as the program's cut of that year shows them.
+ * counts the published courses of each program and year, ended ones included, as the program's cut of that year shows them;
+ * `endedCourses` names the published courses that have ended, whose plans a search can still lead to.
  */
 export function readPublicOverview(sqlite: Database.Database, today: string): {
-  courses: PublicCourse[]; phases: CoursePhase[]; cutSizes: Map<string, number>;
+  courses: PublicCourse[]; phases: CoursePhase[]; cutSizes: Map<string, number>; endedCourses: EndedCourse[];
 } {
   const courses = sqlite.prepare(`SELECT course.id, course.code, area.name AS area, program.name AS program,
       program.abbreviation AS programAbbreviation,
@@ -41,7 +42,11 @@ export function readPublicOverview(sqlite: Database.Database, today: string): {
     FROM courses course JOIN programs program ON program.id = course.program_id
     WHERE course.published_at IS NOT NULL
     GROUP BY lower(program.abbreviation), year`).all() as Array<{ abbreviation: string; year: number; size: number }>;
-  return { courses, phases, cutSizes: new Map(sizes.map((row) => [cutKey(row.abbreviation, row.year), row.size])) };
+  const endedCourses = sqlite.prepare(`SELECT course.code, CAST(substr(course.study_start, 1, 4) AS INTEGER) AS year
+    FROM courses course
+    WHERE course.published_at IS NOT NULL AND course.study_end < ?
+    ORDER BY course.code COLLATE NOCASE`).all(today) as EndedCourse[];
+  return { courses, phases, cutSizes: new Map(sizes.map((row) => [cutKey(row.abbreviation, row.year), row.size])), endedCourses };
 }
 
 function cutQuery(cut: PublicCut): { sql: string; parameters: unknown[] } | null {
