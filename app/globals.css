@@ -222,14 +222,6 @@ p[role="status"] { margin: 0; color: var(--success); }
 .course-list dd { display: flex; flex-wrap: wrap; gap: .5rem; margin: 0; }
 .course-list dd span { padding: .12rem .45rem; background: var(--surface); border: 1px solid var(--line); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .88rem; }
 .plan-detail section { margin-top: 2rem; }
-
-.plan-detail .workspace-panel { margin-top: 0; padding: 2.25rem 0 1rem; }
-/* On the plan page a panel of the editor ranks with the sections beside it, so its heading carries their weight —
-   without it the editor would read as a caption under the last section rather than as a part of its own. Scoped like
-   the rule above it: the same class carries the publication controls of the course page, where the headings of the
-   page settle the weight of every section alike. */
-.plan-detail .workspace-panel h2 { margin: 0 0 .5rem; font-size: clamp(1.3rem, 2.5vw, 1.6rem); font-weight: 800; letter-spacing: -.015em; }
-.plan-detail .workspace-panel h3 { margin: 1.75rem 0 .35rem; font-size: 1.1rem; font-weight: 700; }
 /* Open points are counted in the line above them, so they are set as the list they are rather than as loose lines. */
 .issue-list { margin: .4rem 0 0; padding-left: 1.25rem; list-style: disc; }
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isPublicationState, publicationState, publicationStateLabels } from "@/lib/domain/course-status";
+import { publicationState, publicationStateLabels } from "@/lib/domain/course-status";
 
 describe("publicationState", () => {
   it("derives the two visibility states from the nullable publication timestamp", () => {
@@ -8,10 +8,7 @@ describe("publicationState", () => {
     expect(publicationState("2026-02-01T00:00:00.000Z")).toBe("PUBLISHED");
   });
 
-  it("names and recognises exactly those two states", () => {
+  it("names exactly those two states", () => {
     expect(publicationStateLabels).toEqual({ UNPUBLISHED: "Nicht veröffentlicht", PUBLISHED: "Veröffentlicht" });
-    expect(isPublicationState("UNPUBLISHED")).toBe(true);
-    expect(isPublicationState("PUBLISHED")).toBe(true);
-    expect(isPublicationState("WITHDRAWN")).toBe(false);
   });
 });

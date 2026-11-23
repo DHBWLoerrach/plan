@@ -15,8 +15,8 @@ export function manageableAreas(sqlite: Database.Database, account: { id: string
 }
 
 /**
- * Every area, whether or not the account may write in it. The course list reads and filters system wide and needs the
- * foreign areas as filter values; what may be written is decided separately (ADR 0011).
+ * Every area, whether or not the account may write in it. Permissions are assigned for any of them; what an account
+ * may write is decided separately (ADR 0011).
  */
 export function allAreas(sqlite: Database.Database): AreaOption[] {
   return sqlite.prepare("SELECT id, name FROM areas ORDER BY name COLLATE NOCASE").all() as AreaOption[];

@@ -4,10 +4,11 @@ import { revalidatePath } from "next/cache";
 
 import { sqlite } from "@/lib/db";
 import { FieldError } from "@/lib/domain/field-error";
-import { getActiveAccount } from "@/lib/internal-auth";
 import { createCourseEvent, deleteCourseEvent, updateCourseEvent, type EventField, type EventInput } from "@/lib/services/event-admin";
 import { createCoursePhases, deleteCoursePhase, moveCoursePhaseChange, updateCoursePhase, type PhaseChangeField, type PhaseDetails, type PhaseField, type PhaseInput } from "@/lib/services/phase-admin";
 import { assertTransferTargets } from "@/lib/services/plan-transfer";
+
+import { errorMessage, requireAccountId } from "../../action-helpers";
 
 export type PlanFormState<TField extends string = string, TValues = never> = {
   error?: string;
@@ -15,22 +16,6 @@ export type PlanFormState<TField extends string = string, TValues = never> = {
   field?: TField;
   values?: TValues;
 };
-
-/**
- * The first statement of every attempt, before anything is read from the database. A server action is a public
- * endpoint: whoever holds its identifier reaches it without ever passing the page, whose permission check therefore
- * guards nothing here. A refusal that reported on stored data before the session was established would answer
- * questions about the course inventory to a caller who is not signed in at all.
- */
-async function requireAccountId() {
-  const account = await getActiveAccount();
-  if (!account) throw new Error("Ihre Sitzung ist nicht mehr gültig.");
-  return account.id;
-}
-
-function errorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Die Aktion konnte nicht ausgeführt werden.";
-}
 
 function rejected<TField extends string, TValues>(error: unknown, values: TValues): PlanFormState<TField, TValues> {
   return { error: errorMessage(error), field: error instanceof FieldError ? error.field as TField : undefined, values };

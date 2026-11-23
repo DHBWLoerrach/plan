@@ -16,6 +16,8 @@ import {
 } from "@/lib/services/account-admin";
 import { passwordLinkUrl } from "@/lib/services/password-link-token.mjs";
 
+import { errorMessage } from "../action-helpers";
+
 const notAuthorizedMessage = "Sie sind nicht zur Kontoverwaltung berechtigt.";
 
 async function requireSystemAdmin() {
@@ -42,10 +44,6 @@ async function requestOrigin() {
 function revalidateAccount(userId: string) {
   revalidatePath("/intern/konten");
   revalidatePath(`/intern/konten/${userId}`);
-}
-
-function errorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Die Aktion konnte nicht ausgeführt werden.";
 }
 
 export type CreateAccountState = { error?: string; passwordLink?: string; email?: string };

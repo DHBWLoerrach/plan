@@ -43,10 +43,6 @@ export function comparisonScopeParameter(scope: ComparisonScope): string {
   return scopeEntry(scope).parameter;
 }
 
-export function comparisonScopeLabel(scope: ComparisonScope): string {
-  return scopeEntry(scope).label;
-}
-
 /**
  * The address of one course. Without a scope it is the planning state, the page a course is edited on and the one that
  * gets linked and bookmarked. With a scope it is the comparison view in that width, which always names its scope in

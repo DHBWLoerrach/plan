@@ -2,6 +2,8 @@ import "server-only";
 
 import type Database from "better-sqlite3";
 
+import { allAreas, type AreaOption } from "../data";
+
 type AccountScope = { systemAdmin: boolean };
 
 const notAuthorizedMessage = "Sie sind nicht zur Kontoverwaltung berechtigt.";
@@ -15,7 +17,6 @@ export type AccountListRow = {
   status: AccountStatus;
   areas: string | null;
 };
-export type AreaOption = { id: string; name: string };
 export type ManagedAccount = {
   id: string;
   email: string;
@@ -42,7 +43,7 @@ export function listAccounts(sqlite: Database.Database, account: AccountScope, s
 /** Areas available for account permission assignment. */
 export function accountAreaOptions(sqlite: Database.Database, account: AccountScope): AreaOption[] {
   requireSystemAdmin(account);
-  return readAccountAreaOptions(sqlite);
+  return allAreas(sqlite);
 }
 
 /** Account and permission data required by the administration form. */
@@ -53,13 +54,9 @@ export function findManagedAccount(sqlite: Database.Database, account: AccountSc
   if (!managedAccount) return undefined;
   const areaIds = (sqlite.prepare("SELECT area_id AS areaId FROM area_assignments WHERE user_id = ?")
     .all(userId) as { areaId: string }[]).map((row) => row.areaId);
-  return { account: managedAccount, areas: readAccountAreaOptions(sqlite), areaIds };
+  return { account: managedAccount, areas: allAreas(sqlite), areaIds };
 }
 
 function requireSystemAdmin(account: AccountScope): void {
   if (!account.systemAdmin) throw new Error(notAuthorizedMessage);
-}
-
-function readAccountAreaOptions(sqlite: Database.Database): AreaOption[] {
-  return sqlite.prepare("SELECT id, name FROM areas ORDER BY name COLLATE NOCASE").all() as AreaOption[];
 }

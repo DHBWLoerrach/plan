@@ -165,11 +165,12 @@ export function nearestMonday(day: string): string {
   return plusDays(day, offset <= 3 ? -offset : 7 - offset);
 }
 
-function eventEnd(event: Pick<PlanEvent, "startDate" | "endDate">): string {
+/** The last day of an event; a single-day event has no end date of its own. */
+export function eventEnd(event: Pick<PlanEvent, "startDate" | "endDate">): string {
   return event.endDate ?? event.startDate;
 }
 
-function eventPeriod(event: Pick<PlanEvent, "startDate" | "endDate">): string {
+export function eventPeriod(event: Pick<PlanEvent, "startDate" | "endDate">): string {
   return formatCalendarPeriod(event.startDate, eventEnd(event), { weekday: true });
 }
 

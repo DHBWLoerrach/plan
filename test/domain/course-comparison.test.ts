@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { comparisonScope, comparisonScopeLabel, comparisonScopes, coursePath, defaultComparisonScope } from "@/lib/domain/course-comparison";
+import { comparisonScope, comparisonScopes, coursePath, defaultComparisonScope } from "@/lib/domain/course-comparison";
 
 describe("comparisonScope", () => {
   it("reads every offered option back from its address", () => {
@@ -18,7 +18,6 @@ describe("comparisonScope", () => {
 
   it("names the parallel courses of the own study program as the default", () => {
     expect(defaultComparisonScope).toBe("program");
-    expect(comparisonScopeLabel(defaultComparisonScope)).toBe("Studiengang");
   });
 });
 

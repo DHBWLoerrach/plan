@@ -17,7 +17,7 @@ import { coursePath } from "@/lib/domain/course-comparison";
 import { eventCategoryLabel } from "@/lib/domain/event-category";
 import { phaseTypeLabel } from "@/lib/domain/phase-type";
 import {
-  affectedEvents, axisMonths, axisPercent, axisYears, boardAxis, coursePhases, dayAt, dayIndex, describeChanges, junctionBlocks,
+  affectedEvents, axisMonths, axisPercent, axisYears, boardAxis, coursePhases, dayAt, dayIndex, describeChanges, eventEnd, eventPeriod, junctionBlocks,
   junctionRange, minimumPhaseDays, moveJunction, moveJunctions, nearestMonday, newOpenPoints, parallelDeviations, periodPlacement, reachableDay, phaseDiffers, phaseJunctions,
   type BoardAxis, type BoardPlan, type PhaseJunction,
 } from "@/lib/domain/planning-board";
@@ -43,12 +43,8 @@ const eventRowHeight = 30;
 const eventMinWidth = 14;
 const monthFormatter = new Intl.DateTimeFormat("de-DE", { month: "short", timeZone: "UTC" });
 
-function eventEnd(event: Pick<PlanEvent, "startDate" | "endDate">): string {
-  return event.endDate ?? event.startDate;
-}
-
 function eventLabel(event: PlanEvent): string {
-  return `${event.title}, ${eventCategoryLabel(event.category)}, ${formatCalendarPeriod(event.startDate, eventEnd(event), { weekday: true })}${event.provisional ? ", vorläufig" : ""}`;
+  return `${event.title}, ${eventCategoryLabel(event.category)}, ${eventPeriod(event)}${event.provisional ? ", vorläufig" : ""}`;
 }
 
 function toSpan(axis: BoardAxis, event: PlanEvent, track: string): EventSpan {
@@ -299,7 +295,7 @@ function FocusDetails({ focus, plan, course, parallels, phases, events, lastDay,
   return <div className={styles.detailsBody}>
     <p className={styles.detailsKind}>{eventCategoryLabel(event.category)} · {codeOf(event.courseIds[0])}{event.provisional ? " · vorläufig" : ""}</p>
     <p className={styles.detailsTitle}>{event.title}</p>
-    <p>{formatCalendarPeriod(event.startDate, eventEnd(event), { weekday: true })}</p>
+    <p>{eventPeriod(event)}</p>
     {event.description ? <p>{event.description}</p> : null}
     {editable ? <EventEndField key={event.id} event={event} lastDay={lastDay} onChange={(end) => onEndChange(event.id, end)} /> : null}
     {editable ? <p className={styles.detailsHint}>Ziehen verschiebt, der Griff am rechten Rand ändert das Ende. Mit der Tastatur: Pfeile verschieben um einen Tag, Umschalt mit Pfeil ändert das Ende.</p> : null}

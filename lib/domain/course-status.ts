@@ -6,10 +6,6 @@ export const publicationStateLabels: Record<PublicationState, string> = {
   PUBLISHED: "Veröffentlicht",
 };
 
-export function isPublicationState(value: string | null): value is PublicationState {
-  return value !== null && Object.hasOwn(publicationStateLabels, value);
-}
-
 /**
  * Publication is visibility of the current course data, represented by one nullable timestamp. Since a course carries
  * no second data stand beside the visible one (ADR 0012), this single state says everything there is to say about it:

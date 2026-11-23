@@ -4,15 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { sqlite } from "@/lib/db";
-import { getActiveAccount } from "@/lib/internal-auth";
 import { createCourse, deleteCourse, updateCourse } from "@/lib/services/course-admin";
 import { StaleStateError, publishCourse, withdrawCourse } from "@/lib/services/publication";
 
-async function requireAccountId() {
-  const account = await getActiveAccount();
-  if (!account) throw new Error("Ihre Sitzung ist nicht mehr gültig.");
-  return account.id;
-}
+import { errorMessage, requireAccountId } from "../action-helpers";
 
 function courseInput(formData: FormData) {
   return {
@@ -48,10 +43,6 @@ function planInput(formData: FormData) {
   }
   if (!Array.isArray(parsed)) throw new Error("Der erzeugte Studienplan konnte nicht gelesen werden. Berechnen Sie ihn neu.");
   return parsed as { semester: unknown; type: unknown; startDate: unknown; endDate: unknown }[];
-}
-
-function errorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Die Aktion konnte nicht ausgeführt werden.";
 }
 
 export type CourseFormState = { error?: string; success?: string };
