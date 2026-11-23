@@ -16,6 +16,14 @@ export interface PublicCutDetail {
 
 type StoredEventRow = Omit<CourseEvent, "courseIds" | "provisional"> & { courseId: string; provisional: number };
 
+const publishedCourseSelection = `SELECT course.id, course.code, area.name AS area, program.name AS program,
+    program.abbreviation AS programAbbreviation,
+    course.study_start AS studyStart, course.study_end AS studyEnd, program.semesters,
+    CAST(substr(course.study_start, 1, 4) AS INTEGER) AS year
+  FROM courses course JOIN programs program ON program.id = course.program_id
+  JOIN areas area ON area.id = program.area_id
+  WHERE course.published_at IS NOT NULL`;
+
 /**
  * Every published course that has not ended by `today`, with its phases: what the landing page lays out. `cutSizes`
  * counts the published courses of each program and year, ended ones included, as the program's cut of that year shows them;
@@ -24,13 +32,7 @@ type StoredEventRow = Omit<CourseEvent, "courseIds" | "provisional"> & { courseI
 export function readPublicOverview(sqlite: Database.Database, today: string): {
   courses: PublicCourse[]; phases: CoursePhase[]; cutSizes: Map<string, number>; endedCourses: EndedCourse[];
 } {
-  const courses = sqlite.prepare(`SELECT course.id, course.code, area.name AS area, program.name AS program,
-      program.abbreviation AS programAbbreviation,
-      course.study_start AS studyStart, course.study_end AS studyEnd, program.semesters,
-      CAST(substr(course.study_start, 1, 4) AS INTEGER) AS year
-    FROM courses course JOIN programs program ON program.id = course.program_id
-    JOIN areas area ON area.id = program.area_id
-    WHERE course.published_at IS NOT NULL AND course.study_end >= ?
+  const courses = sqlite.prepare(`${publishedCourseSelection} AND course.study_end >= ?
     ORDER BY course.code COLLATE NOCASE`).all(today) as PublicCourse[];
   const phases = sqlite.prepare(`SELECT phase.course_id AS courseId, phase.semester, phase.phase_type AS type,
       phase.start_date AS startDate, phase.end_date AS endDate
@@ -64,13 +66,7 @@ function cutQuery(cut: PublicCut): { sql: string; parameters: unknown[] } | null
 function readCoursesForCut(sqlite: Database.Database, cut: PublicCut): PublicCourse[] {
   const query = cutQuery(cut);
   if (!query) return [];
-  return sqlite.prepare(`SELECT course.id, course.code, area.name AS area, program.name AS program,
-      program.abbreviation AS programAbbreviation,
-      course.study_start AS studyStart, course.study_end AS studyEnd, program.semesters,
-      CAST(substr(course.study_start, 1, 4) AS INTEGER) AS year
-    FROM courses course JOIN programs program ON program.id = course.program_id
-    JOIN areas area ON area.id = program.area_id
-    WHERE course.published_at IS NOT NULL AND ${query.sql}
+  return sqlite.prepare(`${publishedCourseSelection} AND ${query.sql}
     ORDER BY course.code COLLATE NOCASE`).all(...query.parameters) as PublicCourse[];
 }
 

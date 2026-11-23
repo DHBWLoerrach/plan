@@ -21,9 +21,8 @@ export interface ComparableEvent {
   courses: ComparableEventCourse[];
 }
 
-function phaseSequenceKey(courseId: string, phases: CoursePhase[]): string {
+export function phaseSequenceKey(phases: CoursePhase[]): string {
   return JSON.stringify(phases
-    .filter((phase) => phase.courseId === courseId)
     .toSorted((left, right) => (
       left.semester - right.semester
       || left.startDate.localeCompare(right.startDate)
@@ -40,7 +39,7 @@ function phaseSequenceKey(courseId: string, phases: CoursePhase[]): string {
 export function groupComparableCourses(courses: CoursePlan[], phases: CoursePhase[]): ComparableCourseGroup[] {
   const groups = new Map<string, ComparableCourseGroup>();
   for (const course of courses) {
-    const key = phaseSequenceKey(course.id, phases);
+    const key = phaseSequenceKey(phases.filter((phase) => phase.courseId === course.id));
     const group = groups.get(key);
     if (group) {
       group.courses.push({ id: course.id, code: course.code });
@@ -110,7 +109,7 @@ export interface CourseDeviation {
 }
 
 function semesterKey(courseId: string, phases: CoursePhase[], semester: number): string {
-  return phaseSequenceKey(courseId, phases.filter((phase) => phase.semester === semester));
+  return phaseSequenceKey(phases.filter((phase) => phase.courseId === courseId && phase.semester === semester));
 }
 
 function eventKeys(courseId: string, events: CourseEvent[]): string[] {

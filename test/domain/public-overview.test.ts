@@ -72,6 +72,18 @@ describe("buildPublicOverview", () => {
     }]);
   });
 
+  it("compares the whole progression of parallel courses regardless of phase order", () => {
+    const parallels = [course("TIF26A"), course("TIF26B")];
+    const theory = phase("TIF26A", "2026-10-01");
+    const practice = { ...phase("TIF26A", "2026-12-21"), type: "PRACTICE" as const, endDate: "2027-03-31" };
+    const otherPractice = { ...practice, courseId: "TIF26B" };
+    const interleaved = [theory, otherPractice, { ...theory, courseId: "TIF26B" }];
+
+    const overview = (later: CoursePhase) => buildPublicOverview(parallels, [...interleaved, later], today).programs[0].cells[2026];
+    expect(overview(practice).map((chip) => chip.href)).toEqual(["/jahrgang/2026/studiengang/TIF"]);
+    expect(overview({ ...practice, endDate: "2027-03-30" }).map((chip) => chip.href)).toEqual(["/TIF26A", "/TIF26B"]);
+  });
+
   it("links every course of a year on its own where its courses form more than one group", () => {
     const four = ["WHC25A", "WHC25B", "WHC25C", "WHC25D"].map((code) => course(code));
     const split = buildPublicOverview(four, [

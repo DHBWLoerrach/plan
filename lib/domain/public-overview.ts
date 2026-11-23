@@ -1,6 +1,6 @@
 import { plusDays } from "@/lib/domain/calendar-day";
 import { courseCodeYear } from "@/lib/domain/generated-course-plan";
-import { groupComparableCourses } from "@/lib/domain/plan-comparison";
+import { phaseSequenceKey } from "@/lib/domain/plan-comparison";
 import { publicCutPath } from "@/lib/domain/public-cut";
 import type { PhaseType } from "@/lib/domain/phase-type";
 import type { CoursePhase, CoursePlan } from "@/lib/domain/publication";
@@ -16,7 +16,6 @@ export interface OverviewChip { label: string; href: string; codes: string[]; st
 
 /** `detail` is left out where the courses of a year stand at different points, like one begun and one still to begin. */
 export interface OverviewYear { year: number; label: string; detail: string | null }
-
 
 export interface OverviewProgram {
   abbreviation: string;
@@ -209,41 +208,57 @@ function dayAndMonth(day: string): string {
 /* Where the students are, as partners ask it, rather than the planners' „Theorie“ and „Praxis“. */
 const phasePlace: Record<PhaseType, string> = { THEORY: "An der DHBW", PRACTICE: "Im Unternehmen" };
 
-function phaseStatus(courseId: string, phases: CoursePhase[], today: string): OverviewPhaseStatus | null {
-  const own = phases.filter((phase) => phase.courseId === courseId).toSorted((left, right) => left.startDate.localeCompare(right.startDate));
-  const index = own.findIndex((phase) => phase.startDate <= today && today <= phase.endDate);
+function phaseStatus(phases: CoursePhase[], today: string): OverviewPhaseStatus | null {
+  const ordered = phases.toSorted((left, right) => left.startDate.localeCompare(right.startDate));
+  const index = ordered.findIndex((phase) => phase.startDate <= today && today <= phase.endDate);
   if (index >= 0) {
     /* Phases of one type that follow each other without a day between, like practice across a semester boundary, are
        one stay in one place. */
-    const { type } = own[index];
-    let end = own[index].endDate;
-    for (const phase of own.slice(index + 1)) {
+    const { type, endDate } = ordered[index];
+    let end = endDate;
+    for (const phase of ordered.slice(index + 1)) {
       if (phase.type !== type || phase.startDate !== plusDays(end, 1)) break;
       end = phase.endDate;
     }
     return { type, text: `${phasePlace[type]} bis ${dayAndMonth(end)}` };
   }
-  const next = own.find((phase) => phase.startDate > today);
+  const next = ordered.find((phase) => phase.startDate > today);
   return next ? { type: next.type, text: `${phasePlace[next.type]} ab ${dayAndMonth(next.startDate)}` } : null;
 }
 
 /* The program's cut of a year shows all of its published courses, ended ones included, so one link stands for a group
    only where the group is exactly what that cut shows. */
 function chipsFor(
-  courses: OverviewCourse[], groups: ReturnType<typeof groupComparableCourses>, cutSize: number, phases: CoursePhase[], today: string,
+  courses: OverviewCourse[], cutSize: number, phasesByCourse: ReadonlyMap<string, CoursePhase[]>, today: string,
 ): OverviewChip[] {
-  if (groups.length === 1 && courses.length > 1 && courses.length === cutSize) {
-    const codes = groups[0].courses.map((course) => course.code);
-    return [{
-      label: `${codes[0]} + ${suffixes(codes).slice(1).join(" + ")}`,
-      href: publicCutPath({ kind: "program", year: courses[0].year, abbreviation: courses[0].programAbbreviation }),
-      codes,
-      status: phaseStatus(groups[0].courses[0].id, phases, today),
-    }];
+  const phasesFor = (course: OverviewCourse) => phasesByCourse.get(course.id) ?? [];
+  if (courses.length > 1 && courses.length === cutSize) {
+    const [first, ...parallels] = courses;
+    const sequence = phaseSequenceKey(phasesFor(first));
+    if (parallels.every((course) => phaseSequenceKey(phasesFor(course)) === sequence)) {
+      const codes = courses.map((course) => course.code);
+      return [{
+        label: `${first.code} + ${suffixes(codes).slice(1).join(" + ")}`,
+        href: publicCutPath({ kind: "program", year: first.year, abbreviation: first.programAbbreviation }),
+        codes,
+        status: phaseStatus(phasesFor(first), today),
+      }];
+    }
   }
   return courses.map((course) => ({
-    label: course.code, href: publicCutPath({ kind: "course", code: course.code }), codes: [course.code], status: phaseStatus(course.id, phases, today),
+    label: course.code, href: publicCutPath({ kind: "course", code: course.code }), codes: [course.code], status: phaseStatus(phasesFor(course), today),
   }));
+}
+
+function groupBy<Item, Key>(items: Item[], keyOf: (item: Item) => Key): Map<Key, Item[]> {
+  const groups = new Map<Key, Item[]>();
+  for (const item of items) {
+    const key = keyOf(item);
+    const group = groups.get(key);
+    if (group) group.push(item);
+    else groups.set(key, [item]);
+  }
+  return groups;
 }
 
 /**
@@ -256,18 +271,17 @@ export function buildPublicOverview(
   courses: OverviewCourse[], phases: CoursePhase[], today: string, cutSizes?: Map<string, number>, endedCourses: EndedCourse[] = [],
 ): PublicOverview {
   const sorted = courses.toSorted((left, right) => collator.compare(left.code, right.code));
-  const yearNumbers = [...new Set(sorted.map((course) => course.year))].toSorted((left, right) => left - right);
-  const years = yearNumbers.map((year) => describeYear(year, sorted.filter((course) => course.year === year).map((course) => course.studyStart), today));
+  const coursesByYear = [...groupBy(sorted, (course) => course.year)].toSorted(([left], [right]) => left - right);
+  const years = coursesByYear.map(([year, inYear]) => describeYear(year, inYear.map((course) => course.studyStart), today));
 
-  const byProgram = new Map<string, OverviewCourse[]>();
-  for (const course of sorted) byProgram.set(course.programAbbreviation, [...(byProgram.get(course.programAbbreviation) ?? []), course]);
+  const phasesByCourse = groupBy(phases, (phase) => phase.courseId);
+  const byProgram = groupBy(sorted, (course) => course.programAbbreviation);
   const programs = [...byProgram.values()].map((programCourses): OverviewProgram => {
     const { programAbbreviation, program } = programCourses[0];
     const cells: Record<number, OverviewChip[]> = {};
-    for (const year of yearNumbers) {
-      const inYear = programCourses.filter((course) => course.year === year);
-      if (!inYear.length) continue;
-      cells[year] = chipsFor(inYear, groupComparableCourses(inYear, phases), cutSizes?.get(cutKey(programAbbreviation, year)) ?? inYear.length, phases, today);
+    for (const [year, inYear] of groupBy(programCourses, (course) => course.year)) {
+      const cutSize = cutSizes?.get(cutKey(programAbbreviation, year)) ?? inYear.length;
+      cells[year] = chipsFor(inYear, cutSize, phasesByCourse, today);
     }
     return {
       abbreviation: programAbbreviation,
@@ -288,7 +302,7 @@ export function buildPublicOverview(
     abbreviation: course.programAbbreviation,
     detail: describeCourseStart(course.studyStart, today),
   }));
-  const newest = yearNumbers.at(-1);
+  const newest = years.at(-1)?.year;
   const exampleCode = sorted.find((course) => course.year === newest)?.code.match(codeUpToYear)?.[0] ?? null;
   const publishedCuts = cutSizes ? [...cutSizes.keys()] : [...new Set(sorted.map((course) => cutKey(course.programAbbreviation, course.year)))];
   return { programs, years, courses: suggestions, nextYear, today, publishedCuts, endedCourses, exampleCode };
@@ -352,12 +366,6 @@ function byKey<T>(candidates: T[], keyOf: (candidate: T) => string, typed: strin
     ?? candidates.find((candidate) => codeKey(keyOf(candidate)) === codeKey(typed));
 }
 
-/**
- * Why a course code finds nothing. A published course that has ended leads to its plan, and so does a year whose
- * published courses have all ended; both from the published courses rather than a guess. A year without any published
- * course is still to come, or still running.
- */
-/** The ended course a query names by its whole code. A course code is one word: „WWI23 irgendwas“ asks for something else. */
 /** The query as typed, its spaces kept, with the words that ask for nothing left out before it, after it, or both. */
 function edgeTrimmed(query: string, before: boolean, after: boolean): string {
   const words = [...query.matchAll(/\S+/gu)];
