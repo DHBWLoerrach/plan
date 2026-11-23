@@ -8,12 +8,13 @@ import { applySchema } from "@/test/schema";
 
 const databases: Database.Database[] = [];
 
-function createDatabase() {
+function createDatabase(actorId = "actor") {
   const sqlite = new Database(":memory:");
   databases.push(sqlite);
   applySchema(sqlite);
   sqlite.prepare("INSERT INTO areas (id, name, normalized_name) VALUES (?, ?, ?)").run("area-01", "Technik", "technik");
   sqlite.prepare("INSERT INTO areas (id, name, normalized_name) VALUES (?, ?, ?)").run("area-02", "Wirtschaft", "wirtschaft");
+  insertUser(sqlite, { id: actorId, systemAdmin: 1 });
   return sqlite;
 }
 
@@ -42,6 +43,7 @@ describe("createInternalAccount", () => {
     const sqlite = createDatabase();
 
     const token = createInternalAccount(sqlite, {
+      actorId: "actor",
       email: "  New.User@DHBW-Loerrach.de ",
       role: "AREA_EDITOR",
       systemAdmin: false,
@@ -49,7 +51,7 @@ describe("createInternalAccount", () => {
       now: new Date("2030-01-01T00:00:00.000Z"),
     });
 
-    const user = sqlite.prepare("SELECT email, name, role, system_admin AS systemAdmin, status FROM users").get() as Record<string, unknown>;
+    const user = sqlite.prepare("SELECT email, name, role, system_admin AS systemAdmin, status FROM users WHERE id <> 'actor'").get() as Record<string, unknown>;
     expect(user).toEqual({ email: "new.user@dhbw-loerrach.de", name: "new.user@dhbw-loerrach.de", role: "AREA_EDITOR", systemAdmin: 0, status: "PASSWORD_PENDING" });
     expect(sqlite.prepare("SELECT area_id AS areaId FROM area_assignments ORDER BY area_id").all()).toEqual([{ areaId: "area-01" }, { areaId: "area-02" }]);
     expect(sqlite.prepare("SELECT token_hash AS tokenHash, expires_at AS expiresAt FROM password_links").get()).toEqual({
@@ -59,8 +61,8 @@ describe("createInternalAccount", () => {
 
   it("creates a pure system administration account without a role or area", () => {
     const sqlite = createDatabase();
-    createInternalAccount(sqlite, { email: "admin@dhbw-loerrach.de", role: "NONE", systemAdmin: true, areaIds: [] });
-    expect(sqlite.prepare("SELECT role, system_admin AS systemAdmin FROM users").get()).toEqual({ role: "NONE", systemAdmin: 1 });
+    createInternalAccount(sqlite, { actorId: "actor", email: "admin@dhbw-loerrach.de", role: "NONE", systemAdmin: true, areaIds: [] });
+    expect(sqlite.prepare("SELECT role, system_admin AS systemAdmin FROM users WHERE id <> 'actor'").get()).toEqual({ role: "NONE", systemAdmin: 1 });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM area_assignments").get()).toEqual({ count: 0 });
   });
 
@@ -68,28 +70,38 @@ describe("createInternalAccount", () => {
     const sqlite = createDatabase();
     const base = { role: "NONE" as const, systemAdmin: false, areaIds: [] as string[] };
 
-    expect(() => createInternalAccount(sqlite, { ...base, email: "keine-mail", systemAdmin: true })).toThrow("gültige dienstliche E-Mail-Adresse");
-    expect(() => createInternalAccount(sqlite, { email: "no-role@dhbw-loerrach.de", role: "NONE", systemAdmin: false, areaIds: [] })).toThrow("mindestens");
-    expect(() => createInternalAccount(sqlite, { email: "editor@dhbw-loerrach.de", role: "AREA_EDITOR", systemAdmin: false, areaIds: [] })).toThrow("mindestens einen Bereich");
-    expect(() => createInternalAccount(sqlite, { email: "areas@dhbw-loerrach.de", role: "NONE", systemAdmin: true, areaIds: ["area-01"] })).toThrow("keine Bereiche");
-    expect(() => createInternalAccount(sqlite, { email: "ghost@dhbw-loerrach.de", role: "AREA_EDITOR", systemAdmin: false, areaIds: ["area-99"] })).toThrow("existiert nicht");
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM users").get()).toEqual({ count: 0 });
+    expect(() => createInternalAccount(sqlite, { actorId: "actor", ...base, email: "keine-mail", systemAdmin: true })).toThrow("gültige dienstliche E-Mail-Adresse");
+    expect(() => createInternalAccount(sqlite, { actorId: "actor", email: "no-role@dhbw-loerrach.de", role: "NONE", systemAdmin: false, areaIds: [] })).toThrow("mindestens");
+    expect(() => createInternalAccount(sqlite, { actorId: "actor", email: "editor@dhbw-loerrach.de", role: "AREA_EDITOR", systemAdmin: false, areaIds: [] })).toThrow("mindestens einen Bereich");
+    expect(() => createInternalAccount(sqlite, { actorId: "actor", email: "areas@dhbw-loerrach.de", role: "NONE", systemAdmin: true, areaIds: ["area-01"] })).toThrow("keine Bereiche");
+    expect(() => createInternalAccount(sqlite, { actorId: "actor", email: "ghost@dhbw-loerrach.de", role: "AREA_EDITOR", systemAdmin: false, areaIds: ["area-99"] })).toThrow("existiert nicht");
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM users WHERE id <> 'actor'").get()).toEqual({ count: 0 });
   });
 
   it("rejects a duplicate email address", () => {
     const sqlite = createDatabase();
     insertUser(sqlite, { id: "existing", email: "taken@dhbw-loerrach.de", systemAdmin: 1 });
-    expect(() => createInternalAccount(sqlite, { email: "TAKEN@dhbw-loerrach.de", role: "NONE", systemAdmin: true, areaIds: [] })).toThrow("bereits vergeben");
+    expect(() => createInternalAccount(sqlite, { actorId: "actor", email: "TAKEN@dhbw-loerrach.de", role: "NONE", systemAdmin: true, areaIds: [] })).toThrow("bereits vergeben");
   });
 });
 
 describe("updateAccountEmail", () => {
+  it("refuses an active account whose system administration permission was removed", () => {
+    const sqlite = createDatabase();
+    insertUser(sqlite, { id: "target" });
+    sqlite.prepare("UPDATE users SET system_admin = 0 WHERE id = 'actor'").run();
+
+    expect(() => updateAccountEmail(sqlite, { actorId: "actor", userId: "target", email: "changed@example.test" }))
+      .toThrow("Sie sind nicht zur Kontoverwaltung berechtigt.");
+    expect(sqlite.prepare("SELECT email FROM users WHERE id = 'target'").pluck().get()).toBe("target@example.test");
+  });
+
   it("corrects the sign-in address without touching state, password, sessions or links", () => {
     const sqlite = createDatabase();
     insertUser(sqlite, { id: "user-1", email: "old@dhbw-loerrach.de", systemAdmin: 1, status: "ACTIVE" });
     addCredential(sqlite, "user-1");
 
-    updateAccountEmail(sqlite, { userId: "user-1", email: " Corrected@DHBW-Loerrach.de " });
+    updateAccountEmail(sqlite, { actorId: "actor", userId: "user-1", email: " Corrected@DHBW-Loerrach.de " });
 
     expect(sqlite.prepare("SELECT email, status FROM users WHERE id = 'user-1'").get()).toEqual({ email: "corrected@dhbw-loerrach.de", status: "ACTIVE" });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM accounts").get()).toEqual({ count: 1 });
@@ -100,7 +112,7 @@ describe("updateAccountEmail", () => {
     const sqlite = createDatabase();
     insertUser(sqlite, { id: "user-1", email: "one@dhbw-loerrach.de", systemAdmin: 1 });
     insertUser(sqlite, { id: "user-2", email: "two@dhbw-loerrach.de", systemAdmin: 1 });
-    expect(() => updateAccountEmail(sqlite, { userId: "user-2", email: "ONE@dhbw-loerrach.de" })).toThrow("bereits vergeben");
+    expect(() => updateAccountEmail(sqlite, { actorId: "actor", userId: "user-2", email: "ONE@dhbw-loerrach.de" })).toThrow("bereits vergeben");
   });
 });
 
@@ -111,19 +123,18 @@ describe("updateAccountPermissions", () => {
     sqlite.prepare("INSERT INTO area_assignments (user_id, area_id) VALUES (?, ?)").run("user-1", "area-01");
     insertUser(sqlite, { id: "admin", systemAdmin: 1, status: "ACTIVE" });
 
-    updateAccountPermissions(sqlite, { userId: "user-1", role: "AREA_EDITOR", systemAdmin: true, areaIds: ["area-02"] });
+    updateAccountPermissions(sqlite, { actorId: "actor", userId: "user-1", role: "AREA_EDITOR", systemAdmin: true, areaIds: ["area-02"] });
 
     expect(sqlite.prepare("SELECT role, system_admin AS systemAdmin FROM users WHERE id = 'user-1'").get()).toEqual({ role: "AREA_EDITOR", systemAdmin: 1 });
     expect(sqlite.prepare("SELECT area_id AS areaId FROM area_assignments WHERE user_id = 'user-1'").all()).toEqual([{ areaId: "area-02" }]);
   });
 
   it("rejects removing system administration from the last active system administration account", () => {
-    const sqlite = createDatabase();
-    insertUser(sqlite, { id: "sole-admin", role: "AREA_EDITOR", systemAdmin: 1, status: "ACTIVE" });
+    const sqlite = createDatabase("sole-admin");
     sqlite.prepare("INSERT INTO area_assignments (user_id, area_id) VALUES (?, ?)").run("sole-admin", "area-01");
     insertUser(sqlite, { id: "pending-admin", systemAdmin: 1, status: "PASSWORD_PENDING" });
 
-    expect(() => updateAccountPermissions(sqlite, { userId: "sole-admin", role: "AREA_EDITOR", systemAdmin: false, areaIds: ["area-01"] })).toThrow("letzte aktive Systemadministrationskonto");
+    expect(() => updateAccountPermissions(sqlite, { actorId: "sole-admin", userId: "sole-admin", role: "AREA_EDITOR", systemAdmin: false, areaIds: ["area-01"] })).toThrow("letzte aktive Systemadministrationskonto");
     expect(sqlite.prepare("SELECT system_admin AS systemAdmin FROM users WHERE id = 'sole-admin'").get()).toEqual({ systemAdmin: 1 });
   });
 
@@ -133,7 +144,7 @@ describe("updateAccountPermissions", () => {
     sqlite.prepare("INSERT INTO area_assignments (user_id, area_id) VALUES (?, ?)").run("admin-1", "area-01");
     insertUser(sqlite, { id: "admin-2", systemAdmin: 1, status: "ACTIVE" });
 
-    updateAccountPermissions(sqlite, { userId: "admin-1", role: "AREA_EDITOR", systemAdmin: false, areaIds: ["area-01"] });
+    updateAccountPermissions(sqlite, { actorId: "actor", userId: "admin-1", role: "AREA_EDITOR", systemAdmin: false, areaIds: ["area-01"] });
     expect(sqlite.prepare("SELECT system_admin AS systemAdmin FROM users WHERE id = 'admin-1'").get()).toEqual({ systemAdmin: 0 });
   });
 });
@@ -146,7 +157,7 @@ describe("issuePasswordLink", () => {
     addCredential(sqlite, "user-1");
     insertUser(sqlite, { id: "admin", systemAdmin: 1, status: "ACTIVE" });
 
-    const token = issuePasswordLink(sqlite, "user-1", new Date("2030-01-01T00:00:00.000Z"));
+    const token = issuePasswordLink(sqlite, { actorId: "actor", userId: "user-1", now: new Date("2030-01-01T00:00:00.000Z") });
 
     expect(sqlite.prepare("SELECT status FROM users WHERE id = 'user-1'").get()).toEqual({ status: "PASSWORD_PENDING" });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM accounts WHERE user_id = 'user-1'").get()).toEqual({ count: 0 });
@@ -159,8 +170,8 @@ describe("issuePasswordLink", () => {
   it("reissues a fresh link for a pending account and invalidates the previous one", () => {
     const sqlite = createDatabase();
     insertUser(sqlite, { id: "user-1", systemAdmin: 1, status: "PASSWORD_PENDING" });
-    const first = issuePasswordLink(sqlite, "user-1", new Date("2030-01-01T00:00:00.000Z"));
-    const second = issuePasswordLink(sqlite, "user-1", new Date("2030-01-02T00:00:00.000Z"));
+    const first = issuePasswordLink(sqlite, { actorId: "actor", userId: "user-1", now: new Date("2030-01-01T00:00:00.000Z") });
+    const second = issuePasswordLink(sqlite, { actorId: "actor", userId: "user-1", now: new Date("2030-01-02T00:00:00.000Z") });
 
     expect(second).not.toEqual(first);
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM password_links WHERE user_id = 'user-1'").get()).toEqual({ count: 1 });
@@ -173,14 +184,13 @@ describe("issuePasswordLink", () => {
     const sqlite = createDatabase();
     insertUser(sqlite, { id: "user-1", role: "AREA_EDITOR", status: "LOCKED" });
     sqlite.prepare("INSERT INTO area_assignments (user_id, area_id) VALUES (?, ?)").run("user-1", "area-01");
-    expect(() => issuePasswordLink(sqlite, "user-1")).toThrow("gesperrt");
+    expect(() => issuePasswordLink(sqlite, { actorId: "actor", userId: "user-1" })).toThrow("gesperrt");
   });
 
   it("rejects resetting the last active system administration account", () => {
-    const sqlite = createDatabase();
-    insertUser(sqlite, { id: "sole-admin", systemAdmin: 1, status: "ACTIVE" });
+    const sqlite = createDatabase("sole-admin");
     addCredential(sqlite, "sole-admin");
-    expect(() => issuePasswordLink(sqlite, "sole-admin")).toThrow("letzte aktive Systemadministrationskonto");
+    expect(() => issuePasswordLink(sqlite, { actorId: "sole-admin", userId: "sole-admin" })).toThrow("letzte aktive Systemadministrationskonto");
     expect(sqlite.prepare("SELECT status FROM users WHERE id = 'sole-admin'").get()).toEqual({ status: "ACTIVE" });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM accounts WHERE user_id = 'sole-admin'").get()).toEqual({ count: 1 });
   });
@@ -194,11 +204,11 @@ describe("lockInternalAccount and unlockInternalAccount", () => {
     addCredential(sqlite, "user-1");
     insertUser(sqlite, { id: "admin", systemAdmin: 1, status: "ACTIVE" });
 
-    lockInternalAccount(sqlite, "user-1", new Date("2030-01-01T00:00:00.000Z"));
+    lockInternalAccount(sqlite, { actorId: "actor", userId: "user-1", now: new Date("2030-01-01T00:00:00.000Z") });
     expect(sqlite.prepare("SELECT status FROM users WHERE id = 'user-1'").get()).toEqual({ status: "LOCKED" });
     expect(sqlite.prepare("SELECT area_id AS areaId FROM area_assignments WHERE user_id = 'user-1'").all()).toEqual([{ areaId: "area-01" }]);
 
-    const token = unlockInternalAccount(sqlite, "user-1", new Date("2030-01-02T00:00:00.000Z"));
+    const token = unlockInternalAccount(sqlite, { actorId: "actor", userId: "user-1", now: new Date("2030-01-02T00:00:00.000Z") });
     expect(sqlite.prepare("SELECT status FROM users WHERE id = 'user-1'").get()).toEqual({ status: "PASSWORD_PENDING" });
     expect(sqlite.prepare("SELECT token_hash AS tokenHash FROM password_links WHERE user_id = 'user-1'").get()).toEqual({
       tokenHash: createHash("sha256").update(token).digest("hex"),
@@ -206,10 +216,9 @@ describe("lockInternalAccount and unlockInternalAccount", () => {
   });
 
   it("rejects locking the last active system administration account", () => {
-    const sqlite = createDatabase();
-    insertUser(sqlite, { id: "sole-admin", systemAdmin: 1, status: "ACTIVE" });
+    const sqlite = createDatabase("sole-admin");
     addCredential(sqlite, "sole-admin");
-    expect(() => lockInternalAccount(sqlite, "sole-admin")).toThrow("letzte aktive Systemadministrationskonto");
+    expect(() => lockInternalAccount(sqlite, { actorId: "sole-admin", userId: "sole-admin" })).toThrow("letzte aktive Systemadministrationskonto");
     expect(sqlite.prepare("SELECT status FROM users WHERE id = 'sole-admin'").get()).toEqual({ status: "ACTIVE" });
   });
 });

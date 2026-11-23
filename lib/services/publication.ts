@@ -72,7 +72,7 @@ export function publishCourse(sqlite: Database.Database, request: PublicationReq
     if (preview.issues.length) throw new Error(preview.issues.map((issue) => issue.message).join(" "));
     sqlite.prepare("UPDATE courses SET published_at = ? WHERE id = ?").run(new Date().toISOString(), preview.course.id);
     return { courseCode: preview.course.code };
-  })();
+  }).immediate();
 }
 
 export function withdrawCourse(
@@ -87,5 +87,5 @@ export function withdrawCourse(
       throw new StaleStateError("Die angezeigte Veröffentlichung ist nicht mehr aktuell.");
     }
     sqlite.prepare("UPDATE courses SET published_at = NULL WHERE id = ?").run(request.courseId);
-  })();
+  }).immediate();
 }

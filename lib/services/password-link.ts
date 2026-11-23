@@ -47,7 +47,7 @@ export async function redeemPasswordLink(sqlite: Database.Database, input: Redee
     sqlite.prepare("DELETE FROM sessions WHERE user_id = ?").run(currentLink.userId);
     sqlite.prepare("UPDATE users SET status = 'ACTIVE', updated_at = ? WHERE id = ?").run(transactionNow.getTime(), currentLink.userId);
     sqlite.prepare("DELETE FROM password_links WHERE user_id = ?").run(currentLink.userId);
-  })();
+  }).immediate();
 }
 
 export async function changeAccountPassword(sqlite: Database.Database, input: {
@@ -65,11 +65,15 @@ export async function changeAccountPassword(sqlite: Database.Database, input: {
   }
   const passwordHash = await input.hashPassword(input.newPassword);
   sqlite.transaction(() => {
+    // The previous password was checked before the write lock, so it only counts if it is still the stored one: a
+    // change that got in between would otherwise be overwritten by someone who never knew the password it set.
     const currentAccount = findCredentialAccount(sqlite, input.userId);
-    if (!currentAccount) throw new FieldError("currentPassword", "Das bisherige Passwort ist nicht korrekt.");
+    if (!currentAccount || currentAccount.id !== account.id || currentAccount.password !== account.password) {
+      throw new FieldError("currentPassword", "Das bisherige Passwort ist nicht korrekt.");
+    }
     sqlite.prepare("UPDATE accounts SET password = ?, updated_at = ? WHERE id = ?").run(passwordHash, Date.now(), currentAccount.id);
     sqlite.prepare("DELETE FROM sessions WHERE user_id = ? AND id <> ?").run(input.userId, input.currentSessionId);
-  })();
+  }).immediate();
 }
 
 export function resetAccountPassword(sqlite: Database.Database, userId: string, now = new Date()) {
@@ -92,7 +96,7 @@ export function lockAccount(sqlite: Database.Database, userId: string, now = new
     sqlite.prepare("DELETE FROM sessions WHERE user_id = ?").run(userId);
     sqlite.prepare("DELETE FROM password_links WHERE user_id = ?").run(userId);
     sqlite.prepare("UPDATE users SET status = 'LOCKED', updated_at = ? WHERE id = ?").run(now.getTime(), userId);
-  })();
+  }).immediate();
 }
 
 /** Rejects a password at the field it belongs to, so a form can show every rule without reading its wording. */
@@ -117,7 +121,7 @@ function transitionToPasswordPending(sqlite: Database.Database, userId: string, 
     sqlite.prepare("DELETE FROM sessions WHERE user_id = ?").run(userId);
     sqlite.prepare("UPDATE users SET status = 'PASSWORD_PENDING', updated_at = ? WHERE id = ?").run(now.getTime(), userId);
     return issuePasswordLinkToken(sqlite, userId, now);
-  })();
+  }).immediate();
 }
 
 function findUser(sqlite: Database.Database, userId: string) {

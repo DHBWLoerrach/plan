@@ -35,7 +35,7 @@ export function createCoursePhases(sqlite: Database.Database, input: { accountId
       ids.push(id);
     }
     return ids;
-  })();
+  }).immediate();
 }
 
 export function updateCoursePhase(sqlite: Database.Database, input: { accountId: string; phaseId: string; now?: Date } & PhaseDetails): void {
@@ -50,7 +50,7 @@ export function updateCoursePhase(sqlite: Database.Database, input: { accountId:
       .run(phase.semester, phase.type, phase.startDate, phase.endDate, input.phaseId);
     touchCourse(sqlite, course.id, input.accountId, now);
     assertPublishedCourseValid(sqlite, course.id);
-  })();
+  }).immediate();
 }
 
 /**
@@ -77,7 +77,7 @@ export function moveCoursePhaseChange(sqlite: Database.Database, input: { accoun
     sqlite.prepare("UPDATE course_phases SET start_date = ? WHERE id = ?").run(date, later.id);
     touchCourse(sqlite, course.id, input.accountId, now);
     assertPublishedCourseValid(sqlite, course.id);
-  })();
+  }).immediate();
 }
 
 export function deleteCoursePhase(sqlite: Database.Database, input: { accountId: string; phaseId: string; now?: Date }): void {
@@ -88,7 +88,7 @@ export function deleteCoursePhase(sqlite: Database.Database, input: { accountId:
     sqlite.prepare("DELETE FROM course_phases WHERE id = ?").run(input.phaseId);
     touchCourse(sqlite, course.id, input.accountId, now);
     assertPublishedCourseValid(sqlite, course.id);
-  })();
+  }).immediate();
 }
 
 export function touchCourse(sqlite: Database.Database, courseId: string, accountId: string, now: Date): void {

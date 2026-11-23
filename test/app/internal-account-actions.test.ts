@@ -15,7 +15,8 @@ vi.mock("next/headers", () => ({ headers: vi.fn() }));
 vi.mock("@/lib/db", () => ({ sqlite: {} }));
 vi.mock("@/lib/domain/account-email.mjs", () => ({ normalizeEmail: vi.fn() }));
 vi.mock("@/lib/internal-auth", () => ({ getActiveAccount: mocks.getActiveAccount }));
-vi.mock("@/lib/services/account-admin", () => ({
+vi.mock(import("@/lib/services/account-admin"), async (importOriginal) => ({
+  ...await importOriginal(),
   createInternalAccount: mocks.createInternalAccount,
   updateAccountEmail: mocks.updateAccountEmail,
   updateAccountPermissions: mocks.updateAccountPermissions,

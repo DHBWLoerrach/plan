@@ -41,7 +41,7 @@ export function createCourse(sqlite: Database.Database, input: { accountId: stri
     if (input.adoption) adoptIntoCourse(sqlite, { courseId: id, ...period, adoption: input.adoption });
     if (input.plan) writeCoursePlan(sqlite, { courseId: id, ...period, phases: input.plan });
     return id;
-  })();
+  }).immediate();
 }
 
 export function updateCourse(sqlite: Database.Database, input: { accountId: string; courseId: string; now?: Date } & CourseInput): void {
@@ -63,7 +63,7 @@ export function updateCourse(sqlite: Database.Database, input: { accountId: stri
       .run(normalized.programId, normalized.code, normalized.normalizedCode, normalized.studyStart, normalized.studyEnd, input.courseId);
     touchCourse(sqlite, input.courseId, input.accountId, now);
     assertPublishedCourseValid(sqlite, input.courseId);
-  })();
+  }).immediate();
 }
 
 export function deleteCourse(sqlite: Database.Database, input: { accountId: string; courseId: string }): void {
@@ -74,7 +74,7 @@ export function deleteCourse(sqlite: Database.Database, input: { accountId: stri
       throw new Error("Der Kurs ist veröffentlicht und kann nicht gelöscht werden. Nehmen Sie die Veröffentlichung zuerst zurück.");
     }
     sqlite.prepare("DELETE FROM courses WHERE id = ?").run(input.courseId);
-  })();
+  }).immediate();
 }
 
 function requireProgram(sqlite: Database.Database, programId: string): ProgramRow {

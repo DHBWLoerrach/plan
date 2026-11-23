@@ -1,5 +1,7 @@
 import "server-only";
 
+import Database from "better-sqlite3";
+
 import { getActiveAccount } from "@/lib/internal-auth";
 
 /**
@@ -14,6 +16,18 @@ export async function requireAccountId() {
   return account.id;
 }
 
+const genericFailure = "Die Aktion konnte nicht ausgeführt werden.";
+
+// SQLite's own wording names locks, tables and constraints, none of which a person can act on. The log keeps it, so
+// recurring busy errors stay visible to operations (ARCHITEKTUR_UND_BETRIEB.md).
+export function databaseErrorMessage(error: unknown): string | undefined {
+  if (!(error instanceof Database.SqliteError)) return undefined;
+  console.error(error);
+  return error.code.startsWith("SQLITE_BUSY")
+    ? "Die Daten werden gerade an anderer Stelle geändert. Bitte versuchen Sie es in einem Moment erneut."
+    : genericFailure;
+}
+
 export function errorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Die Aktion konnte nicht ausgeführt werden.";
+  return databaseErrorMessage(error) ?? (error instanceof Error ? error.message : genericFailure);
 }

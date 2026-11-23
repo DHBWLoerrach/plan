@@ -6,6 +6,8 @@ import { normalizeEmail } from "@/lib/domain/account-email.mjs";
 import { lockAccount, reissuePasswordLink, resetAccountPassword, unlockAccount } from "@/lib/services/password-link";
 import { issuePasswordLinkToken } from "@/lib/services/password-link-token.mjs";
 
+export const accountAdminDeniedMessage = "Sie sind nicht zur Kontoverwaltung berechtigt.";
+
 const lastActiveSystemAdminMessage = "Das letzte aktive Systemadministrationskonto muss erhalten bleiben.";
 const notFoundMessage = "Das interne Konto wurde nicht gefunden.";
 
@@ -13,13 +15,15 @@ type Role = "NONE" | "AREA_EDITOR";
 
 type Permissions = { role: Role; systemAdmin: boolean; areaIds: string[] };
 
-type CreateInternalAccountInput = Permissions & { email: string; now?: Date };
+type AccountTarget = { actorId: string; userId: string; now?: Date };
+
+type CreateInternalAccountInput = Permissions & { actorId: string; email: string; now?: Date };
 
 export function createInternalAccount(sqlite: Database.Database, input: CreateInternalAccountInput): string {
   const email = normalizeEmail(input.email);
   const areaIds = validatePermissions(input);
   const now = input.now ?? new Date();
-  return sqlite.transaction(() => {
+  return withSystemAdmin(sqlite, input.actorId, () => {
     assertEmailAvailable(sqlite, email, null);
     assertAreasExist(sqlite, areaIds);
     const userId = randomUUID();
@@ -29,23 +33,23 @@ export function createInternalAccount(sqlite: Database.Database, input: CreateIn
     `).run(userId, email, email, input.role, input.systemAdmin ? 1 : 0, now.getTime(), now.getTime());
     assignAreas(sqlite, userId, areaIds);
     return issuePasswordLinkToken(sqlite, userId, now);
-  })();
+  });
 }
 
-export function updateAccountEmail(sqlite: Database.Database, input: { userId: string; email: string; now?: Date }): void {
+export function updateAccountEmail(sqlite: Database.Database, input: AccountTarget & { email: string }): void {
   const email = normalizeEmail(input.email);
   const now = input.now ?? new Date();
-  sqlite.transaction(() => {
+  withSystemAdmin(sqlite, input.actorId, () => {
     requireUser(sqlite, input.userId);
     assertEmailAvailable(sqlite, email, input.userId);
     sqlite.prepare("UPDATE users SET email = ?, name = ?, updated_at = ? WHERE id = ?").run(email, email, now.getTime(), input.userId);
-  })();
+  });
 }
 
-export function updateAccountPermissions(sqlite: Database.Database, input: { userId: string } & Permissions & { now?: Date }): void {
+export function updateAccountPermissions(sqlite: Database.Database, input: AccountTarget & Permissions): void {
   const areaIds = validatePermissions(input);
   const now = input.now ?? new Date();
-  sqlite.transaction(() => {
+  withSystemAdmin(sqlite, input.actorId, () => {
     const user = requireUser(sqlite, input.userId);
     assertAreasExist(sqlite, areaIds);
     const removesSystemAdmin = Boolean(user.systemAdmin) && !input.systemAdmin;
@@ -55,11 +59,11 @@ export function updateAccountPermissions(sqlite: Database.Database, input: { use
     sqlite.prepare("UPDATE users SET role = ?, system_admin = ?, updated_at = ? WHERE id = ?").run(input.role, input.systemAdmin ? 1 : 0, now.getTime(), input.userId);
     sqlite.prepare("DELETE FROM area_assignments WHERE user_id = ?").run(input.userId);
     assignAreas(sqlite, input.userId, areaIds);
-  })();
+  });
 }
 
-export function issuePasswordLink(sqlite: Database.Database, userId: string, now = new Date()): string {
-  return sqlite.transaction(() => {
+export function issuePasswordLink(sqlite: Database.Database, { actorId, userId, now = new Date() }: AccountTarget): string {
+  return withSystemAdmin(sqlite, actorId, () => {
     const user = requireUser(sqlite, userId);
     if (user.status === "LOCKED") throw new Error("Ein gesperrtes Konto muss zuerst freigegeben werden.");
     if (user.status === "ACTIVE") {
@@ -67,19 +71,27 @@ export function issuePasswordLink(sqlite: Database.Database, userId: string, now
       return resetAccountPassword(sqlite, userId, now);
     }
     return reissuePasswordLink(sqlite, userId, now);
-  })();
+  });
 }
 
-export function lockInternalAccount(sqlite: Database.Database, userId: string, now = new Date()): void {
-  sqlite.transaction(() => {
+export function lockInternalAccount(sqlite: Database.Database, { actorId, userId, now = new Date() }: AccountTarget): void {
+  withSystemAdmin(sqlite, actorId, () => {
     const user = requireUser(sqlite, userId);
     assertNotLastActiveSystemAdmin(sqlite, user);
     lockAccount(sqlite, userId, now);
-  })();
+  });
 }
 
-export function unlockInternalAccount(sqlite: Database.Database, userId: string, now = new Date()): string {
-  return unlockAccount(sqlite, userId, now);
+export function unlockInternalAccount(sqlite: Database.Database, { actorId, userId, now = new Date() }: AccountTarget): string {
+  return withSystemAdmin(sqlite, actorId, () => unlockAccount(sqlite, userId, now));
+}
+
+function withSystemAdmin<T>(sqlite: Database.Database, actorId: string, write: () => T): T {
+  return sqlite.transaction(() => {
+    const admin = sqlite.prepare("SELECT 1 FROM users WHERE id = ? AND system_admin = 1 AND status = 'ACTIVE'").get(actorId);
+    if (!admin) throw new Error(accountAdminDeniedMessage);
+    return write();
+  }).immediate();
 }
 
 type UserRow = { id: string; systemAdmin: number; status: string };

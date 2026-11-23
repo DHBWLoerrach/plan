@@ -194,4 +194,36 @@ describe("redeemPasswordLink", () => {
     expect(sqlite.prepare("SELECT password FROM accounts WHERE id = 'credential-account'").get()).toEqual({ password: "old-hash" });
     expect(sqlite.prepare("SELECT id FROM sessions ORDER BY id").pluck().all()).toEqual(["current-session", "other-session"]);
   });
+
+  /* Checking the previous password is asynchronous and therefore happens before the write lock. Two changes that both
+     checked the same previous password must not both succeed: the second would overwrite the first without its
+     author ever having known the password it replaces. */
+  it("lets only one of two changes that checked the same previous password succeed", async () => {
+    const { sqlite } = databaseWithPasswordLink({ status: "ACTIVE" });
+    sqlite.prepare("INSERT INTO accounts (id, account_id, provider_id, user_id, password, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)").run(
+      "credential-account", "user-1", "credential", "user-1", "old-hash", Date.now(), Date.now(),
+    );
+    let checked = 0;
+    let bothChecked: () => void = () => {};
+    const bothHaveChecked = new Promise<void>((resolve) => { bothChecked = resolve; });
+    const change = (newPassword: string) => changeAccountPassword(sqlite, {
+      userId: "user-1",
+      currentSessionId: "current-session",
+      currentPassword: "bisheriges-passwort",
+      newPassword,
+      hashPassword: async (password) => `better-auth:${password}`,
+      verifyPassword: async (hash, password) => {
+        const matches = hash === "old-hash" && password === "bisheriges-passwort";
+        if (++checked === 2) bothChecked();
+        await bothHaveChecked;
+        return matches;
+      },
+    });
+
+    const outcomes = await Promise.allSettled([change("Ein-sehr-langes-Passwort1!"), change("Ein-anderes-langes-Passwort2!")]);
+
+    expect(outcomes.map((outcome) => outcome.status)).toEqual(["fulfilled", "rejected"]);
+    expect((outcomes[1] as PromiseRejectedResult).reason).toMatchObject({ field: "currentPassword" });
+    expect(sqlite.prepare("SELECT password FROM accounts WHERE id = 'credential-account'").pluck().get()).toBe("better-auth:Ein-sehr-langes-Passwort1!");
+  });
 });

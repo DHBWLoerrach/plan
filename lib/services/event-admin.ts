@@ -31,7 +31,7 @@ export function createCourseEvent(sqlite: Database.Database, input: { accountId:
       assertPublishedCourseValid(sqlite, courseId);
       return id;
     });
-  })();
+  }).immediate();
 }
 
 export function updateCourseEvent(sqlite: Database.Database, input: { accountId: string; eventId: string; now?: Date } & Omit<EventInput, "courseIds">): void {
@@ -44,7 +44,7 @@ export function updateCourseEvent(sqlite: Database.Database, input: { accountId:
       .run(event.title, event.description, event.category, event.startDate, event.endDate, event.provisional ? 1 : 0, input.eventId);
     touchCourse(sqlite, courseId, input.accountId, now);
     assertPublishedCourseValid(sqlite, courseId);
-  })();
+  }).immediate();
 }
 
 export function deleteCourseEvent(sqlite: Database.Database, input: { accountId: string; eventId: string; now?: Date }): void {
@@ -55,7 +55,7 @@ export function deleteCourseEvent(sqlite: Database.Database, input: { accountId:
     sqlite.prepare("DELETE FROM course_events WHERE id = ?").run(input.eventId);
     touchCourse(sqlite, courseId, input.accountId, now);
     assertPublishedCourseValid(sqlite, courseId);
-  })();
+  }).immediate();
 }
 
 function requireCourseIds(sqlite: Database.Database, rawIds: string[]): string[] {

@@ -8,6 +8,7 @@ import Database from "better-sqlite3";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { productionOrigin } from "@/lib/product";
+import { createInternalAccount } from "@/lib/services/account-admin";
 import { resetSystemAdminPassword } from "@/lib/services/emergency-admin-reset.mjs";
 import { applySchema } from "@/test/schema";
 
@@ -43,6 +44,23 @@ afterEach(() => {
 });
 
 describe("resetSystemAdminPassword", () => {
+  it("refuses a pending account creation when the acting administrator was reset on another connection", () => {
+    const databasePath = createDatabase();
+    const sqlite = new Database(databasePath);
+    try {
+      const actor = sqlite.prepare("SELECT id FROM users WHERE status = 'ACTIVE' AND system_admin = 1").get() as { id: string };
+      resetSystemAdminPassword({ ...validInput, databasePath, email: "admin@dhbw-loerrach.de" });
+
+      expect(() => createInternalAccount(sqlite, {
+        actorId: actor.id,
+        email: "new@example.test", role: "NONE", systemAdmin: true, areaIds: [],
+      })).toThrow("Sie sind nicht zur Kontoverwaltung berechtigt.");
+      expect(sqlite.prepare("SELECT id FROM users").pluck().all()).toEqual([actor.id]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("prints the complete password link exactly once when invoked as a CLI command", () => {
     const databasePath = createDatabase();
 

@@ -10,6 +10,8 @@ import { getActiveAccount } from "@/lib/internal-auth";
 import { changeAccountPassword, redeemPasswordLink } from "@/lib/services/password-link";
 import { hashPassword, verifyPassword } from "better-auth/crypto";
 
+import { databaseErrorMessage } from "./action-helpers";
+
 /**
  * Signing out is a form submission rather than a link: a link would be prefetched by Next and would
  * end the session on a mere GET. The session cookie is cleared by the `nextCookies` plugin.
@@ -29,9 +31,10 @@ export async function setPasswordWithLinkAction(_: PasswordLinkActionState, form
       hashPassword,
     });
   } catch (error) {
-    // A rejected password names its rule; everything else about the link stays as unspecific as it has to be.
+    // A rejected password names its rule; everything else about the link stays as unspecific as it has to be. A busy
+    // database says nothing about the link, which stays usable, so it gets the retry hint instead.
     if (error instanceof FieldError) return { error: error.message };
-    return { error: "Der Passwortlink ist ungültig oder abgelaufen." };
+    return { error: databaseErrorMessage(error) ?? "Der Passwortlink ist ungültig oder abgelaufen." };
   }
   redirect("/intern/anmelden?passwort=gesetzt");
 }
@@ -55,7 +58,7 @@ export async function changePasswordAction(_: ChangePasswordActionState, formDat
     if (error instanceof FieldError) {
       return error.field === "currentPassword" ? { currentPasswordError: error.message } : { newPasswordError: error.message };
     }
-    return { formError: "Das Passwort konnte nicht geändert werden." };
+    return { formError: databaseErrorMessage(error) ?? "Das Passwort konnte nicht geändert werden." };
   }
   return { success: "Ihr Passwort wurde geändert. Andere Sitzungen wurden beendet." };
 }

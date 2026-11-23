@@ -46,5 +46,5 @@ export function seedMasterData(sqlite: Database.Database, rows: readonly MasterD
       const { id: areaId } = upsertArea.get(`area-${areaKey}`, areaName, areaName.toLocaleLowerCase("de-DE")) as { id: string };
       upsertProgram.run(`program-${abbreviation.toLocaleLowerCase("de-DE")}`, areaId, programName, abbreviation, semesters);
     }
-  })();
+  }).immediate();
 }

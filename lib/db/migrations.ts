@@ -30,13 +30,18 @@ export function pendingMigrations(sqlite: Database.Database) {
   return migrationIdsOnDisk().filter((migrationId) => !applied.has(migrationId));
 }
 
-/** Applies the pending migrations, each with its bookkeeping entry in one transaction. */
+/**
+ * Applies the pending migrations, each with its bookkeeping entry in one transaction. The list was read before the
+ * write lock, so another process may have applied a migration while this one waited; it is skipped then.
+ */
 export function applyMigrations(sqlite: Database.Database, migrationIds: string[]) {
+  const recorded = sqlite.prepare("SELECT 1 FROM _migrations WHERE id = ?");
   for (const migrationId of migrationIds) {
     const statements = readFileSync(path.join(migrationsDirectory, `${migrationId}.sql`), "utf8");
     sqlite.transaction(() => {
+      if (recorded.get(migrationId)) return;
       sqlite.exec(statements);
       sqlite.prepare("INSERT INTO _migrations (id, applied_at) VALUES (?, ?)").run(migrationId, new Date().toISOString());
-    })();
+    }).immediate();
   }
 }

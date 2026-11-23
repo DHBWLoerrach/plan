@@ -17,6 +17,13 @@ oder mehrere nebenläufig schreibende Container erfordern deshalb zuvor eine neu
 Bereitstellungsentscheidung. Die Anwendung versendet keine E-Mails und betreibt keinen eigenen
 Scheduler.
 
+Neben der Anwendung schreiben nur die Betriebsbefehle in dieselbe Datei, etwa die Vergabe eines
+Notfall-Passwortlinks bei laufendem Betrieb. Jede Schreibtransaktion beginnt deshalb mit
+`BEGIN IMMEDIATE`: Sie wartet bis zu fünf Sekunden auf die Schreibsperre, statt mit einem
+inzwischen veralteten Lesestand sofort mit `SQLITE_BUSY` zu scheitern. Bei einem solchen
+Sperrfehler protokollieren die Formularaktionen der Kurs-, Konto- und Passwortverwaltung
+den Fehler und bitten um einen erneuten Versuch.
+
 Die Vorlesungskalender sind eine externe Lesesicht. Die Anwendung ruft den ICS-Feed
 eines verwalteten Kurses ausschließlich serverseitig aus dem konfigurierten
 DHBW-Kalendersystem ab, hält gefundene und fehlende Feeds höchstens zehn Minuten,
