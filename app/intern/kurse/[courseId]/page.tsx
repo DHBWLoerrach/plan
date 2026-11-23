@@ -18,12 +18,13 @@ import { comparisonScope, comparisonScopes, coursePath, defaultComparisonScope, 
 import { calendarEventsForView, courseCalendarView, normalizeCalendarAnchor, type CourseCalendarView } from "@/lib/domain/course-calendar";
 import { publicationStateLabels } from "@/lib/domain/course-status";
 import { nextYearCourseCode } from "@/lib/domain/generated-course-plan";
-import { validatePublication, type PlanEvent, type PlanPhase } from "@/lib/domain/publication";
+import { validatePublication } from "@/lib/domain/publication";
 import { getActiveAccount, managesAnyArea } from "@/lib/internal-auth";
 import { readCourseCalendar } from "@/lib/services/course-calendar-feed";
+import { coursePlanData, type PlanCourse } from "@/lib/services/internal-course-plan";
 
 import { searchParam } from "../../search-params";
-import { coursePlanData, findCourseIdByCode, findInternalCourse, programOptions, type InternalCourse, type PlanCourse } from "../data";
+import { findCourseIdByCode, findInternalCourse, programOptions, type InternalCourse } from "../data";
 
 /**
  * How wide the comparison view reaches. It is chosen anew on every visit and never stored, so it lives in the address
@@ -44,15 +45,6 @@ function ComparisonSwitch({ courseId, scope, shown }: { courseId: string; scope:
       {current.description} {shown ? `Zurzeit ${shown === 1 ? "steht 1 Kurs" : `stehen ${shown} Kurse`} daneben.` : "Zurzeit steht kein weiterer Kurs daneben."}
     </p>
   </div>;
-}
-
-/** The open points of one course: the publication rules its current plan violates (ADR 0012). */
-function courseIssues(course: PlanCourse, phases: PlanPhase[], events: PlanEvent[]) {
-  return validatePublication({
-    course,
-    phases: phases.filter((phase) => phase.courseId === course.id),
-    events: events.filter((event) => event.courseIds.includes(course.id)),
-  });
 }
 
 type CourseHeadingData = Pick<InternalCourse, "code" | "program" | "areaName" | "studyStart" | "studyEnd" | "state">;
@@ -161,7 +153,7 @@ export default async function CoursePage({ params, searchParams }: PageProps<"/i
     {course.editable
       ? <CoursePublicationControls courseId={course.id} code={course.code} updatedAt={course.updatedAt} publishedAt={course.publishedAt}
           publishedOn={course.publishedAt ? berlinCalendarDay(new Date(course.publishedAt)) : null}
-          issues={courseIssues(course, phases, events).map((issue) => issue.message)} />
+          issues={validatePublication({ course, phases, events }).map((issue) => issue.message)} />
       : <p className="notice">Dieser Kurs gehört zum Bereich {course.areaName}, der Ihnen nicht zugeordnet ist: Sie können ihn lesen, aber nicht bearbeiten, löschen oder veröffentlichen.</p>}
 
     <CoursePlanWorkspace course={course} parallels={comparison} phases={phases} events={events} />

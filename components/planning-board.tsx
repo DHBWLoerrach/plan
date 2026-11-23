@@ -266,7 +266,7 @@ function FocusDetails({ focus, plan, course, parallels, phases, events, lastDay,
   const empty = <p className={styles.detailsEmpty}>Zeigen Sie auf eine Phase, einen Wechsel oder einen Termin, um seine Angaben hier zu sehen. Ein angeklickter Termin bleibt ausgewählt, auch wenn der Zeiger weiterwandert.</p>;
   if (!focus) return empty;
   const allPhases = [...plan.phases, ...phases.filter((phase) => phase.courseId !== course.id)];
-  const allEvents = [...plan.events, ...events.filter((event) => !event.courseIds.includes(course.id))];
+  const allEvents = [...plan.events, ...events.filter((event) => event.courseId !== course.id)];
   const codeOf = (courseId: string) => [course, ...parallels].find((candidate) => candidate.id === courseId)?.code ?? "";
   if (focus.kind === "junction") {
     const later = plan.phases.find((phase) => phase.id === focus.id);
@@ -291,9 +291,9 @@ function FocusDetails({ focus, plan, course, parallels, phases, events, lastDay,
   }
   const event = allEvents.find((candidate) => candidate.id === focus.id);
   if (!event) return empty;
-  const editable = course.editable && event.courseIds.includes(course.id);
+  const editable = course.editable && event.courseId === course.id;
   return <div className={styles.detailsBody}>
-    <p className={styles.detailsKind}>{eventCategoryLabel(event.category)} · {codeOf(event.courseIds[0])}{event.provisional ? " · vorläufig" : ""}</p>
+    <p className={styles.detailsKind}>{eventCategoryLabel(event.category)} · {codeOf(event.courseId)}{event.provisional ? " · vorläufig" : ""}</p>
     <p className={styles.detailsTitle}>{event.title}</p>
     <p>{eventPeriod(event)}</p>
     {event.description ? <p>{event.description}</p> : null}
@@ -314,7 +314,7 @@ export function PlanningBoard({ course, parallels, phases, events, today }: {
   events: PlanEvent[];
   today: string;
 }) {
-  const saved = useMemo<BoardPlan>(() => ({ phases: coursePhases(phases, course.id), events: events.filter((event) => event.courseIds.includes(course.id)) }), [phases, events, course.id]);
+  const saved = useMemo<BoardPlan>(() => ({ phases: coursePhases(phases, course.id), events: events.filter((event) => event.courseId === course.id) }), [phases, events, course.id]);
   const savedKey = useMemo(() => JSON.stringify(saved), [saved]);
   // Draft, comparison base and history start from one loaded state. A reload, like a change of the comparison, only
   // replaces it while the draft is untouched; otherwise someone else's edit would show up as one of the draft's changes.
@@ -485,7 +485,7 @@ export function PlanningBoard({ course, parallels, phases, events, today }: {
         {parallels.map((parallel) => <div key={parallel.id} className={styles.lane}>
           <p className={styles.laneLabel}><Link href={coursePath(parallel.id)}>{parallel.code}</Link>{parallel.state === "PUBLISHED" ? " · veröffentlicht" : ""}</p>
           <PhaseBars axis={axis} phases={coursePhases(phases, parallel.id)} compareWith={plan.phases} onHover={setHover} entries={{ label: `Phasen von ${parallel.code}`, onSelect: select }} />
-          <StaticEvents axis={axis} events={events.filter((event) => event.courseIds.includes(parallel.id))} track={parallel.id} visualDays={visualDays} onHover={setHover} entries={{ label: `Termine von ${parallel.code}`, onSelect: select }} />
+          <StaticEvents axis={axis} events={events.filter((event) => event.courseId === parallel.id)} track={parallel.id} visualDays={visualDays} onHover={setHover} entries={{ label: `Termine von ${parallel.code}`, onSelect: select }} />
         </div>)}
       </div>
     </div>

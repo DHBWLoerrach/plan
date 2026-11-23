@@ -1,5 +1,6 @@
 "use client";
 
+import { Checkbox, CheckboxIndicator } from "@ui-sdk/react/checkbox";
 import Link from "next/link";
 import { useActionState, useEffect, useId, useRef, useState, type MouseEvent, type ReactNode } from "react";
 
@@ -13,8 +14,6 @@ import {
   updateEventAction,
   updatePhaseAction,
 } from "@/app/intern/kurse/[courseId]/actions";
-// A type-only import: the module is server-only and is erased here rather than pulled into the client bundle.
-import type { PlanCourse } from "@/app/intern/kurse/data";
 import { DateField } from "@/components/date-field";
 import { ConfirmAction } from "@/components/editor-controls";
 import { PlanTimeline } from "@/components/plan-timeline";
@@ -25,8 +24,10 @@ import { buildCourseProgression, type PhaseJunction } from "@/lib/domain/course-
 import { eventCategories, eventCategoryLabel } from "@/lib/domain/event-category";
 import { phaseTypeLabel, phaseTypes } from "@/lib/domain/phase-type";
 import { describeDeviations, type CourseDeviation } from "@/lib/domain/plan-comparison";
+import { transferRefusal, type TransferKind } from "@/lib/domain/plan-transfer";
 import { type PlanEvent, type PlanPhase } from "@/lib/domain/publication";
-import type { EventField, EventInput } from "@/lib/services/event-admin";
+import type { EventDetails, EventField, EventInput } from "@/lib/services/event-admin";
+import type { PlanCourse } from "@/lib/services/internal-course-plan";
 import type { PhaseChangeField, PhaseDetails, PhaseField, PhaseInput } from "@/lib/services/phase-admin";
 
 /**
@@ -132,17 +133,30 @@ function EntryGone({ id, children }: { id: string; children: ReactNode }) {
   return <p ref={note} id={id} className="edit-panel__gone" role="status" tabIndex={-1}>{children}</p>;
 }
 
-/**
- * The courses a newly captured entry may additionally be written to. They are always courses of the comparison, never
- * the edited course itself, and always ones this account may write to — the domain would refuse anything else
- * (ADR 0011). What is written stays independent per course (ADR 0006); the transfer copies a value, it does not share it.
- */
-function TransferChoices({ courses, subject }: { courses: PlanCourse[]; subject: string }) {
+function TransferChoices({ courses, kind, submittedTargets, errorId }: {
+  courses: PlanCourse[];
+  kind: TransferKind;
+  submittedTargets?: string[];
+  errorId?: string;
+}) {
+  const hintId = useId();
   if (!courses.length) return null;
-  return <fieldset className="account-fieldset">
+  const entryLabel = kind === "phase" ? "Kursphase" : "Termin";
+  const subject = kind === "phase" ? "eine eigenständige Kursphase" : "ein eigenständiger Termin";
+  return <fieldset className="account-fieldset" aria-describedby={errorId ? `${hintId} ${errorId}` : hintId}>
     <legend>Zusätzlich übertragen auf</legend>
-    <p>Optional. Bei jedem angekreuzten Kurs entsteht {subject}. Spätere Änderungen an einem Kurs wirken nicht auf die anderen.</p>
-    {courses.map((course) => <label key={course.id}><input name="transferCourseId" type="checkbox" value={course.id} /> {course.code}{course.state === "PUBLISHED" ? " · veröffentlicht" : ""}</label>)}
+    <p id={hintId}>Optional. Bei jedem angekreuzten Kurs entsteht {subject}. Spätere Änderungen an einem Kurs wirken nicht auf die anderen.</p>
+    {courses.map((course) => {
+      const label = `${course.code}${course.state === "PUBLISHED" ? " · veröffentlicht" : ""}`;
+      const selected = submittedTargets?.includes(course.id) ?? false;
+      return <label key={course.id}>
+        <Checkbox key={selected ? "selected" : "unselected"} className="plan-transfer-checkbox" name="transferCourseId" value={course.id}
+          defaultChecked={selected} aria-label={`${label} – ${entryLabel} übertragen`}>
+          <CheckboxIndicator aria-hidden="true">✓</CheckboxIndicator>
+        </Checkbox>
+        {label}
+      </label>;
+    })}
   </fieldset>;
 }
 
@@ -162,18 +176,18 @@ function PhaseCreateForm({ course, transferTargets }: { course: PlanCourse; tran
     {state.error ? <p id={ids.error} role="alert">{state.error}</p> : null}
     {state.success ? <p role="status">{state.success}</p> : null}
     <label htmlFor={ids.semester}>Semester</label>
-    <select id={ids.semester} name="semester" required defaultValue={values?.semester ?? ""} aria-invalid={state.field === "semester" || undefined} aria-describedby={state.field === "semester" ? ids.error : undefined}>
+    <select key={`semester:${values?.semester ?? ""}`} id={ids.semester} name="semester" required defaultValue={values?.semester ?? ""} aria-invalid={state.field === "semester" || undefined} aria-describedby={state.field === "semester" ? ids.error : undefined}>
       <option value="" disabled>Bitte wählen</option>
       {Array.from({ length: course.semesters }, (_, index) => index + 1).map((semester) => <option key={semester} value={semester}>Semester {semester}</option>)}
     </select>
     <label htmlFor={ids.type}>Phasentyp</label>
-    <select id={ids.type} name="type" required defaultValue={values?.type ?? ""} aria-invalid={state.field === "type" || undefined} aria-describedby={state.field === "type" ? ids.error : undefined}>
+    <select key={`type:${values?.type ?? ""}`} id={ids.type} name="type" required defaultValue={values?.type ?? ""} aria-invalid={state.field === "type" || undefined} aria-describedby={state.field === "type" ? ids.error : undefined}>
       <option value="" disabled>Bitte wählen</option>
       {phaseTypes.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}
     </select>
     <DateField label="Startdatum" name="startDate" required defaultValue={values?.startDate ?? ""} invalid={state.field === "startDate"} errorId={ids.error} />
     <DateField label="Enddatum" name="endDate" required defaultValue={values?.endDate ?? ""} invalid={state.field === "endDate"} errorId={ids.error} />
-    <TransferChoices courses={transferTargets} subject="eine eigenständige Kursphase" />
+    <TransferChoices courses={transferTargets} kind="phase" submittedTargets={values?.targetCourseIds} errorId={state.field === "courseIds" ? ids.error : undefined} />
     {transferTargets.length
       ? <ConfirmAction openLabel="Kursphase speichern" heading="Kursphase auf weitere Kurse übertragen"
           consequence={`Die Kursphase wird für ${course.code} gespeichert.`}
@@ -259,14 +273,14 @@ function EventCreateForm({ course, transferTargets }: { course: PlanCourse; tran
     <input id={ids.title} name="title" type="text" required maxLength={160} defaultValue={values?.title} aria-invalid={state.field === "title" || undefined} aria-describedby={state.field === "title" ? ids.error : undefined} />
     <label>Beschreibung (optional)<textarea name="description" rows={3} maxLength={2000} defaultValue={values?.description} /></label>
     <label htmlFor={ids.category}>Kategorie</label>
-    <select id={ids.category} name="category" required defaultValue={values?.category ?? ""} aria-invalid={state.field === "category" || undefined} aria-describedby={state.field === "category" ? ids.error : undefined}>
+    <select key={`category:${values?.category ?? ""}`} id={ids.category} name="category" required defaultValue={values?.category ?? ""} aria-invalid={state.field === "category" || undefined} aria-describedby={state.field === "category" ? ids.error : undefined}>
       <option value="" disabled>Bitte wählen</option>
       {eventCategories.map((category) => <option key={category.value} value={category.value}>{category.label}</option>)}
     </select>
     <DateField label="Startdatum" name="startDate" required defaultValue={values?.startDate ?? ""} invalid={state.field === "startDate"} errorId={ids.error} />
     <DateField label="Enddatum (optional)" name="endDate" defaultValue={values?.endDate ?? ""} invalid={state.field === "endDate"} errorId={ids.error} />
     <label className="account-check"><input type="checkbox" name="provisional" defaultChecked={values?.provisional} /> Zeitangabe ist vorläufig</label>
-    <TransferChoices courses={transferTargets} subject="ein eigenständiger Termin" />
+    <TransferChoices courses={transferTargets} kind="event" submittedTargets={values?.targetCourseIds} errorId={state.field === "courseIds" ? ids.error : undefined} />
     {published || transferTargets.length
       ? <ConfirmAction openLabel="Termin prüfen" heading="Prüfungsrelevanten Termin speichern"
           consequence="Der Termin wird gespeichert. Für veröffentlichte Kurse ist er anschließend unmittelbar öffentlich sichtbar."
@@ -285,7 +299,7 @@ function EventCreateForm({ course, transferTargets }: { course: PlanCourse; tran
 }
 
 function EventEditForm({ event, course }: { event: PlanEvent; course: PlanCourse }) {
-  const [updateState, updateAction, updating] = useActionState<PlanFormState<EventField, Omit<EventInput, "courseIds">>, FormData>(updateEventAction, {});
+  const [updateState, updateAction, updating] = useActionState<PlanFormState<EventField, EventDetails>, FormData>(updateEventAction, {});
   const [deleteState, deleteAction, deleting] = useActionState<PlanFormState, FormData>(deleteEventAction, {});
   const ids = { title: useId(), category: useId(), error: useId() };
   const published = course.state === "PUBLISHED";
@@ -431,16 +445,9 @@ export function CoursePlanWorkspace({ course, parallels, phases, events }: { cou
   const deviations = describeDeviations(course, parallels, phases, events);
   const ownPhases = phases.filter((phase) => phase.courseId === course.id);
   const published = course.state === "PUBLISHED";
-  /* A phase transfer is only offered where every phase valid for this course is valid for the target as well: same
-     number of semesters and the same study period. Which dates are about to be entered is not known while the target
-     is being offered, so the condition is on the courses rather than on the entry — a target the domain would refuse
-     must not be offerable, because its refusal takes the whole transaction down, this course included. */
-  const phaseTargets = parallels.filter((candidate) => candidate.editable && candidate.state === "UNPUBLISHED"
-    && candidate.semesters === course.semesters && candidate.studyStart === course.studyStart && candidate.studyEnd === course.studyEnd);
-  // A course one may write to but not transfer into would otherwise simply be missing from the choices, leaving the
-  // reason to be guessed. It is named instead, with the property that rules it out.
-  const excludedTargets = parallels.filter((candidate) => candidate.editable && candidate.state === "UNPUBLISHED" && !phaseTargets.includes(candidate));
-  const eventTargets = parallels.filter((candidate) => candidate.editable);
+  const eventTargets = parallels.filter((candidate) => candidate.editable && !transferRefusal(course, candidate, "event"));
+  const phaseTargets = eventTargets.filter((candidate) => !transferRefusal(course, candidate, "phase"));
+  const excludedTargets = eventTargets.filter((candidate) => candidate.state === "UNPUBLISHED" && !phaseTargets.includes(candidate));
 
   // The phases a change leads into: together with a change after it, such a phase has both of its days on a line of their own.
   const changeBefore = new Set(progression.semesters.flatMap((semester) => semester.phases)

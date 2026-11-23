@@ -1,7 +1,8 @@
 import Database from "better-sqlite3";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { coursePlanData, courseListData, findInternalCourse, managedCourseAreaCounts, overviewPrograms, programOptions, studyingPrograms, type CourseListFilters } from "@/app/intern/kurse/data";
+import { courseListData, findInternalCourse, managedCourseAreaCounts, overviewPrograms, programOptions, studyingPrograms, type CourseListFilters } from "@/app/intern/kurse/data";
+import { coursePlanData } from "@/lib/services/internal-course-plan";
 import { applySchema } from "@/test/schema";
 
 const databases: Database.Database[] = [];

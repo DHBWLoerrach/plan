@@ -25,7 +25,7 @@ describe("courses", () => {
   it("rejects a study period or program that invalidates existing phases", () => {
     const sqlite = database();
     const id = createCourse(sqlite, { accountId: "admin", code: "TIF26A", programId: "program-7", studyStart: "2026-10-01", studyEnd: "2029-09-30" });
-    createCoursePhases(sqlite, { accountId: "admin", courseIds: [id], semester: "7", type: "THEORY", startDate: "2029-01-01", endDate: "2029-09-30" });
+    createCoursePhases(sqlite, { accountId: "admin", sourceCourseId: id, targetCourseIds: [], semester: "7", type: "THEORY", startDate: "2029-01-01", endDate: "2029-09-30" });
     expect(() => updateCourse(sqlite, { accountId: "admin", courseId: id, code: "TIF26A", programId: "program-7", studyStart: "2026-10-01", studyEnd: "2029-06-30" })).toThrow("alle Kursphasen");
     expect(() => updateCourse(sqlite, { accountId: "admin", courseId: id, code: "TIF26A", programId: "program-6", studyStart: "2026-10-01", studyEnd: "2029-09-30" })).toThrow("mindestens 7 Semester");
   });
@@ -62,7 +62,7 @@ describe("courses", () => {
   it("deletes dependent planning data when no public version exists", () => {
     const sqlite = database();
     const id = createCourse(sqlite, { accountId: "admin", code: "TIF26A", programId: "program-6", studyStart: "2026-10-01", studyEnd: "2029-09-30" });
-    createCoursePhases(sqlite, { accountId: "admin", courseIds: [id], semester: "1", type: "THEORY", startDate: "2026-10-01", endDate: "2026-12-31" });
+    createCoursePhases(sqlite, { accountId: "admin", sourceCourseId: id, targetCourseIds: [], semester: "1", type: "THEORY", startDate: "2026-10-01", endDate: "2026-12-31" });
     deleteCourse(sqlite, { accountId: "admin", courseId: id });
     expect(sqlite.prepare("SELECT count(*) AS count FROM course_phases").get()).toEqual({ count: 0 });
   });

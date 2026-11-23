@@ -762,3 +762,88 @@ test("takes up a calendar period opened while an earlier request is still runnin
   await expect(views.getByRole("radio", { name: "Woche" })).toBeFocused();
   await expectSystemFocusRing(page, views.getByRole("radio", { name: "Woche" }));
 });
+
+test("transfers an event to the courses selected with the keyboard", async ({ page }) => {
+  await signIn(page, "admin@test.invalid");
+  await page.goto("/intern/kurse/e2e-running-1");
+  const entry = disclosure(page, "Termin erfassen");
+  const form = entry.locator("..").locator("form");
+  await entry.click();
+  await form.getByLabel("Titel").fill("Übertragene Prüfung");
+  await form.getByLabel("Kategorie").selectOption("EXAM");
+  await form.getByLabel("Startdatum").fill("2026-12-01");
+
+  const first = form.getByRole("checkbox", { name: "FRM25E2E2 – Termin übertragen", exact: true });
+  const second = form.getByRole("checkbox", { name: "FRM25E2E3 – Termin übertragen", exact: true });
+  await first.press("Space");
+  await expect(first).toBeFocused();
+  await expect(first).toBeChecked();
+  await second.press("Space");
+  await second.press("Space");
+  await expect(second).not.toBeChecked();
+  await page.emulateMedia({ forcedColors: "active", colorScheme: "dark" });
+  const background = (option: Locator) => option.evaluate((node) => getComputedStyle(node).backgroundColor);
+  expect(await background(first)).not.toBe(await background(second));
+  await page.emulateMedia({ forcedColors: null, colorScheme: null });
+  await second.press("Space");
+  await expect(second).toBeChecked();
+
+  const review = form.getByRole("button", { name: "Termin prüfen" });
+  const confirmation = form.getByRole("group", { name: "Prüfungsrelevanten Termin speichern" });
+  await first.press("Enter");
+  await expect(confirmation).toBeFocused();
+  await expect(confirmation).toContainText("FRM25E2E1, FRM25E2E2, FRM25E2E3");
+  await first.press("Enter");
+  await expect(confirmation).toBeVisible();
+  await expect(form.getByText("3 eigenständige Termine wurden gespeichert", { exact: false })).toHaveCount(0);
+  await confirmation.press("Escape");
+  await expect(review).toBeFocused();
+  await expect(first).toBeChecked();
+  await expect(second).toBeChecked();
+  await review.press("Enter");
+  await confirmation.getByRole("button", { name: "Termin speichern" }).press("Enter");
+  await expect(form.getByText("3 eigenständige Termine wurden gespeichert", { exact: false })).toBeVisible();
+
+  for (const courseId of ["e2e-running-1", "e2e-running-2", "e2e-running-3"]) {
+    await page.goto(`/intern/kurse/${courseId}`);
+    await expect(page.getByRole("button", { name: /Übertragene Prüfung/u })).toBeVisible();
+  }
+  await page.goto("/intern/kurse/e2e-running-4");
+  await expect(page.getByRole("button", { name: /Übertragene Prüfung/u })).toHaveCount(0);
+});
+
+test("retains transfer targets after a server-side validation error and clears them after saving", async ({ page }) => {
+  await signIn(page, "admin@test.invalid");
+  await page.goto("/intern/kurse/e2e-running-1");
+  const entry = disclosure(page, "Termin erfassen");
+  await entry.click();
+  const form = entry.locator("..").locator("form");
+  const title = form.getByLabel("Titel");
+  const end = form.getByLabel("Enddatum (optional)");
+  const target = form.getByRole("checkbox", { name: "FRM25E2E2 – Termin übertragen", exact: true });
+  await title.fill("Korrigierte Prüfung");
+  await form.getByLabel("Kategorie").selectOption("EXAM");
+  await form.getByLabel("Startdatum").fill("2026-12-01");
+  await end.fill("2026-11-30");
+  await target.press("Space");
+
+  const confirmation = form.getByRole("group", { name: "Prüfungsrelevanten Termin speichern" });
+  await title.press("Enter");
+  await expect(confirmation).toBeFocused();
+  const save = confirmation.getByRole("button", { name: "Termin speichern" });
+  await save.press("Enter");
+
+  await expect(form.getByText("Das Enddatum darf nicht vor dem Startdatum liegen.")).toBeVisible();
+  await expect(target).toBeChecked();
+  await expect(form.getByLabel("Kategorie")).toHaveValue("EXAM");
+  await expect(confirmation).toContainText("FRM25E2E1, FRM25E2E2");
+  const selected = await form.evaluate((node: HTMLFormElement) => new FormData(node).getAll("transferCourseId"));
+  expect(selected).toEqual(["e2e-running-2"]);
+
+  await end.fill("2026-12-02");
+  await save.press("Enter");
+  await expect(confirmation.getByRole("alert")).toContainText("Die Eingaben haben sich nach der Vorschau geändert.");
+  await save.press("Enter");
+  await expect(form.getByText("2 eigenständige Termine wurden gespeichert", { exact: false })).toBeVisible();
+  await expect(target).not.toBeChecked();
+});

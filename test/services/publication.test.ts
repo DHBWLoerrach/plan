@@ -21,7 +21,7 @@ function plannedCourse(sqlite: Database.Database, code: string) {
   const id = createCourse(sqlite, { accountId: "editor", code, programId: "program", studyStart: "2026-10-01", studyEnd: "2026-10-06" });
   for (let semester = 1; semester <= 6; semester += 1) {
     const day = `2026-10-0${semester}`;
-    createCoursePhases(sqlite, { accountId: "editor", courseIds: [id], semester: String(semester), type: "THEORY", startDate: day, endDate: day });
+    createCoursePhases(sqlite, { accountId: "editor", sourceCourseId: id, targetCourseIds: [], semester: String(semester), type: "THEORY", startDate: day, endDate: day });
   }
   return id;
 }
@@ -60,7 +60,7 @@ describe("course publication", () => {
   it("keeps current phases and events in place instead of copying them", () => {
     const sqlite = database();
     const id = plannedCourse(sqlite, "TIF26A");
-    createCourseEvent(sqlite, { accountId: "editor", courseIds: [id], title: "Prüfung", description: "", category: "EXAM", startDate: "2026-10-03", endDate: "", provisional: false });
+    createCourseEvent(sqlite, { accountId: "editor", sourceCourseId: id, targetCourseIds: [], title: "Prüfung", description: "", category: "EXAM", startDate: "2026-10-03", endDate: "", provisional: false });
     const phaseIds = sqlite.prepare("SELECT id FROM course_phases WHERE course_id = ? ORDER BY id").pluck().all(id);
     const eventIds = sqlite.prepare("SELECT id FROM course_events WHERE course_id = ? ORDER BY id").pluck().all(id);
 
@@ -74,7 +74,7 @@ describe("course publication", () => {
     const sqlite = database();
     const id = plannedCourse(sqlite, "TIF26A");
     const preview = readPublicationPreview(sqlite, id)!;
-    createCourseEvent(sqlite, { accountId: "editor", courseIds: [id], title: "Prüfung", description: "", category: "EXAM", startDate: "2026-10-03", endDate: "", provisional: false, now: new Date("2027-01-01") });
+    createCourseEvent(sqlite, { accountId: "editor", sourceCourseId: id, targetCourseIds: [], title: "Prüfung", description: "", category: "EXAM", startDate: "2026-10-03", endDate: "", provisional: false, now: new Date("2027-01-01") });
 
     expect(() => publishCourse(sqlite, { courseId: id, accountId: "editor", seenUpdatedAt: preview.course.updatedAt, seenPublishedAt: null }))
       .toThrow(StaleStateError);

@@ -28,14 +28,14 @@ function readCoursePlan(sqlite: Database.Database, courseId: string) {
   const phases = sqlite.prepare(`SELECT course_id AS courseId, semester, phase_type AS type,
       start_date AS startDate, end_date AS endDate FROM course_phases WHERE course_id = ?`)
     .all(courseId) as CoursePhase[];
-  const events = sqlite.prepare(`SELECT id, title, description, category, start_date AS startDate,
+  const events = sqlite.prepare(`SELECT id, course_id AS courseId, title, description, category, start_date AS startDate,
       end_date AS endDate, provisional FROM course_events WHERE course_id = ?
       ORDER BY start_date, title COLLATE NOCASE`)
-    .all(courseId) as Array<Omit<CourseEvent, "courseIds" | "provisional"> & { provisional: number }>;
+    .all(courseId) as Array<Omit<CourseEvent, "provisional"> & { provisional: number }>;
   return {
     course,
     phases,
-    events: events.map((event) => ({ ...event, provisional: Boolean(event.provisional), courseIds: [courseId] })),
+    events: events.map(({ provisional, ...event }) => ({ ...event, provisional: Boolean(provisional) })),
   };
 }
 

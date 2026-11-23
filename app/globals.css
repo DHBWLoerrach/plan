@@ -597,6 +597,9 @@ p[role="status"] { margin: 0; color: var(--success); }
 .account-fieldset { display: grid; gap: .45rem; margin: 0; padding: 1rem; border: 1px solid var(--line); background: #fff; }
 .account-fieldset legend { padding: 0 .25rem; font-weight: 700; }
 .account-fieldset label, .account-check { display: flex; align-items: center; gap: .5rem; font-weight: 400; }
+.plan-transfer-checkbox { display: inline-grid; place-items: center; width: 1.05rem; height: 1.05rem; flex: none; border: 1px solid var(--field-border); border-radius: .15rem; background: #fff; cursor: pointer; }
+.plan-transfer-checkbox[data-checked] { border-color: var(--red); background: var(--red); color: #fff; font-size: .85rem; line-height: 1; }
+@media (forced-colors: active) { .plan-transfer-checkbox[data-checked] { forced-color-adjust: none; border-color: Highlight; background: Highlight; color: HighlightText; outline-color: CanvasText; } }
 .account-check { font-weight: 700; }
 .account-fieldset p { margin: 0; color: var(--gray); font-size: .9rem; }
 

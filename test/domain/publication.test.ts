@@ -66,6 +66,7 @@ describe("validatePublication", () => {
         events: [
           {
             id: "event-1",
+            courseId: "course-a",
             title: "Prüfung",
             description: null,
             category: "EXAM",
@@ -86,6 +87,7 @@ describe("validatePublication", () => {
         events: [
           {
             id: "event-1",
+            courseId: "course-a",
             title: "Projektarbeit",
             description: null,
             category: "SUBMISSION",
@@ -110,6 +112,14 @@ describe("validatePublication", () => {
     );
   });
 
+  it("checks only events assigned to the published course", () => {
+    expect(validatePublication({
+      course: courses[0],
+      phases: completePhases,
+      events: [{ id: "event-1", courseId: "course-b", title: "Prüfung", description: null, category: "EXAM", startDate: "2027-04-01", endDate: null, provisional: false }],
+    })).toEqual([]);
+  });
+
   it("points at the start date of an event whose semester no course phase covers", () => {
     const phases = completePhases.filter((phase) => !(phase.courseId === "course-a" && phase.semester === 2));
 
@@ -117,7 +127,7 @@ describe("validatePublication", () => {
       validatePublication({
         course: courses[0],
         phases,
-        events: [{ id: "event-1", title: "Prüfung", description: null, category: "EXAM", startDate: "2027-02-10", endDate: null, provisional: false }],
+        events: [{ id: "event-1", courseId: "course-a", title: "Prüfung", description: null, category: "EXAM", startDate: "2027-02-10", endDate: null, provisional: false }],
       }),
     ).toContainEqual(expect.objectContaining({ eventId: "event-1", courseId: "course-a", code: "event-semester-not-derivable", semester: null, field: "startDate" }));
   });

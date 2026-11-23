@@ -45,7 +45,7 @@ function event(id: string, courseId: string, overrides: Partial<CourseEvent> = {
     startDate: "2027-03-15",
     endDate: null,
     provisional: false,
-    courseIds: [courseId],
+    courseId,
     ...overrides,
   };
 }
@@ -80,7 +80,7 @@ describe("groupComparableEvents", () => {
 });
 
 describe("describeDeviations", () => {
-  const exam = (id: string, courseId: string, startDate = "2027-03-15"): CourseEvent => ({ id, title: "Klausur", description: null, category: "EXAM", startDate, endDate: null, provisional: false, courseIds: [courseId] });
+  const exam = (id: string, courseId: string, startDate = "2027-03-15"): CourseEvent => ({ id, title: "Klausur", description: null, category: "EXAM", startDate, endDate: null, provisional: false, courseId });
 
   it("lists a course that agrees, with nothing to report", () => {
     expect(describeDeviations(courses[0], [courses[1]], [...phases("course-a"), ...phases("course-b")], [exam("a", "course-a"), exam("b", "course-b")]))

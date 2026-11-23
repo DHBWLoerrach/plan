@@ -61,7 +61,7 @@ export function buildCourseProgression<TPhase extends CoursePhase, TEvent extend
      plan may number its semesters against their order in time, and asking the group order for the neighbour would
      then report two adjoining phases as lying months on top of each other. */
   const chronological = own.toSorted((left, right) => left.startDate.localeCompare(right.startDate) || left.endDate.localeCompare(right.endDate));
-  const ownEvents = events.filter((event) => event.courseIds.includes(course.id))
+  const ownEvents = events.filter((event) => event.courseId === course.id)
     .toSorted((left, right) => left.startDate.localeCompare(right.startDate));
   const placed = new Map<TPhase, TEvent[]>();
   const unplacedEvents: TEvent[] = [];

@@ -23,8 +23,8 @@ function database() {
 
 const valid = { title: "Prüfung", description: "", category: "EXAM", startDate: "2026-12-01", endDate: "", provisional: false };
 
-function create(sqlite: Database.Database, details: Partial<typeof valid> = {}, courseIds = ["course"]) {
-  return createCourseEvent(sqlite, { accountId: "editor", courseIds, ...valid, ...details });
+function create(sqlite: Database.Database, details: Partial<typeof valid> = {}, sourceCourseId = "course", targetCourseIds: string[] = []) {
+  return createCourseEvent(sqlite, { accountId: "editor", sourceCourseId, targetCourseIds, ...valid, ...details });
 }
 
 function rejectedField(save: () => unknown) {
@@ -117,15 +117,15 @@ describe("createCourseEvent", () => {
   it("refuses a selection that is empty or names a course that does not exist", () => {
     const sqlite = database();
 
-    expect(rejectedField(() => create(sqlite, {}, []))).toBe("courseIds");
-    expect(rejectedField(() => create(sqlite, {}, ["kurs-unbekannt"]))).toBe("courseIds");
+    expect(rejectedField(() => create(sqlite, {}, ""))).toBe("courseIds");
+    expect(rejectedField(() => create(sqlite, {}, "kurs-unbekannt"))).toBe("courseIds");
     expect(sqlite.prepare("SELECT count(*) AS count FROM course_events").get()).toEqual({ count: 0 });
   });
 
   it("records the moment of the change on the course", () => {
     const sqlite = database();
 
-    createCourseEvent(sqlite, { accountId: "editor", courseIds: ["course"], ...valid, now: new Date("2026-07-30T09:00:00.000Z") });
+    createCourseEvent(sqlite, { accountId: "editor", sourceCourseId: "course", targetCourseIds: [], ...valid, now: new Date("2026-07-30T09:00:00.000Z") });
 
     expect(sqlite.prepare("SELECT updated_at AS at, updated_by_account_id AS by FROM courses").get())
       .toEqual({ at: "2026-07-30T09:00:00.000Z", by: "editor" });

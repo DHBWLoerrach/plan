@@ -11,9 +11,9 @@ import { berlinCalendarDay } from "@/lib/domain/calendar-day";
 import { formatCalendarPeriod } from "@/lib/domain/calendar-format";
 import { comparisonScope, comparisonScopes } from "@/lib/domain/course-comparison";
 import { getActiveAccount, managesAnyArea } from "@/lib/internal-auth";
+import { coursePlanData } from "@/lib/services/internal-course-plan";
 
 import { searchParam } from "../../../search-params";
-import { coursePlanData } from "../../data";
 
 export default async function PlanningBoardPage({ params, searchParams }: PageProps<"/intern/kurse/[courseId]/tafel">) {
   await connection();

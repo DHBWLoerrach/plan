@@ -24,8 +24,8 @@ function database() {
 
 const valid = { semester: "1", type: "THEORY", startDate: "2026-10-01", endDate: "2026-12-31" };
 
-function create(sqlite: Database.Database, details: Partial<typeof valid> = {}, courseIds = ["course"]) {
-  return createCoursePhases(sqlite, { accountId: "editor", courseIds, ...valid, ...details });
+function create(sqlite: Database.Database, details: Partial<typeof valid> = {}, sourceCourseId = "course", targetCourseIds: string[] = []) {
+  return createCoursePhases(sqlite, { accountId: "editor", sourceCourseId, targetCourseIds, ...valid, ...details });
 }
 
 /** The field a rejected value names, so the editor can point the message at the input it came from. */
@@ -57,7 +57,7 @@ describe("createCoursePhases", () => {
   it("stores the phase and stamps the course with who changed it when", () => {
     const sqlite = database();
 
-    const [id] = create(sqlite, {}, ["course"]);
+    const [id] = create(sqlite);
 
     expect(sqlite.prepare("SELECT course_id AS courseId, semester, phase_type AS type, start_date AS startDate, end_date AS endDate FROM course_phases WHERE id = ?").get(id))
       .toEqual({ courseId: "course", semester: 1, type: "THEORY", startDate: "2026-10-01", endDate: "2026-12-31" });
@@ -66,7 +66,7 @@ describe("createCoursePhases", () => {
   it("records the moment of the change on the course", () => {
     const sqlite = database();
 
-    createCoursePhases(sqlite, { accountId: "editor", courseIds: ["course"], ...valid, now: new Date("2026-07-30T09:00:00.000Z") });
+    createCoursePhases(sqlite, { accountId: "editor", sourceCourseId: "course", targetCourseIds: [], ...valid, now: new Date("2026-07-30T09:00:00.000Z") });
 
     expect(sqlite.prepare("SELECT updated_at AS at, updated_by_account_id AS by FROM courses").get())
       .toEqual({ at: "2026-07-30T09:00:00.000Z", by: "editor" });
@@ -115,9 +115,9 @@ describe("createCoursePhases", () => {
   it("refuses a selection that is empty or names a course that does not exist", () => {
     const sqlite = database();
 
-    expect(rejectedField(() => create(sqlite, {}, []))).toBe("courseIds");
-    expect(rejectedField(() => create(sqlite, {}, ["  "]))).toBe("courseIds");
-    expect(rejectedField(() => create(sqlite, {}, ["course", "kurs-unbekannt"]))).toBe("courseIds");
+    expect(rejectedField(() => create(sqlite, {}, ""))).toBe("courseIds");
+    expect(rejectedField(() => create(sqlite, {}, "  "))).toBe("courseIds");
+    expect(rejectedField(() => create(sqlite, {}, "course", ["kurs-unbekannt"]))).toBe("courseIds");
     expect(sqlite.prepare("SELECT count(*) AS count FROM course_phases").get()).toEqual({ count: 0 });
   });
 
@@ -126,8 +126,7 @@ describe("createCoursePhases", () => {
     sqlite.exec(`INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, published_at, updated_at, updated_by_account_id) VALUES
       ('kurz', 'program', 'TIF26B', 'tif26b', '2026-10-01', '2026-11-30', NULL, '2026-01-01T00:00:00.000Z', 'editor');`);
 
-    // The period fits the first course but reaches past the study end of the second one.
-    expect(() => create(sqlite, {}, ["course", "kurz"])).toThrow("Studienzeitraums von TIF26B");
+    expect(() => create(sqlite, {}, "course", ["kurz"])).toThrow("TIF26B hat einen anderen Studienzeitraum");
     expect(sqlite.prepare("SELECT count(*) AS count FROM course_phases").get()).toEqual({ count: 0 });
   });
 
@@ -139,8 +138,8 @@ describe("createCoursePhases", () => {
       ('kurz-a', 'program', 'TIF26B', 'tif26b', '2026-10-01', '2026-11-30', NULL, '2026-01-01T00:00:00.000Z', 'editor'),
       ('kurz-b', 'program', 'TIF26C', 'tif26c', '2026-10-01', '2026-11-30', NULL, '2026-01-01T00:00:00.000Z', 'editor');`);
 
-    expect(() => create(sqlite, {}, ["kurz-a", "kurz-b"])).toThrow("Studienzeitraums von TIF26B");
-    expect(() => create(sqlite, {}, ["kurz-b", "kurz-a"])).toThrow("Studienzeitraums von TIF26C");
+    expect(() => create(sqlite, {}, "course", ["kurz-a", "kurz-b"])).toThrow("TIF26B hat einen anderen Studienzeitraum");
+    expect(() => create(sqlite, {}, "course", ["kurz-b", "kurz-a"])).toThrow("TIF26C hat einen anderen Studienzeitraum");
   });
 });
 

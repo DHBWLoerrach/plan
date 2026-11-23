@@ -89,10 +89,8 @@ export function groupComparableEvents(events: CourseEvent[]): ComparableEvent[] 
       };
       groups.set(key, group);
     }
-    for (const courseId of event.courseIds) {
-      if (!group.courses.some((course) => course.courseId === courseId)) {
-        group.courses.push({ courseId, description: event.description });
-      }
+    if (!group.courses.some((course) => course.courseId === event.courseId)) {
+      group.courses.push({ courseId: event.courseId, description: event.description });
     }
   }
   return [...groups.values()];
@@ -113,7 +111,7 @@ function semesterKey(courseId: string, phases: CoursePhase[], semester: number):
 }
 
 function eventKeys(courseId: string, events: CourseEvent[]): string[] {
-  return events.filter((event) => event.courseIds.includes(courseId)).map(comparableEventKey);
+  return events.filter((event) => event.courseId === courseId).map(comparableEventKey);
 }
 
 /** How many entries of `keys` find no partner in `others`, counting equal entries as often as they occur. */

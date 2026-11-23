@@ -78,7 +78,7 @@ describe("readPublicCut", () => {
     expect(cut?.cut).toEqual({ kind: "course", code: "TIF24A" });
     expect(cut?.courses.map((course) => course.code)).toEqual(["TIF24A"]);
     expect(cut?.phases).toEqual([{ courseId: courseIdForCode("TIF24A"), semester: 1, type: "THEORY", startDate: "2024-10-01", endDate: "2024-12-20" }]);
-    expect(cut?.events.map((event) => [event.title, event.courseIds])).toEqual([["Klausur A", [courseIdForCode("TIF24A")]]]);
+    expect(cut?.events.map((event) => [event.title, event.courseId])).toEqual([["Klausur A", courseIdForCode("TIF24A")]]);
   });
 
   it("forms year, area and program cuts only from matching published courses", () => {

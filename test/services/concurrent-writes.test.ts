@@ -79,7 +79,7 @@ it("saves while another connection writes during the save, instead of failing wi
     INSERT INTO courses (id, program_id, code, normalized_code, study_start, study_end, published_at, updated_at, updated_by_account_id) VALUES
       ('course', 'program', 'TIF26A', 'tif26a', '2026-10-01', '2029-09-30', NULL, '2026-01-01T00:00:00.000Z', 'editor');`);
   const details = { title: "Prüfung", description: "", category: "EXAM", startDate: "2026-12-01", endDate: "", provisional: false };
-  const [eventId] = createCourseEvent(sqlite, { accountId: "editor", courseIds: ["course"], ...details });
+  const [eventId] = createCourseEvent(sqlite, { accountId: "editor", sourceCourseId: "course", targetCourseIds: [], ...details });
   // The other connection gives up at once: in this single thread it could never get the lock by waiting.
   const other = open(file, 0);
 

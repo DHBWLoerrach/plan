@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useEffect, useId, useRef, useState } from "react";
+import { type MouseEvent, type ReactNode, useEffect, useId, useRef, useState } from "react";
 
 function formSignature(formData: FormData): string {
   return JSON.stringify([...formData.entries()].map(([name, value]) => [name, typeof value === "string" ? value : [value.name, value.size, value.type]]));
@@ -27,32 +27,37 @@ export function ConfirmAction({ openLabel, heading, consequence, preview, should
   const [shownConsequence, setShownConsequence] = useState<ReactNode>(consequence);
   const [shownSignature, setShownSignature] = useState("");
   const [changedAfterPreview, setChangedAfterPreview] = useState(false);
-  const trigger = useRef<HTMLButtonElement>(null);
+  const [trigger, setTrigger] = useState<HTMLButtonElement | null>(null);
   const region = useRef<HTMLDivElement>(null);
   const wasConfirming = useRef(false);
   const consequenceId = useId();
   // Both stay mounted: the trigger has to survive the open confirmation to take focus back when it closes.
   useEffect(() => {
     if (confirming) region.current?.focus();
-    else if (wasConfirming.current) trigger.current?.focus();
+    else if (wasConfirming.current) trigger?.focus();
     wasConfirming.current = confirming;
-  }, [confirming]);
+  }, [confirming, trigger]);
   const buttonClass = danger ? "button button--danger" : "button";
-  function openOrSubmit() {
-    const form = trigger.current?.form;
-    const formData = form ? new FormData(form) : new FormData();
-    if (form && shouldConfirm && !shouldConfirm(formData)) {
-      form.requestSubmit();
+  function openOrSubmit(event: MouseEvent<HTMLButtonElement>) {
+    const form = event.currentTarget.form;
+    if (!form || confirming || isPending) {
+      event.preventDefault();
       return;
     }
+    const formData = new FormData(form);
+    if (shouldConfirm && !shouldConfirm(formData)) return;
+    event.preventDefault();
     setShownConsequence(preview ? preview(formData) : consequence);
     setShownSignature(formSignature(formData));
     setChangedAfterPreview(false);
     setConfirming(true);
   }
-  function confirmCurrentPreview(event: { preventDefault: () => void }) {
-    const form = trigger.current?.form;
-    if (!form) return;
+  function confirmCurrentPreview(event: MouseEvent<HTMLButtonElement>) {
+    const form = event.currentTarget.form;
+    if (!form || !confirming || isPending) {
+      event.preventDefault();
+      return;
+    }
     const formData = new FormData(form);
     const currentSignature = formSignature(formData);
     if (currentSignature === shownSignature) return;
@@ -62,15 +67,16 @@ export function ConfirmAction({ openLabel, heading, consequence, preview, should
     setChangedAfterPreview(true);
   }
   return <>
-    <button ref={trigger} hidden={confirming} className={buttonClass}
-      type="button" onClick={openOrSubmit}>{openLabel}</button>
+    {/* Implicit submission uses the first submit button even while it is hidden. Enable it once React can handle it. */}
+    <button ref={setTrigger} hidden={confirming} className={buttonClass} disabled={isPending}
+      type={trigger ? "submit" : "button"} onClick={openOrSubmit}>{openLabel}</button>
     <div ref={region} hidden={!confirming} className="confirm-region" role="group" tabIndex={-1}
       aria-label={heading} aria-describedby={consequenceId}
       onKeyDown={(event) => { if (event.key === "Escape") setConfirming(false); }}>
       <p><strong>{heading}</strong></p>
       <div id={consequenceId}>{shownConsequence}</div>
       {changedAfterPreview ? <p role="alert">Die Eingaben haben sich nach der Vorschau geändert. Prüfen Sie den aktualisierten Stand und bestätigen Sie erneut.</p> : null}
-      <button className={buttonClass} type="submit" disabled={isPending} onClick={confirmCurrentPreview}>{isPending ? pendingLabel : confirmLabel}</button>
+      <button className={buttonClass} type="submit" disabled={!confirming || isPending} onClick={confirmCurrentPreview}>{isPending ? pendingLabel : confirmLabel}</button>
       <button className="button button--ghost" type="button" onClick={() => setConfirming(false)}>Abbrechen</button>
     </div>
   </>;

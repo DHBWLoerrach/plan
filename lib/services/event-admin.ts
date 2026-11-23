@@ -5,12 +5,14 @@ import type Database from "better-sqlite3";
 import { normalizeCalendarDayField } from "@/lib/domain/calendar-day";
 import { type EventCategory, isEventCategory } from "@/lib/domain/event-category";
 import { FieldError } from "@/lib/domain/field-error";
-import { assertCourseEditPermission, assertCoursesEditPermission } from "@/lib/services/authorization";
-import { touchCourse } from "@/lib/services/phase-admin";
-import { assertPublishedCourseValid } from "@/lib/services/publication";
+import type { TransferSelection } from "@/lib/domain/plan-transfer";
+import { assertCourseEditPermission } from "@/lib/services/authorization";
+import { completeCourseChange } from "@/lib/services/course-change";
+import { requirePlanEntryCourses } from "@/lib/services/plan-transfer";
 
 export type EventField = "title" | "description" | "category" | "startDate" | "endDate" | "courseIds";
-export type EventInput = { title: string; description: string; category: string; startDate: string; endDate: string; provisional: boolean; courseIds: string[] };
+export type EventDetails = { title: string; description: string; category: string; startDate: string; endDate: string; provisional: boolean };
+export type EventInput = EventDetails & TransferSelection;
 type NormalizedEvent = { title: string; description: string | null; category: EventCategory; startDate: string; endDate: string | null; provisional: boolean };
 const maximumTitleLength = 160;
 const maximumDescriptionLength = 2000;
@@ -20,21 +22,19 @@ export function createCourseEvent(sqlite: Database.Database, input: { accountId:
   const event = normalizeEventInput(input);
   const now = input.now ?? new Date();
   return sqlite.transaction(() => {
-    const courseIds = requireCourseIds(sqlite, input.courseIds);
-    assertCoursesEditPermission(sqlite, input.accountId, courseIds);
+    const courses = requirePlanEntryCourses(sqlite, input, "event");
     const add = sqlite.prepare(`INSERT INTO course_events (id, course_id, title, description, category, start_date, end_date, provisional)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
-    return courseIds.map((courseId) => {
+    return courses.map(({ id: courseId }) => {
       const id = randomUUID();
       add.run(id, courseId, event.title, event.description, event.category, event.startDate, event.endDate, event.provisional ? 1 : 0);
-      touchCourse(sqlite, courseId, input.accountId, now);
-      assertPublishedCourseValid(sqlite, courseId);
+      completeCourseChange(sqlite, courseId, input.accountId, now);
       return id;
     });
   }).immediate();
 }
 
-export function updateCourseEvent(sqlite: Database.Database, input: { accountId: string; eventId: string; now?: Date } & Omit<EventInput, "courseIds">): void {
+export function updateCourseEvent(sqlite: Database.Database, input: { accountId: string; eventId: string; now?: Date } & EventDetails): void {
   const event = normalizeEventInput(input);
   const now = input.now ?? new Date();
   sqlite.transaction(() => {
@@ -42,8 +42,7 @@ export function updateCourseEvent(sqlite: Database.Database, input: { accountId:
     assertCourseEditPermission(sqlite, input.accountId, courseId);
     sqlite.prepare("UPDATE course_events SET title = ?, description = ?, category = ?, start_date = ?, end_date = ?, provisional = ? WHERE id = ?")
       .run(event.title, event.description, event.category, event.startDate, event.endDate, event.provisional ? 1 : 0, input.eventId);
-    touchCourse(sqlite, courseId, input.accountId, now);
-    assertPublishedCourseValid(sqlite, courseId);
+    completeCourseChange(sqlite, courseId, input.accountId, now);
   }).immediate();
 }
 
@@ -53,19 +52,8 @@ export function deleteCourseEvent(sqlite: Database.Database, input: { accountId:
     const courseId = requireCourseOfEvent(sqlite, input.eventId);
     assertCourseEditPermission(sqlite, input.accountId, courseId);
     sqlite.prepare("DELETE FROM course_events WHERE id = ?").run(input.eventId);
-    touchCourse(sqlite, courseId, input.accountId, now);
-    assertPublishedCourseValid(sqlite, courseId);
+    completeCourseChange(sqlite, courseId, input.accountId, now);
   }).immediate();
-}
-
-function requireCourseIds(sqlite: Database.Database, rawIds: string[]): string[] {
-  const ids = [...new Set(rawIds.map((id) => id.trim()).filter(Boolean))];
-  if (!ids.length) throw new FieldError("courseIds", "Ein Termin betrifft mindestens einen Kurs.");
-  const placeholders = ids.map(() => "?").join(", ");
-  if ((sqlite.prepare(`SELECT count(*) AS count FROM courses WHERE id IN (${placeholders})`).get(...ids) as { count: number }).count !== ids.length) {
-    throw new FieldError("courseIds", "Ein ausgewählter Kurs wurde nicht gefunden.");
-  }
-  return ids;
 }
 
 function requireCourseOfEvent(sqlite: Database.Database, eventId: string): string {
@@ -74,7 +62,7 @@ function requireCourseOfEvent(sqlite: Database.Database, eventId: string): strin
   return courseId;
 }
 
-function normalizeEventInput(input: Omit<EventInput, "courseIds">): NormalizedEvent {
+function normalizeEventInput(input: EventDetails): NormalizedEvent {
   const title = input.title.trim().replace(/\s+/gu, " ");
   if (!title) throw new FieldError("title", "Der Termintitel ist erforderlich.");
   if ([...title].length > maximumTitleLength) throw new FieldError("title", `Der Termintitel darf höchstens ${maximumTitleLength} Zeichen lang sein.`);

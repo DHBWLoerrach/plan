@@ -15,7 +15,7 @@ const phases: PlanPhase[] = [
   { id: "s2-p", courseId: "course-a", code: "TIF25A", semester: 2, type: "PRACTICE", startDate: "2026-06-22", endDate: "2026-09-27" },
 ];
 
-const exam: PlanEvent = { id: "exam", code: "TIF25A", title: "Klausuren", description: null, category: "EXAM", startDate: "2025-12-15", endDate: "2025-12-19", provisional: false, courseIds: ["course-a"] };
+const exam: PlanEvent = { id: "exam", code: "TIF25A", title: "Klausuren", description: null, category: "EXAM", startDate: "2025-12-15", endDate: "2025-12-19", provisional: false, courseId: "course-a" };
 const saved: BoardPlan = { phases, events: [exam] };
 
 describe("planning board axis", () => {

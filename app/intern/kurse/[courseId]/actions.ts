@@ -4,9 +4,9 @@ import { revalidatePath } from "next/cache";
 
 import { sqlite } from "@/lib/db";
 import { FieldError } from "@/lib/domain/field-error";
-import { createCourseEvent, deleteCourseEvent, updateCourseEvent, type EventField, type EventInput } from "@/lib/services/event-admin";
+import type { TransferSelection } from "@/lib/domain/plan-transfer";
+import { createCourseEvent, deleteCourseEvent, updateCourseEvent, type EventDetails, type EventField, type EventInput } from "@/lib/services/event-admin";
 import { createCoursePhases, deleteCoursePhase, moveCoursePhaseChange, updateCoursePhase, type PhaseChangeField, type PhaseDetails, type PhaseField, type PhaseInput } from "@/lib/services/phase-admin";
-import { assertTransferTargets } from "@/lib/services/plan-transfer";
 
 import { errorMessage, requireAccountId } from "../../action-helpers";
 
@@ -32,30 +32,16 @@ function revalidatePlan() {
   revalidatePath("/intern/kurse/[courseId]", "page");
 }
 
-/**
- * The course being edited followed by the courses the same entry is transferred to. `courseId` carries all of them,
- * so the domain sees one selection and creates one independent entry per course (ADR 0006). The edited course is
- * always first, so a refusal names it before any transfer target.
- *
- * Whether those targets are permitted is decided by `checkTransfer` inside the attempt, so a refusal reaches the form
- * with the captured values like any other one.
- */
-function selectedCourseIds(formData: FormData): string[] {
-  return [String(formData.get("courseId") ?? ""), ...formData.getAll("transferCourseId").map(String)];
-}
-
-/**
- * The form offers only courses of the comparison, but a form is a proposal and this action is reachable without it.
- * Called after the session is established and immediately before the write, with nothing awaited in between: what was
- * checked and what is stored must be the same state.
- */
-function checkTransfer(courseIds: string[], kind: "phase" | "event"): void {
-  assertTransferTargets(sqlite, { courseId: courseIds[0], targetIds: courseIds.slice(1), kind });
+function transferSelection(formData: FormData): TransferSelection {
+  return {
+    sourceCourseId: String(formData.get("courseId") ?? ""),
+    targetCourseIds: formData.getAll("transferCourseId").map(String),
+  };
 }
 
 function phaseInput(formData: FormData): PhaseInput {
   return {
-    courseIds: selectedCourseIds(formData),
+    ...transferSelection(formData),
     semester: String(formData.get("semester") ?? ""),
     type: String(formData.get("type") ?? ""),
     startDate: String(formData.get("startDate") ?? ""),
@@ -67,7 +53,6 @@ export async function createPhaseAction(_: PlanFormState<PhaseField, PhaseInput>
   const input = phaseInput(formData);
   try {
     const accountId = await requireAccountId();
-    checkTransfer(input.courseIds, "phase");
     const created = createCoursePhases(sqlite, { accountId, ...input });
     revalidatePlan();
     return { success: created.length === 1 ? "Die Kursphase wurde gespeichert." : `${created.length} eigenständige Kursphasen wurden gespeichert — je Kurs eine.` };
@@ -124,7 +109,7 @@ export async function deletePhaseAction(_: PlanFormState, formData: FormData): P
 
 function eventInput(formData: FormData): EventInput {
   return {
-    courseIds: selectedCourseIds(formData),
+    ...transferSelection(formData),
     title: String(formData.get("title") ?? ""),
     description: String(formData.get("description") ?? ""),
     category: String(formData.get("category") ?? ""),
@@ -138,7 +123,6 @@ export async function createEventAction(_: PlanFormState<EventField, EventInput>
   const input = eventInput(formData);
   try {
     const accountId = await requireAccountId();
-    checkTransfer(input.courseIds, "event");
     const created = createCourseEvent(sqlite, { accountId, ...input });
     revalidatePlan();
     return { success: created.length === 1 ? "Der Termin wurde gespeichert." : `${created.length} eigenständige Termine wurden gespeichert — je Kurs einer.` };
@@ -146,8 +130,6 @@ export async function createEventAction(_: PlanFormState<EventField, EventInput>
     return rejected<EventField, EventInput>(error, input);
   }
 }
-
-type EventDetails = Omit<EventInput, "courseIds">;
 
 export async function updateEventAction(_: PlanFormState<EventField, EventDetails>, formData: FormData): Promise<PlanFormState<EventField, EventDetails>> {
   const details: EventDetails = {

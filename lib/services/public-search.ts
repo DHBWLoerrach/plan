@@ -14,7 +14,7 @@ export interface PublicCutDetail {
   events: CourseEvent[];
 }
 
-type StoredEventRow = Omit<CourseEvent, "courseIds" | "provisional"> & { courseId: string; provisional: number };
+type StoredEventRow = Omit<CourseEvent, "provisional"> & { provisional: number };
 
 const publishedCourseSelection = `SELECT course.id, course.code, area.name AS area, program.name AS program,
     program.abbreviation AS programAbbreviation,
@@ -81,7 +81,7 @@ function readDetailForCourses(sqlite: Database.Database, courses: PublicCourse[]
     WHERE course_id IN (${placeholders}) ORDER BY start_date, title COLLATE NOCASE, id`).all(...ids) as StoredEventRow[];
   return {
     phases,
-    events: events.map(({ courseId, provisional, ...event }) => ({ ...event, provisional: Boolean(provisional), courseIds: [courseId] })),
+    events: events.map(({ provisional, ...event }) => ({ ...event, provisional: Boolean(provisional) })),
   };
 }
 

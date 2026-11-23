@@ -6,9 +6,8 @@ import { normalizeCalendarDay } from "@/lib/domain/calendar-day";
 import { normalizeCourseCode } from "@/lib/domain/course-code";
 import { assertAreaEditPermission, assertCourseEditPermission } from "@/lib/services/authorization";
 import { adoptIntoCourse, type AdoptionInput } from "@/lib/services/course-adoption";
+import { completeCourseChange } from "@/lib/services/course-change";
 import { type CoursePlanInput, writeCoursePlan } from "@/lib/services/course-plan";
-import { touchCourse } from "@/lib/services/phase-admin";
-import { assertPublishedCourseValid } from "@/lib/services/publication";
 
 const maximumCodeLength = 32;
 type CourseInput = { code: string; programId: string; studyStart: string; studyEnd: string };
@@ -61,8 +60,7 @@ export function updateCourse(sqlite: Database.Database, input: { accountId: stri
     if (highestSemester && highestSemester > program.semesters) throw new Error(`Der Studiengang benötigt mindestens ${highestSemester} Semester für die erfassten Kursphasen.`);
     sqlite.prepare("UPDATE courses SET program_id = ?, code = ?, normalized_code = ?, study_start = ?, study_end = ? WHERE id = ?")
       .run(normalized.programId, normalized.code, normalized.normalizedCode, normalized.studyStart, normalized.studyEnd, input.courseId);
-    touchCourse(sqlite, input.courseId, input.accountId, now);
-    assertPublishedCourseValid(sqlite, input.courseId);
+    completeCourseChange(sqlite, input.courseId, input.accountId, now);
   }).immediate();
 }
 

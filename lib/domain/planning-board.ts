@@ -217,8 +217,8 @@ export function describeChanges(saved: BoardPlan, current: BoardPlan): BoardChan
     const savedEvent = saved.events.find((candidate) => candidate.id === event.id);
     if (!savedEvent || (savedEvent.startDate === event.startDate && eventEnd(savedEvent) === eventEnd(event))) continue;
     const consequence = placementConsequence(event, saved.phases, current.phases, savedEvent.startDate, event.startDate);
-    const savedSemester = deriveEventSemester(saved.phases, event.courseIds[0], savedEvent.startDate);
-    const semester = deriveEventSemester(current.phases, event.courseIds[0], event.startDate);
+    const savedSemester = deriveEventSemester(saved.phases, event.courseId, savedEvent.startDate);
+    const semester = deriveEventSemester(current.phases, event.courseId, event.startDate);
     const lengthened = savedEvent.startDate === event.startDate;
     changes.push({
       key: `event:${event.id}`,

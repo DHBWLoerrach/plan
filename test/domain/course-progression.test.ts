@@ -5,7 +5,7 @@ import type { CourseEvent, CoursePhase } from "@/lib/domain/publication";
 
 const course = { id: "course", semesters: 2 };
 const phase = (semester: number, type: CoursePhase["type"], startDate: string, endDate: string, courseId = "course"): CoursePhase => ({ courseId, semester, type, startDate, endDate });
-const event = (id: string, startDate: string, courseId = "course"): CourseEvent => ({ id, title: id, description: null, category: "EXAM", startDate, endDate: null, provisional: false, courseIds: [courseId] });
+const event = (id: string, startDate: string, courseId = "course"): CourseEvent => ({ id, title: id, description: null, category: "EXAM", startDate, endDate: null, provisional: false, courseId });
 
 describe("buildCourseProgression", () => {
   it("orders the phases by semester and names the day the course changes over, across semesters as well", () => {

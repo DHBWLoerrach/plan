@@ -3,15 +3,11 @@ import "server-only";
 import type Database from "better-sqlite3";
 
 import { berlinCalendarDay } from "@/lib/domain/calendar-day";
-import type { ComparisonScope } from "@/lib/domain/course-comparison";
 import { matchesCodePrefix, normalizeCodePrefix, normalizeCourseCode } from "@/lib/domain/course-code";
 import { courseStanding, type CourseStanding, type StandingPhase } from "@/lib/domain/course-progress";
 import { publicationState, type PublicationState } from "@/lib/domain/course-status";
-import { type CoursePlan, type PlanEvent, type PlanPhase } from "@/lib/domain/publication";
+import { editableAreaIds, markCourse, type AccountScope, type CourseMarking, type MarkingColumns } from "@/lib/services/course-read-access";
 
-import { manageableAreas } from "../data";
-
-type AccountScope = { id: string; systemAdmin: boolean };
 /**
  * Whether the list stands on the courses this account is responsible for or on all of them. Reading across areas is
  * permitted (ADR 0011), but with eighteen study programs and few areas per account it is the exception, so the list
@@ -19,8 +15,6 @@ type AccountScope = { id: string; systemAdmin: boolean };
  */
 export type CourseResponsibility = "own" | "all";
 export type CourseListFilters = { program: string | null; year: string | null; code: string | null; responsibility: CourseResponsibility };
-/** What a course is marked with in every internal view: its visibility and whether this account may write to it. */
-export type CourseMarking = { state: PublicationState; editable: boolean };
 /**
  * `publishedOn` is the calendar day the course became visible on, and `null` where it is not. The list shows that day
  * instead of naming the state in every row: the state is what the day already says, while the day itself differs from
@@ -38,17 +32,10 @@ export type InternalCourse = CourseMarking & { id: string; code: string; program
 export type LabeledOption = { id: string; label: string };
 /** A study program to choose from. It carries its number of semesters, from which a generated progression derives study end and phase count. */
 export type ProgramOption = LabeledOption & { semesters: number };
-/**
- * A course as the course page shows it, whether it is the edited one or one it is compared with. It carries the two
- * timestamps the publication controls compare against, so the page needs no second read of the same course beside the
- * one that produced its plan.
- */
-export type PlanCourse = CoursePlan & CourseMarking & { areaId: string; areaName: string; program: string; programId: string; updatedAt: string; publishedAt: string | null };
 /** A course on the overview. It carries no `editable`: the overview reads the own areas only, so all of them are. */
 export type OverviewCourse = CourseStanding & { id: string; code: string; state: PublicationState };
 export type OverviewYear = { year: string; courses: OverviewCourse[] };
 export type OverviewProgram = { id: string; name: string; abbreviation: string; areaName: string; years: OverviewYear[] };
-export type CoursePlanData = { course: PlanCourse; scope: ComparisonScope; comparison: PlanCourse[]; phases: PlanPhase[]; events: PlanEvent[] };
 export type CourseSort = "code" | "program" | "studyPeriod" | "publication";
 export type CourseSortDirection = "asc" | "desc";
 export function isCourseSort(value: string | null): value is CourseSort {
@@ -61,19 +48,6 @@ export function isCourseSortDirection(value: string | null): value is CourseSort
 /** The two designations of a study program, because the same name may occur in more than one area once all of them are listed. */
 function programLabel(program: { name: string; abbreviation: string }): string {
   return `${program.abbreviation} — ${program.name}`;
-}
-
-/** The areas this account may write to, as the set the list markings are decided against (ADR 0011). */
-function editableAreaIds(sqlite: Database.Database, account: AccountScope): Set<string> {
-  return new Set(manageableAreas(sqlite, account).map((area) => area.id));
-}
-
-/** The columns every internal course query selects to derive the markings from. The views show the markings, not these. */
-type MarkingColumns = { areaId: string; publishedAt: string | null };
-
-/** Turns the raw marking columns of one course row into the markings themselves, for whichever view read the row. */
-function markCourse<TRow extends MarkingColumns>(row: TRow, editableAreas: Set<string>): TRow & CourseMarking {
-  return { ...row, state: publicationState(row.publishedAt), editable: editableAreas.has(row.areaId) };
 }
 
 type CourseRow = MarkingColumns & { id: string; code: string; programId: string; program: string; areaName: string; studyStart: string; studyEnd: string };
@@ -247,54 +221,4 @@ export function programOptions(sqlite: Database.Database, account: AccountScope,
     .all({ systemAdmin: Number(account.systemAdmin), accountId: account.id, semesters: semesters ?? null }) as
     { id: string; name: string; abbreviation: string; semesters: number; areaName: string }[];
   return rows.map((program) => ({ id: program.id, label: `${programLabel(program)} (${program.areaName})`, semesters: program.semesters }));
-}
-
-type PlanCourseRow = MarkingColumns & CoursePlan & { areaName: string; program: string; programId: string; updatedAt: string };
-
-const planCourseColumns = `course.id, course.code, course.study_start AS studyStart, course.study_end AS studyEnd,
-  program.semesters, program.id AS programId, program.name AS program, program.area_id AS areaId, area.name AS areaName,
-  course.published_at AS publishedAt, course.updated_at AS updatedAt
-  FROM courses course JOIN programs program ON program.id = course.program_id JOIN areas area ON area.id = program.area_id`;
-
-/**
- * The courses that stand beside an edited one, always within its year (ADR 0010). They may belong to foreign areas:
- * seeing them is the point of reading system wide, writing to them stays refused (ADR 0011).
- */
-function comparisonCourseRows(sqlite: Database.Database, course: PlanCourseRow, scope: ComparisonScope): PlanCourseRow[] {
-  const restriction = scope === "program" ? "AND course.program_id = ?" : scope === "area" ? "AND program.area_id = ?" : "";
-  const parameters = scope === "program" ? [course.programId] : scope === "area" ? [course.areaId] : [];
-  return sqlite.prepare(`SELECT ${planCourseColumns}
-    WHERE course.id <> ? AND substr(course.study_start, 1, 4) = substr(?, 1, 4) ${restriction}
-    ORDER BY course.code COLLATE NOCASE`).all(course.id, course.studyStart, ...parameters) as PlanCourseRow[];
-}
-
-/**
- * One course with its saved plan and the courses its comparison currently shows. The edited course and the compared
- * ones are read apart on purpose: only the first is ever written to, while the others exist so that a deviation is
- * seen while it is being made. Phases and events cover all of them, because the matrix draws every column.
- */
-export function coursePlanData(sqlite: Database.Database, account: AccountScope, courseId: string, scope: ComparisonScope): CoursePlanData | null {
-  const row = sqlite.prepare(`SELECT ${planCourseColumns} WHERE course.id = ?`).get(courseId) as PlanCourseRow | undefined;
-  if (!row) return null;
-  const editableAreas = editableAreaIds(sqlite, account);
-  const course = markCourse(row, editableAreas);
-  const comparison = comparisonCourseRows(sqlite, row, scope).map((candidate) => markCourse(candidate, editableAreas));
-  const ids = [course.id, ...comparison.map((candidate) => candidate.id)];
-  const placeholders = ids.map(() => "?").join(", ");
-  const phases = sqlite.prepare(`SELECT phase.id, phase.course_id AS courseId, phase.semester, phase.phase_type AS type,
-      phase.start_date AS startDate, phase.end_date AS endDate, course.code
-    FROM course_phases phase JOIN courses course ON course.id = phase.course_id
-    WHERE phase.course_id IN (${placeholders}) ORDER BY phase.semester, phase.start_date, phase.id`).all(...ids) as PlanPhase[];
-  const events = sqlite.prepare(`SELECT event.id, event.course_id AS courseId, event.title, event.description, event.category,
-      event.start_date AS startDate, event.end_date AS endDate, event.provisional, course.code
-    FROM course_events event JOIN courses course ON course.id = event.course_id
-    WHERE event.course_id IN (${placeholders}) ORDER BY event.start_date, event.title COLLATE NOCASE, event.id`)
-    .all(...ids) as (Omit<PlanEvent, "courseIds" | "provisional"> & { courseId: string; provisional: number })[];
-  return {
-    course,
-    scope,
-    comparison,
-    phases,
-    events: events.map(({ courseId: eventCourseId, provisional, ...event }) => ({ ...event, provisional: Boolean(provisional), courseIds: [eventCourseId] })),
-  };
 }

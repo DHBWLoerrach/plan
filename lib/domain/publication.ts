@@ -29,7 +29,7 @@ export interface CourseEvent {
   startDate: string;
   endDate: string | null;
   provisional: boolean;
-  courseIds: string[];
+  courseId: string;
 }
 
 /** A saved event as the editor lists it: the domain data plus the code of the one course it belongs to. */
@@ -79,7 +79,7 @@ export function validatePublication({
 }: {
   course: CoursePlan;
   phases: CoursePhase[];
-  events: Omit<CourseEvent, "courseIds">[];
+  events: CourseEvent[];
 }): PublicationIssue[] {
   const issues: PublicationIssue[] = [];
   const coursePhases = phases
@@ -122,6 +122,7 @@ export function validatePublication({
   }
 
   for (const event of events) {
+    if (event.courseId !== course.id) continue;
     const startOutside = event.startDate < course.studyStart || event.startDate > course.studyEnd;
     const endOutside = Boolean(event.endDate && (event.endDate < course.studyStart || event.endDate > course.studyEnd));
     if (startOutside || endOutside) {

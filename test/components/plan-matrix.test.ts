@@ -15,8 +15,8 @@ const phases: CoursePhase[] = courses.flatMap((course) => [
 ]);
 
 const events: CourseEvent[] = [
-  { id: "event-a", title: "Klausur", description: "Raum A", category: "EXAM", startDate: "2027-03-15", endDate: null, provisional: false, courseIds: ["course-a"] },
-  { id: "event-b", title: "  Klausur  ", description: "Raum B", category: "EXAM", startDate: "2027-03-15", endDate: null, provisional: false, courseIds: ["course-b"] },
+  { id: "event-a", title: "Klausur", description: "Raum A", category: "EXAM", startDate: "2027-03-15", endDate: null, provisional: false, courseId: "course-a" },
+  { id: "event-b", title: "  Klausur  ", description: "Raum B", category: "EXAM", startDate: "2027-03-15", endDate: null, provisional: false, courseId: "course-b" },
 ];
 
 describe("PlanMatrix", () => {

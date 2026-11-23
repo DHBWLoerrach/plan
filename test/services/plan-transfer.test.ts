@@ -2,7 +2,9 @@ import Database from "better-sqlite3";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { FieldError } from "@/lib/domain/field-error";
-import { assertTransferTargets } from "@/lib/services/plan-transfer";
+import { createCourseEvent } from "@/lib/services/event-admin";
+import { createCoursePhases } from "@/lib/services/phase-admin";
+import { requirePlanEntryCourses } from "@/lib/services/plan-transfer";
 import { applySchema } from "@/test/schema";
 
 const databases: Database.Database[] = [];
@@ -34,16 +36,17 @@ afterEach(() => {
   for (const sqlite of databases.splice(0)) sqlite.close();
 });
 
-function refusal(courseId: string, targetIds: string[], kind: "phase" | "event") {
+function refusal(sourceCourseId: string, targetCourseIds: string[], kind: "phase" | "event") {
   try {
-    assertTransferTargets(database(), { courseId, targetIds, kind });
+    const sqlite = database();
+    sqlite.transaction(() => requirePlanEntryCourses(sqlite, { sourceCourseId, targetCourseIds, accountId: "editor" }, kind)).immediate();
   } catch (error) {
     return error instanceof FieldError ? error.message : `${error}`;
   }
   return "accepted";
 }
 
-describe("assertTransferTargets", () => {
+describe("requirePlanEntryCourses", () => {
   it("accepts a parallel course of the same year, and the empty selection of a plain creation", () => {
     expect(refusal("course-a", ["course-b"], "phase")).toBe("accepted");
     expect(refusal("course-a", ["course-b"], "event")).toBe("accepted");
@@ -80,4 +83,31 @@ describe("assertTransferTargets", () => {
     expect(refusal("course-a", ["kurs-unbekannt"], "event")).toContain("nicht gefunden");
     expect(refusal("kurs-unbekannt", ["course-b"], "event")).toContain("nicht gefunden");
   });
+});
+
+it("creates independent entries on the source and target and ignores repeated selections", () => {
+  const sqlite = database();
+  const selection = { accountId: "editor", sourceCourseId: " course-a ", targetCourseIds: ["course-b", "course-a", " course-b ", ""] };
+  const phases = createCoursePhases(sqlite, { ...selection, semester: "3", type: "THEORY", startDate: "2027-10-01", endDate: "2027-12-31" });
+  const events = createCourseEvent(sqlite, {
+    ...selection, title: "Prüfung", description: "", category: "EXAM", startDate: "2027-12-01", endDate: "", provisional: false,
+  });
+  expect(new Set(phases).size).toBe(2);
+  expect(new Set(events).size).toBe(2);
+  expect(sqlite.prepare("SELECT course_id FROM course_phases ORDER BY course_id").pluck().all()).toEqual(["course-a", "course-b"]);
+  expect(sqlite.prepare("SELECT course_id FROM course_events ORDER BY course_id").pluck().all()).toEqual(["course-a", "course-b"]);
+});
+
+it("enforces the year in the write services and leaves all courses untouched on refusal", () => {
+  const sqlite = database();
+  const selection = { accountId: "editor", sourceCourseId: "course-a", targetCourseIds: ["course-b", "course-next-year"] };
+  expect(() => createCoursePhases(sqlite, {
+    ...selection, semester: "3", type: "THEORY", startDate: "2027-10-01", endDate: "2027-12-31",
+  })).toThrow("Jahrgang 2027");
+  expect(() => createCourseEvent(sqlite, {
+    ...selection, title: "Prüfung", description: "", category: "EXAM", startDate: "2027-12-01", endDate: "", provisional: false,
+  })).toThrow("Jahrgang 2027");
+  expect(sqlite.prepare("SELECT count(*) FROM course_phases").pluck().get()).toBe(0);
+  expect(sqlite.prepare("SELECT count(*) FROM course_events").pluck().get()).toBe(0);
+  expect(sqlite.prepare("SELECT DISTINCT updated_at FROM courses").pluck().all()).toEqual(["2026-01-01T00:00:00.000Z"]);
 });
