@@ -403,6 +403,8 @@ test("opens on the own areas and keeps foreign courses read-only, confirming wit
   await expect(widerAreasChip).toBeVisible();
   await expect(resetFilters).toBeVisible();
   await widerAreasChip.click();
+  // The form unticks at once; the address follows with a navigation that has to settle before the next change.
+  await expect(page).not.toHaveURL(/zustaendigkeit/u);
   await expect(widerAreas).not.toBeChecked();
   await expect(resetFilters).toHaveCount(0);
   await widerAreas.check();
