@@ -75,7 +75,9 @@
 .table th, .table td { padding: .7rem .75rem; border-bottom: 1px solid var(--line); vertical-align: top; }
 .table tbody tr:last-child > * { border-bottom: 0; }
 .table thead th { background: var(--surface); border-bottom: 1.5px solid var(--gray); font-size: .92rem; }
-.table thead th:first-child { width: max(7rem, 24%); vertical-align: bottom; }
+/* A plain percentage: a table column takes max() or calc() mixing a percentage for auto, and the names would then get an
+   equal share with the years, half the table for a single year. The table only shows from 50rem on, where a quarter is still wide enough. */
+.table thead th:first-child { width: 25%; vertical-align: bottom; }
 .yearLabel { display: block; font-weight: 700; }
 .yearDetail { display: block; color: var(--gray-strong); font-size: .85rem; font-weight: 400; }
 
