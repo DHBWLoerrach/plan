@@ -3,8 +3,9 @@ import "server-only";
 import { cache } from "react";
 
 import { sqlite } from "@/lib/db";
-import { readPublicCut, readPublicOverview, type PublicCutDetail } from "@/lib/services/public-search";
+import { readPublicCourse, readPublicCut, readPublicOverview, type PublicCutDetail } from "@/lib/services/public-search";
 import { berlinCalendarDay } from "@/lib/domain/calendar-day";
+import { buildCourseDetail, type CourseDetail } from "@/lib/domain/course-detail";
 import { buildPublicOverview } from "@/lib/domain/public-overview";
 import { publicCutPath, type PublicCut } from "@/lib/domain/public-cut";
 
@@ -27,6 +28,19 @@ export function publicCutData(cut: PublicCut): PublicCutDetail | null {
   if (cached !== undefined) return cached;
   const detail = readPublicCut(sqlite, cut);
   cuts.set(path, detail);
+  return detail;
+}
+
+const publicCoursesForRequest = cache(() => new Map<string, CourseDetail | null>());
+
+/** The page of one published course and its metadata read it once per request, by the code as the address writes it. */
+export function publicCourseData(code: string): CourseDetail | null {
+  const courses = publicCoursesForRequest();
+  const cached = courses.get(code);
+  if (cached !== undefined) return cached;
+  const read = readPublicCourse(sqlite, code);
+  const detail = read && buildCourseDetail({ ...read, today: berlinCalendarDay() });
+  courses.set(code, detail);
   return detail;
 }
 

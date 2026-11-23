@@ -95,3 +95,34 @@ export function readPublicCut(sqlite: Database.Database, cut: PublicCut): Public
       : cut;
   return { cut: canonicalCut, courses, ...readDetailForCourses(sqlite, courses) };
 }
+
+export interface PublicCourseDetail {
+  course: PublicCourse;
+  // The other published courses of its program and year, which the course page compares it with.
+  parallels: PublicCourse[];
+  // Phases and events of the course and of its parallel courses.
+  phases: CoursePhase[];
+  events: CourseEvent[];
+  updatedAt: string;
+}
+
+// A course read through its program's cut of the year, which always holds it, so that its parallel courses come along.
+// One read transaction keeps both reads on the same snapshot: a withdrawal committed between them would otherwise leave
+// the course without its cut.
+export function readPublicCourse(sqlite: Database.Database, code: string): PublicCourseDetail | null {
+  return sqlite.transaction(() => {
+    const own = readPublicCut(sqlite, { kind: "course", code });
+    if (!own) return null;
+    const [course] = own.courses;
+    const program = readPublicCut(sqlite, { kind: "program", year: course.year, abbreviation: course.programAbbreviation });
+    if (!program) return null;
+    const { updatedAt } = sqlite.prepare("SELECT updated_at AS updatedAt FROM courses WHERE id = ?").get(course.id) as { updatedAt: string };
+    return {
+      course,
+      parallels: program.courses.filter((candidate) => candidate.id !== course.id),
+      phases: program.phases,
+      events: program.events,
+      updatedAt,
+    };
+  })();
+}

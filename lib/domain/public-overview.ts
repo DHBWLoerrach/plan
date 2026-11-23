@@ -2,7 +2,7 @@ import { plusDays } from "@/lib/domain/calendar-day";
 import { courseCodeYear } from "@/lib/domain/generated-course-plan";
 import { phaseSequenceKey } from "@/lib/domain/plan-comparison";
 import { publicCutPath } from "@/lib/domain/public-cut";
-import type { PhaseType } from "@/lib/domain/phase-type";
+import { phasePlaceLabel, type PhaseType } from "@/lib/domain/phase-type";
 import type { CoursePhase, CoursePlan } from "@/lib/domain/publication";
 
 /** A published course that has not ended yet, with the current designations of its program. */
@@ -205,9 +205,6 @@ function dayAndMonth(day: string): string {
   return `${day.slice(8, 10)}.${day.slice(5, 7)}.`;
 }
 
-/* Where the students are, as partners ask it, rather than the planners' „Theorie“ and „Praxis“. */
-const phasePlace: Record<PhaseType, string> = { THEORY: "An der DHBW", PRACTICE: "Im Unternehmen" };
-
 function phaseStatus(phases: CoursePhase[], today: string): OverviewPhaseStatus | null {
   const ordered = phases.toSorted((left, right) => left.startDate.localeCompare(right.startDate));
   const index = ordered.findIndex((phase) => phase.startDate <= today && today <= phase.endDate);
@@ -220,10 +217,10 @@ function phaseStatus(phases: CoursePhase[], today: string): OverviewPhaseStatus 
       if (phase.type !== type || phase.startDate !== plusDays(end, 1)) break;
       end = phase.endDate;
     }
-    return { type, text: `${phasePlace[type]} bis ${dayAndMonth(end)}` };
+    return { type, text: `${phasePlaceLabel(type)} bis ${dayAndMonth(end)}` };
   }
   const next = ordered.find((phase) => phase.startDate > today);
-  return next ? { type: next.type, text: `${phasePlace[next.type]} ab ${dayAndMonth(next.startDate)}` } : null;
+  return next ? { type: next.type, text: `${phasePlaceLabel(next.type)} ab ${dayAndMonth(next.startDate)}` } : null;
 }
 
 /* The program's cut of a year shows all of its published courses, ended ones included, so one link stands for a group

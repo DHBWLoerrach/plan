@@ -10,6 +10,13 @@ export function phaseTypeLabel(type: PhaseType): string {
   return phaseTypes.find((entry) => entry.value === type)?.label ?? type;
 }
 
+/* Where the students are, as partners ask it, rather than the planners' „Theorie“ and „Praxis“. */
+const phasePlaces: Record<PhaseType, string> = { THEORY: "An der DHBW", PRACTICE: "Im Unternehmen" };
+
+export function phasePlaceLabel(type: PhaseType): string {
+  return phasePlaces[type];
+}
+
 export function isPhaseType(value: string): value is PhaseType {
   return phaseTypes.some((entry) => entry.value === value);
 }

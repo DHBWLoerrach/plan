@@ -1,0 +1,116 @@
+.page { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2.25rem; padding-top: .5rem; }
+.page section { display: grid; grid-template-columns: minmax(0, 1fr); gap: .9rem; }
+.page h2 { margin: 0; font-size: clamp(1.3rem, 2.5vw, 1.5rem); font-weight: 800; letter-spacing: -.015em; }
+
+.head { display: grid; justify-items: start; gap: .8rem; }
+/* A course code may run to 32 characters without a space, and must still break inside the narrowest page. */
+.head > * { max-width: 100%; }
+.facts > *, .parallels li, .comparisons li { min-width: 0; overflow-wrap: anywhere; }
+.back { display: inline-flex; align-items: center; gap: .4rem; min-height: 2.75rem; color: var(--red-dark); font-weight: 700; text-underline-offset: .25rem; }
+.back svg, .parallels svg, .copy svg { width: 1.1rem; height: 1.1rem; flex: none; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.head :global(.eyebrow) { margin: 0; }
+.head h1 { max-width: 40ch; margin: 0; font-size: clamp(1.9rem, 4vw, 2.6rem); font-weight: 800; line-height: 1.1; letter-spacing: -.025em; overflow-wrap: anywhere; }
+.facts { display: flex; flex-wrap: wrap; gap: .3rem 1.25rem; margin: 0; font-size: 1.05rem; }
+.parallels { display: flex; flex-wrap: wrap; align-items: center; gap: .1rem .5rem; margin: 0; }
+.parallels ul { display: flex; flex-wrap: wrap; gap: 0 1.25rem; margin: 0; padding: 0; list-style: none; }
+.parallels a { display: inline-flex; align-items: center; min-height: 2.75rem; color: var(--red-dark); font-weight: 700; text-underline-offset: .2rem; }
+.comparisons { display: flex; flex-wrap: wrap; align-items: center; gap: 0 .75rem; color: var(--gray-strong); }
+.comparisons ul { display: flex; flex-wrap: wrap; gap: 0 1.25rem; margin: 0; padding: 0; list-style: none; }
+.comparisons a { display: inline-flex; align-items: center; min-height: 2.75rem; color: var(--red-dark); font-weight: 700; text-underline-offset: .2rem; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; margin-top: .2rem; }
+.actions .copy { gap: .5rem; border: 1.5px solid var(--red); background: #fff; color: var(--red-dark); }
+.actions .copy:hover { background: var(--theory); }
+/* Raised above the global rule that colours every status paragraph as a success. */
+p.copied { margin: 0; color: var(--gray-strong); }
+.stand { margin: 0; color: var(--gray-strong); }
+.stand strong { color: var(--ink); }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 1rem; }
+.card { display: grid; align-content: start; gap: .3rem; padding: 1.1rem 1.25rem; border: 1px solid var(--line); background: #fff; }
+.card p { margin: 0; }
+.cardLabel { color: var(--gray-strong); font-size: .92rem; font-weight: 700; }
+.cardMain { font-size: 1.45rem; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
+.cardDetail { color: var(--gray-strong); }
+/* The current stay carries the fill of its phase, as the timeline and the overview's status patches draw it. */
+.card[data-current] { padding-left: 1.6rem; box-shadow: inset 6px 0 0 var(--gray); }
+.card[data-current][data-phase="theory"] { background: var(--theory); border-color: var(--theory-outline); box-shadow: inset 6px 0 0 var(--theory-edge); }
+.card[data-current][data-phase="practice"] { background: var(--practice); border-color: var(--practice-edge); box-shadow: inset 6px 0 0 var(--practice-edge); }
+.card[data-current] .cardLabel { color: var(--ink); }
+
+.legend { display: flex; flex-wrap: wrap; gap: .4rem 1.4rem; margin: 0; padding: 0; color: var(--gray-strong); font-size: .92rem; list-style: none; }
+.legend li { display: flex; align-items: center; gap: .45rem; }
+.swatch { width: 1.25rem; height: .8rem; flex: none; }
+.swatch[data-phase="theory"], .segment[data-phase="theory"] { background: var(--theory); border: 1px solid var(--theory-outline); }
+.swatch[data-phase="practice"], .segment[data-phase="practice"] { background: var(--practice); border: 1px solid var(--practice-edge); }
+.swatch, .segment, .mark, .card[data-current], .todayBadge { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+.semesterSwatch { width: 2px; height: 1.1rem; flex: none; background: var(--gray-strong); }
+.todayBadge { padding: 0 .35rem; background: var(--ink); color: #fff; font-size: .8rem; font-weight: 700; line-height: 1.15rem; }
+.legend .mark { position: static; flex: none; }
+
+.timeline { border: 1px solid var(--line); background: #fff; }
+.timelineScroll { overflow-x: auto; padding: 1rem 1.25rem .75rem; }
+.timelineGrid { display: grid; grid-template-columns: 9rem minmax(0, 1fr); column-gap: 1rem; min-width: 48rem; }
+.months { position: relative; height: 1.4rem; }
+.months span { position: absolute; top: 0; padding-left: .25rem; color: var(--gray-strong); font-size: .85rem; line-height: 1.2rem; }
+.rowContents { display: contents; }
+.rowLabel { display: grid; align-content: start; margin: 0; padding-top: 1.4rem; border-top: 1px solid var(--line); }
+.rowLabel span:first-child { font-size: .95rem; font-weight: 700; }
+.rowLabel span:last-child { color: var(--gray-strong); font-size: .85rem; }
+.track { --label-top: 0rem; --bar-top: 1.4rem; --bar-height: 2.1rem; --lane-top: calc(var(--bar-top) + var(--bar-height) + .3rem); --lane-pitch: 1.5rem; position: relative; height: calc(var(--bar-top) + var(--bar-height) + .5rem); border-top: 1px solid var(--line); }
+.track[data-marks] { height: calc(var(--lane-top) + var(--levels) * var(--lane-pitch) + .5rem); }
+/* The row of today gives the badge a line of its own above the semester labels, so that neither covers the other. */
+.track[data-today] { --label-top: 1.3rem; --bar-top: 2.7rem; }
+.rowLabel[data-today] { padding-top: 2.7rem; }
+.trackGround { position: absolute; inset: var(--bar-top) 0 auto; height: var(--bar-height); background: var(--surface); }
+.lane { position: absolute; left: 0; right: 0; top: var(--lane-top); height: calc(var(--levels) * var(--lane-pitch)); border: 1px solid var(--line); background: #fafafa; }
+.segment { position: absolute; z-index: 1; top: var(--bar-top); display: flex; align-items: center; justify-content: center; height: var(--bar-height); padding: 0 .4rem; overflow: hidden; color: var(--ink); font-size: .85rem; font-weight: 600; white-space: nowrap; }
+.semesterStart { position: absolute; z-index: 2; top: calc(var(--label-top) + .2rem); width: 2px; height: calc(var(--bar-top) + var(--bar-height) - var(--label-top) - .2rem); margin-left: -1px; background: var(--gray-strong); }
+.semesterLabel { position: absolute; z-index: 4; top: calc(var(--label-top) + .1rem); margin-left: 1px; padding: 0 .25rem 0 calc(.35rem - 1px); background: #fff; color: var(--ink); font-size: .85rem; font-weight: 700; line-height: 1rem; white-space: nowrap; }
+.today { position: absolute; z-index: 3; top: 1.1rem; width: 2px; height: calc(var(--bar-top) + var(--bar-height) - .7rem); margin-left: -1px; background: var(--ink); }
+.track[data-marks] .today { height: calc(var(--lane-top) + var(--levels) * var(--lane-pitch) - 1.1rem); }
+.track .todayBadge { position: absolute; z-index: 3; top: 0; width: 3rem; margin-left: -1.5rem; text-align: center; }
+
+/* A date on one day is a dot, one over several days a bar as long as it lasts; a provisional one stays hollow. */
+.mark { position: absolute; display: block; width: .75rem; height: .75rem; border: 2px solid var(--ink); border-radius: 50%; background: var(--ink); }
+.mark[data-span] { width: 1.5rem; height: .45rem; border-width: 1.5px; border-radius: 0; background: var(--gray-strong); border-color: var(--gray-strong); }
+.mark[data-provisional] { background: #fff; }
+.track .mark { top: calc(var(--lane-top) + (var(--level) + .5) * var(--lane-pitch)); left: var(--center); transform: translate(-50%, -50%); }
+.track .mark[data-span] { width: max(1.25rem, var(--span)); }
+.track .mark[data-selected] { outline: 2px solid var(--red); outline-offset: 2px; }
+.track .mark[data-selected]:not([data-span]) { width: 1rem; height: 1rem; }
+.track .mark[data-selected][data-span] { height: .7rem; }
+/* At least 28 by 24 pixels, wider over a long date; never beyond the track. */
+.markButton { --width: max(1.75rem, var(--span)); position: absolute; z-index: 4; top: calc(var(--lane-top) + var(--level) * var(--lane-pitch)); left: clamp(0px, calc(var(--center) - var(--width) / 2), calc(100% - var(--width))); width: var(--width); height: var(--lane-pitch); padding: 0; border: 0; background: transparent; cursor: pointer; }
+.markButton:hover { background: rgb(0 0 0 / .06); }
+.markButton:focus-visible { outline: 3px solid var(--ink); outline-offset: -3px; }
+
+p.selection { margin: 0; color: var(--ink); padding: .6rem 1.25rem .75rem; border-top: 1px solid var(--line); }
+.note { margin: 0; color: var(--gray-strong); font-size: .95rem; }
+
+.tableWrap { overflow-x: auto; border: 1px solid var(--line); }
+.table { width: 100%; min-width: 40rem; border-collapse: collapse; background: #fff; text-align: left; }
+.table th, .table td { padding: .7rem 1rem; border-top: 1px solid var(--line); vertical-align: top; }
+.table thead th { border-top: 0; border-bottom: 1.5px solid var(--gray); background: var(--surface); font-size: .92rem; }
+.yearRow th { padding-top: .9rem; background: #fafafa; border-top-color: #d5d9dc; font-size: 1rem; }
+.table tbody th[scope="row"] { font-weight: 700; white-space: nowrap; }
+.place { display: inline-flex; align-items: center; gap: .5rem; }
+.place .swatch { width: .8rem; height: .8rem; }
+.table [data-timing="past"] > td, .table [data-timing="past"] > th[scope="row"] { color: var(--gray); }
+/* The semester cell may span further rows, so the mark stays on the cells of the phase itself. */
+.table [data-timing="now"] > td, .table [data-timing="next"] > td { background: var(--surface); }
+.table [data-timing="now"] > td:first-of-type, .table [data-timing="next"] > td:first-of-type { box-shadow: inset 4px 0 0 var(--ink); }
+.badge { display: inline-block; margin-left: .5rem; vertical-align: .1rem; padding: 0 .45rem; background: var(--ink); color: #fff; font-size: .8rem; font-weight: 700; line-height: 1.35rem; white-space: nowrap; }
+.eventsTable td:first-child { width: 18rem; font-weight: 600; }
+.dateCell { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .5rem; }
+.dateCell > * { margin: 0; }
+.dateCell .badge { margin-left: 0; }
+.eventsTable [data-timing="past"] td:first-child { font-weight: 400; }
+.eventTitle { display: block; font-weight: 600; }
+.eventMeta { display: block; margin-top: .1rem; color: var(--gray-strong); font-size: .95rem; }
+.eventDescription { display: block; margin-top: .15rem; color: var(--gray-strong); font-size: .95rem; white-space: pre-line; }
+.empty { margin: 0; padding: 1.25rem 1.5rem; border: 1.5px dashed var(--field-border); font-size: 1.05rem; font-weight: 700; }
+
+@media (forced-colors: active) {
+  .segment, .swatch, .mark, .todayBadge, .badge { forced-color-adjust: none; }
+  .track .mark[data-selected] { outline-color: Highlight; }
+}

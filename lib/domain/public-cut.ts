@@ -60,7 +60,7 @@ function cutYear(value: string): number | null {
   return /^\d{4}$/.test(value) ? Number(value) : null;
 }
 
-export function yearCut(year: string): PublicCut | null {
+export function yearCut(year: string): YearCut | null {
   const parsed = cutYear(year);
   return parsed === null ? null : { kind: "year", year: parsed };
 }
@@ -77,15 +77,18 @@ export function routeSegment(value: string): string {
   }
 }
 
-export function areaCut(year: string, name: string): PublicCut | null {
+export function areaCut(year: string, name: string): YearCut | null {
   const parsed = cutYear(year);
   return parsed === null || !name ? null : { kind: "area", year: parsed, name };
 }
 
-export function programCut(year: string, abbreviation: string): PublicCut | null {
+export function programCut(year: string, abbreviation: string): YearCut | null {
   const parsed = cutYear(year);
   return parsed === null || !abbreviation ? null : { kind: "program", year: parsed, abbreviation };
 }
+
+/** A cut of a year, as opposed to a single course, which has a page of its own. */
+export type YearCut = Exclude<PublicCut, { kind: "course" }>;
 
 /**
  * The cuts a shown cut leads on to: from one course to its year, its program and its area, and from a program or

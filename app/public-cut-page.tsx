@@ -5,7 +5,7 @@ import { connection } from "next/server";
 
 import { PlanEventTable, PlanMatrix } from "@/components/plan-matrix";
 import { SiteShell } from "@/components/site-shell";
-import { publicCutKindLabel, publicCutPath, publicCutTitle, relatedCuts, type PublicCut } from "@/lib/domain/public-cut";
+import { publicCutKindLabel, publicCutPath, publicCutTitle, relatedCuts, type YearCut } from "@/lib/domain/public-cut";
 import { productName } from "@/lib/product";
 
 import { publicCutData } from "./data";
@@ -13,15 +13,13 @@ import { publicCutData } from "./data";
 const missingMetadata: Metadata = { title: "Blockplan nicht gefunden", robots: { index: false, follow: true } };
 
 /** Metadata and the page read the same current published courses, so a withdrawal cannot leave a stale title behind. */
-export async function publicCutMetadata(cut: PublicCut | null): Promise<Metadata> {
+export async function publicCutMetadata(cut: YearCut | null): Promise<Metadata> {
   await connection();
   if (!cut) return missingMetadata;
   const detail = publicCutData(cut);
   if (!detail) return missingMetadata;
   const title = publicCutTitle(detail.cut);
-  const description = detail.cut.kind === "course"
-    ? `Veröffentlichter Kursplan ${detail.cut.code} mit Theorie- und Praxisphasen sowie prüfungsrelevanten Terminen.`
-    : `Veröffentlichter Blockplan für ${title} mit Theorie- und Praxisphasen sowie prüfungsrelevanten Terminen.`;
+  const description = `Veröffentlichter Blockplan für ${title} mit Theorie- und Praxisphasen sowie prüfungsrelevanten Terminen.`;
   return {
     title,
     description,
@@ -36,24 +34,19 @@ export async function publicCutMetadata(cut: PublicCut | null): Promise<Metadata
   };
 }
 
-/** Renders every public address from the same current published cut so all variants share the same 404 behaviour. */
-export async function PublicCutPage({ cut }: { cut: PublicCut | null }) {
+/** Renders the addresses of a year and of a program or area within it; a single course has a page of its own. */
+export async function PublicCutPage({ cut }: { cut: YearCut | null }) {
   await connection();
   if (!cut) notFound();
   const detail = publicCutData(cut);
   if (!detail) notFound();
-  const representativeCourse = detail.courses[0];
   const title = publicCutTitle(detail.cut);
-  const links = relatedCuts(detail.cut, representativeCourse);
+  const links = relatedCuts(cut, detail.courses[0]);
 
   return <SiteShell><article className="plan-detail">
     <h1>{title}</h1>
     <dl className="course-list">
-      {detail.cut.kind === "course" ? <>
-        <div><dt>Bereich</dt><dd>{representativeCourse.area}</dd></div>
-        <div><dt>Studiengang</dt><dd>{representativeCourse.program}</dd></div>
-      </> : null}
-      <div><dt>Jahrgang</dt><dd>{detail.cut.kind === "course" ? representativeCourse.year : detail.cut.year}</dd></div>
+      <div><dt>Jahrgang</dt><dd>{cut.year}</dd></div>
     </dl>
     {links.length ? <nav className="cut-links" aria-label="Andere Ansichten">
       <h2>Andere Ansichten</h2>

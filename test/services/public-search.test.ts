@@ -1,8 +1,13 @@
+import Database from "better-sqlite3";
+import { mkdtempSync, rmSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { areaCut, programCut, yearCut } from "@/lib/domain/public-cut";
-import { readPublicCut, readPublicOverview } from "@/lib/services/public-search";
+import { readPublicCourse, readPublicCut, readPublicOverview } from "@/lib/services/public-search";
 import { databaseWithMasterData, unpublishedCourse, publish, courseIdForCode, withdraw } from "@/test/published-plans";
+import { applySchema } from "@/test/schema";
 
 const today = "2026-07-26";
 
@@ -124,5 +129,74 @@ describe("readPublicCut", () => {
     expect(readPublicCut(sqlite, { kind: "course", code: "TIF99A" })).toBeNull();
     expect(readPublicCut(sqlite, { kind: "course", code: "TIF24A" })).toBeNull();
     expect(readPublicCut(sqlite, areaCut("2024", "Kein Bereich")!)).toBeNull();
+  });
+});
+
+describe("readPublicCourse", () => {
+  it("reads a course with its published parallel courses, their phases and events, and its last change", () => {
+    const sqlite = databaseWithMasterData();
+    publish(sqlite, {
+      courses: [
+        { code: "TIF25A", studyStart: "2025-10-01", phases: [{ semester: 1, startDate: "2025-10-01", endDate: "2025-12-31" }] },
+        { code: "TIF25B", studyStart: "2025-10-01", phases: [{ semester: 1, type: "PRACTICE", startDate: "2025-10-01", endDate: "2025-12-31" }] },
+        { code: "TIF24A", studyStart: "2024-10-01" },
+      ],
+      events: [{ title: "Abgabe", startDate: "2025-11-03", courses: ["TIF25B"] }],
+    });
+    sqlite.prepare("UPDATE courses SET updated_at = '2026-11-09T08:00:00.000Z' WHERE code = 'TIF25B'").run();
+
+    const read = readPublicCourse(sqlite, "tif25b");
+
+    expect(read?.course.code).toBe("TIF25B");
+    expect(read?.updatedAt).toBe("2026-11-09T08:00:00.000Z");
+    expect(read?.parallels.map((course) => course.code)).toEqual(["TIF25A"]);
+    expect(read?.phases.map((phase) => [phase.courseId, phase.type])).toEqual([
+      ["course-published-TIF25A", "THEORY"], ["course-published-TIF25B", "PRACTICE"],
+    ]);
+    expect(read?.events.map((event) => event.courseId)).toEqual(["course-published-TIF25B"]);
+  });
+
+  it("keeps reading one snapshot when another connection withdraws the course between its reads", () => {
+    const directory = mkdtempSync(path.join(os.tmpdir(), "dhbw-mgmt-public-course-"));
+    const file = path.join(directory, "app.sqlite");
+    const setup = new Database(file);
+    setup.pragma("journal_mode = WAL");
+    setup.close();
+    const app = new Database(file);
+    const other = new Database(file);
+    try {
+      applySchema(app);
+      app.exec(`INSERT INTO areas VALUES ('area-1', 'Technik', 'technik');
+        INSERT INTO programs VALUES ('program-1', 'area-1', 'Informatik', 'TIF', 6);
+        INSERT INTO users VALUES ('seed', 'Seed', 'seed@test', 0, NULL, 'NONE', 1, 'ACTIVE', 0, 0);`);
+      publish(app, { courses: [{ code: "TIF25A", studyStart: "2025-10-01" }] });
+      // The cut of the program is the second read; the withdrawal lands right before it.
+      const connection = new Proxy(app, {
+        get(target, property) {
+          if (property === "prepare") {
+            return (source: string) => {
+              if (source.includes("program.abbreviation = ?")) other.prepare("UPDATE courses SET published_at = NULL").run();
+              return target.prepare(source);
+            };
+          }
+          const value = Reflect.get(target, property, target);
+          return typeof value === "function" ? value.bind(target) : value;
+        },
+      });
+
+      expect(readPublicCourse(connection, "TIF25A")?.course.code).toBe("TIF25A");
+      expect(readPublicCourse(app, "TIF25A")).toBeNull();
+    } finally {
+      app.close();
+      other.close();
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("finds no unpublished course", () => {
+    const sqlite = databaseWithMasterData();
+    unpublishedCourse(sqlite, "TIF25C");
+
+    expect(readPublicCourse(sqlite, "TIF25C")).toBeNull();
   });
 });

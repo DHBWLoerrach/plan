@@ -180,7 +180,7 @@ test("edits, publishes and publicly reads a course", async ({ page }) => {
   await expect(page).toHaveURL(/\/\?q=TIF26$/u);
   await page.getByRole("table").getByRole("link", { name: "TIF26EDIT" }).click();
   await expect(page).toHaveURL(/\/TIF26EDIT$/u);
-  await expect(page.getByRole("heading", { name: "TIF26EDIT" })).toBeVisible();
+  await expect(page.getByText("Kurs TIF26EDIT")).toBeVisible();
 
   // Back from the plan, the overview shows the search it left, not the one it was first loaded with.
   await page.goBack();
@@ -193,7 +193,7 @@ test("edits, publishes and publicly reads a course", async ({ page }) => {
   await page.getByRole("combobox", { name: "Studiengang oder Kurs suchen" }).fill("TIF26");
   await page.getByRole("table").getByRole("link", { name: "TIF26EDIT" }).click();
   await expect(page).toHaveURL(/\/TIF26EDIT$/u);
-  await expect(page.getByRole("heading", { name: "TIF26EDIT" })).toBeVisible();
+  await expect(page.getByText("Kurs TIF26EDIT")).toBeVisible();
   await page.waitForTimeout(500);
   await expect(page).toHaveURL(/\/TIF26EDIT$/u);
   await page.goBack();
@@ -276,7 +276,7 @@ test("edits, publishes and publicly reads a course", async ({ page }) => {
   while (await suggestion.getAttribute("data-highlighted") === null) await search.press("ArrowDown");
   await search.press("Enter");
   await expect(page).toHaveURL(/\/TIF26EDIT$/u);
-  await expect(page.getByRole("heading", { name: "TIF26EDIT" })).toBeVisible();
+  await expect(page.getByText("Kurs TIF26EDIT")).toBeVisible();
   await page.waitForTimeout(500);
   await expect(page).toHaveURL(/\/TIF26EDIT$/u);
 });
