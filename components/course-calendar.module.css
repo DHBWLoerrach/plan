@@ -102,7 +102,8 @@
 
 @media (forced-colors: active) {
   .weekEvent, .monthEvent, .allDayEvent { border-width: .2rem; }
-  /* Forced colors drop the indicator's fill, so the chosen item marks itself in the system's selection colors. */
-  .viewItem[data-checked], .viewControls:has(.viewIndicator:not([style*="--segmented-control-indicator-width"])) .viewItem[data-checked] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+  /* Forced colors drop the indicator's fill, so the chosen item marks itself in the system's selection colors. Opting
+     out of forced colors keeps the fixed focus ring too, so it takes the system's text color. */
+  .viewItem[data-checked], .viewControls:has(.viewIndicator:not([style*="--segmented-control-indicator-width"])) .viewItem[data-checked] { forced-color-adjust: none; background: Highlight; color: HighlightText; outline-color: CanvasText; }
   .weekDay.today .weekDayHeading, .monthDay.today { outline: .2rem solid CanvasText; outline-offset: -.2rem; }
 }

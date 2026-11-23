@@ -1,6 +1,8 @@
 "use client";
 
-import { useActionState, useId, useState } from "react";
+import { Field, FieldLabel } from "@ui-sdk/react/field";
+import { Input } from "@ui-sdk/react/input";
+import { useActionState, useState } from "react";
 
 import { ConfirmAction } from "@/components/editor-controls";
 
@@ -36,6 +38,13 @@ function PermissionsFields({ areas, initial }: { areas: Area[]; initial?: Permis
   </>;
 }
 
+function EmailField({ defaultValue }: { defaultValue?: string }) {
+  return <Field name="email">
+    <FieldLabel>Dienstliche E-Mail-Adresse</FieldLabel>
+    <Input type="email" autoComplete="off" required defaultValue={defaultValue} />
+  </Field>;
+}
+
 function PasswordLinkReveal({ link }: { link: string }) {
   const [copied, setCopied] = useState(false);
   return <div className="password-link-reveal" role="status">
@@ -55,13 +64,11 @@ function ActionMessages({ state }: { state: AccountActionState | CreateAccountSt
 
 export function CreateAccountForm({ areas }: { areas: Area[] }) {
   const [state, formAction, isPending] = useActionState<CreateAccountState, FormData>(createAccountAction, {});
-  const emailId = useId();
   if (state.passwordLink) {
     return <div className="account-form"><p role="status">Das Konto {state.email} wurde angelegt und wartet auf die Passwortvergabe.</p><PasswordLinkReveal link={state.passwordLink} /></div>;
   }
   return <form action={formAction} className="account-form">
-    <label htmlFor={emailId}>Dienstliche E-Mail-Adresse</label>
-    <input id={emailId} name="email" type="email" autoComplete="off" required defaultValue={state.email} />
+    <EmailField defaultValue={state.email} />
     <PermissionsFields areas={areas} />
     {state.error ? <p role="alert">{state.error}</p> : null}
     <button className="button" type="submit" disabled={isPending}>{isPending ? "Konto wird angelegt …" : "Konto anlegen und Passwortlink erzeugen"}</button>
@@ -70,11 +77,9 @@ export function CreateAccountForm({ areas }: { areas: Area[] }) {
 
 export function EditEmailForm({ userId, email }: { userId: string; email: string }) {
   const [state, formAction, isPending] = useActionState<AccountActionState, FormData>(updateEmailAction, {});
-  const emailId = useId();
   return <form action={formAction} className="account-form">
     <input type="hidden" name="userId" value={userId} />
-    <label htmlFor={emailId}>Dienstliche E-Mail-Adresse</label>
-    <input id={emailId} name="email" type="email" autoComplete="off" required defaultValue={email} />
+    <EmailField defaultValue={email} />
     <ActionMessages state={state} />
     <button className="button" type="submit" disabled={isPending}>{isPending ? "Wird gespeichert …" : "E-Mail-Adresse speichern"}</button>
   </form>;

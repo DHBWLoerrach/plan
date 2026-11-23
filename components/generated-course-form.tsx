@@ -1,5 +1,6 @@
 "use client";
 
+import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "@ui-sdk/react/collapsible";
 import { useActionState, useId, useMemo, useState } from "react";
 
 import { type CourseFormState, createGeneratedCourseAction } from "@/app/intern/kurse/actions";
@@ -157,12 +158,14 @@ export function GeneratedCourseForm({ programs, today }: { programs: Program[]; 
             const last = index === phases.length - 1;
             return <li key={index} className="plan-preview__item">
               <p className="plan-preview__semester">{phase.semester === phases[index - 1]?.semester ? "" : `${phase.semester}. Semester`}</p>
-              <div className="plan-preview__phase" data-phase={phase.type === "THEORY" ? "theory" : "practice"}>
+              <Collapsible className="plan-preview__phase" data-phase={phase.type === "THEORY" ? "theory" : "practice"}
+                open={open} onOpenChange={(next) => setOpenPhase(next ? index : null)}>
                 <p className="plan-preview__title"><strong>{phaseTypeLabel(phase.type)}phase</strong> <span>Phase {index + 1}</span></p>
                 <p className="plan-preview__period">{formatCalendarPeriod(phase.startDate, phase.endDate, { weekday: true })} · {formatPeriodDuration(phase.startDate, phase.endDate)}</p>
-                <button className="button button--ghost button--compact" type="button" aria-expanded={open}
-                  onClick={() => setOpenPhase(open ? null : index)}>{open ? "Fertig" : "Anpassen"}<span className="sr-only"> — Phase {index + 1}</span></button>
-                {open ? <div className="plan-preview__editor" key={attempt}>
+                <CollapsibleTrigger className="button button--ghost button--compact">
+                  {open ? "Fertig" : "Anpassen"}<span className="sr-only"> — Phase {index + 1}</span>
+                </CollapsibleTrigger>
+                <CollapsiblePanel className="plan-preview__editor" key={attempt}>
                   <label>Phasentyp
                     <select value={phase.type} onChange={(event) => changePhase(index, { type: event.target.value as PhaseType })}>
                       {phaseTypes.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}
@@ -186,8 +189,8 @@ export function GeneratedCourseForm({ programs, today }: { programs: Program[]; 
                   <p className="field-hint">{first || last
                     ? "Studienbeginn und Studienende gehören zum Studienzeitraum und werden oben geändert."
                     : "Eine verschobene Grenze verschiebt die angrenzende Kursphase mit, damit der Kursverlauf lückenlos bleibt."}</p>
-                </div> : null}
-              </div>
+                </CollapsiblePanel>
+              </Collapsible>
             </li>;
           })}
         </ol>

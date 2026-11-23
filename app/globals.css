@@ -431,10 +431,19 @@ p[role="status"] { margin: 0; color: var(--success); }
 
 .narrow-panel { max-width: 40rem; }
 .sign-in-form { display: grid; gap: .55rem; margin-top: 1.5rem; }
+.sign-in-form [data-slot="field"] { display: grid; gap: .35rem; }
 .sign-in-form label { font-weight: 700; font-size: .9rem; }
 .sign-in-form p { margin: 0; font-size: .92rem; }
-.sign-in-form p[id$="-description"] { color: var(--gray); }
-.sign-in-form p[id$="-error"] { color: var(--error); }
+.sign-in-form [data-slot="field-description"] { color: var(--gray); }
+.sign-in-form [data-slot="field-error"] { color: var(--error); font-size: .92rem; font-weight: 700; }
+/* The gap is wider than the 5px a focus ring reaches out, so neither part covers the other's ring (WCAG 2.4.11). */
+[data-slot="password-input"] { display: flex; gap: .4rem; }
+[data-slot="password-input-control"] { flex: 1 1 auto; min-width: 0; }
+[data-slot="password-input-toggle"] { flex: none; min-height: 2.75rem; padding: 0 .9rem; border: 1px solid var(--field-border); background: #fff; color: var(--ink); font: inherit; font-size: .9rem; font-weight: 700; cursor: pointer; }
+[data-slot="password-input-toggle"]:hover { background: var(--surface); }
+[data-slot="password-input-toggle"][aria-pressed="true"] { background: var(--ink); color: #fff; }
+/* Opting out of forced colors keeps the fixed focus ring too, so it takes the system's text color. */
+@media (forced-colors: active) { [data-slot="password-input-toggle"][aria-pressed="true"] { forced-color-adjust: none; background: Highlight; color: HighlightText; outline-color: CanvasText; } }
 .sign-in-form .button { justify-self: start; margin-top: .5rem; }
 
 /* Sits between header and main, so it carries the page width itself and keeps its distance to both. */
@@ -582,7 +591,8 @@ p[role="status"] { margin: 0; color: var(--success); }
 }
 
 .account-form { display: grid; gap: .6rem; max-width: 38rem; margin: 1rem 0 0; }
-.account-form > label { font-weight: 700; font-size: .9rem; }
+.account-form > label, .account-form > [data-slot="field"] > label { font-weight: 700; font-size: .9rem; }
+.account-form > [data-slot="field"] { display: grid; gap: .6rem; }
 .account-form .button { justify-self: start; }
 .account-fieldset { display: grid; gap: .45rem; margin: 0; padding: 1rem; border: 1px solid var(--line); background: #fff; }
 .account-fieldset legend { padding: 0 .25rem; font-weight: 700; }

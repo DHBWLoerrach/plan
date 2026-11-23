@@ -24,7 +24,7 @@ async function signIn(page: Page, email: string) {
 /** One attempt, filled anew each time: a rejected submission leaves the form reset, so a retry starts from empty fields. */
 async function attemptSignIn(page: Page, email: string, rejection: Locator) {
   await page.getByLabel("Dienstliche E-Mail-Adresse").fill(email);
-  await page.getByLabel("Passwort").fill(password);
+  await page.getByLabel("Passwort", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Anmelden" }).click();
   await Promise.race([
     page.waitForURL(/\/intern\/heute$/u).catch(() => {}),
@@ -34,15 +34,63 @@ async function attemptSignIn(page: Page, email: string, rejection: Locator) {
 
 test("sets a password from a link and signs in", async ({ page }) => {
   await page.goto("/intern/passwort-vergeben#e2e-password-link-token");
-  await page.getByLabel("Neues Passwort").fill(password);
+  const newPassword = page.getByLabel("Neues Passwort", { exact: true });
+  await newPassword.fill(password);
+  // Showing the password keeps focus and caret in the field, and the field still submits.
+  await page.getByRole("button", { name: "Neues Passwort anzeigen" }).click();
+  await expect(newPassword).toHaveAttribute("type", "text");
+  await expect(newPassword).toBeFocused();
+  await expect(page.getByRole("button", { name: "Neues Passwort anzeigen" })).toHaveAttribute("aria-pressed", "true");
+  // The toggle sits beside the field, far enough apart that it never covers the field's focus ring.
+  const ringReach = await newPassword.evaluate((field) => {
+    const style = getComputedStyle(field);
+    return Number.parseFloat(style.outlineWidth) + Number.parseFloat(style.outlineOffset);
+  });
+  const fieldBox = (await newPassword.boundingBox())!;
+  const toggleBox = (await page.getByRole("button", { name: "Neues Passwort anzeigen" }).boundingBox())!;
+  expect(toggleBox.x - (fieldBox.x + fieldBox.width)).toBeGreaterThanOrEqual(ringReach);
+  // In a dark forced-colors theme the pressed toggle keeps its own colors, and its focus ring the system's text color.
+  await newPassword.focus();
+  await page.keyboard.press("Tab");
+  await page.emulateMedia({ forcedColors: "active", colorScheme: "dark" });
+  await expectSystemFocusRing(page, page.getByRole("button", { name: "Neues Passwort anzeigen" }));
+  await page.emulateMedia({ forcedColors: "none", colorScheme: null });
   await page.getByRole("button", { name: "Passwort speichern" }).click();
   await expect(page).toHaveURL(/\/intern\/anmelden\?passwort=gesetzt$/u);
 
   await page.getByLabel("Dienstliche E-Mail-Adresse").fill("link@test.invalid");
-  await page.getByLabel("Passwort").fill(password);
+  await page.getByLabel("Passwort", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Anmelden" }).click();
   await expect(page).toHaveURL(/\/intern\/heute$/u);
 });
+
+/** The focus ring a control draws, read whole: a color alone is computed even where no ring is drawn. */
+function focusRing(locator: Locator): Promise<{ focusVisible: boolean; style: string; width: number; color: string }> {
+  return locator.evaluate((element) => {
+    const { outlineStyle, outlineWidth, outlineColor } = getComputedStyle(element);
+    return { focusVisible: element.matches(":focus-visible"), style: outlineStyle, width: Number.parseFloat(outlineWidth), color: outlineColor };
+  });
+}
+
+/** A ring that is drawn, in the system's text color. */
+async function expectSystemFocusRing(page: Page, locator: Locator) {
+  const ring = await focusRing(locator);
+  expect(ring.focusVisible).toBe(true);
+  expect(ring.style).not.toBe("none");
+  expect(ring.width).toBeGreaterThan(0);
+  expect(ring.color).toBe(await canvasTextColor(page));
+}
+
+/** The system's text color in the current color mode, as the browser resolves it. */
+function canvasTextColor(page: Page): Promise<string> {
+  return page.evaluate(() => {
+    const probe = document.body.appendChild(document.createElement("span"));
+    probe.style.color = "CanvasText";
+    const color = getComputedStyle(probe).color;
+    probe.remove();
+    return color;
+  });
+}
 
 /** The disclosure an entry or a form rests behind, addressed by its summary line. */
 function disclosure(page: Page, summary: string): Locator {
@@ -263,7 +311,13 @@ test("creates a course with a generated progression and lands on a complete plan
   await page.getByRole("radio", { name: "Theoriephase" }).check();
 
   // A boundary moved by hand takes the following phase with it.
-  await page.getByRole("button", { name: "Anpassen — Phase 2" }).click();
+  const adjust = page.getByRole("button", { name: "Anpassen — Phase 2" });
+  await expect(adjust).toHaveAttribute("type", "button");
+  await expect(adjust).toHaveAttribute("aria-expanded", "false");
+  await adjust.click();
+  const done = page.getByRole("button", { name: "Fertig — Phase 2" });
+  await expect(done).toHaveAttribute("aria-expanded", "true");
+  await expect(page.locator(`#${await done.getAttribute("aria-controls")}`).getByLabel("Ende", { exact: true })).toBeVisible();
   await page.getByLabel("Ende", { exact: true }).fill("2028-04-09");
   await expect(phases.nth(2)).toContainText("Mo 10.04.2028");
 
@@ -700,7 +754,9 @@ test("takes up a calendar period opened while an earlier request is still runnin
   await expect(page).toHaveURL(/kalender=woche/u);
 
   // Forced colors drop the indicator's fill, so the chosen view has to stand out in the selection colors itself.
-  await page.emulateMedia({ forcedColors: "active" });
+  await page.emulateMedia({ forcedColors: "active", colorScheme: "dark" });
   const textColor = (name: string) => views.getByRole("radio", { name }).evaluate((item) => getComputedStyle(item).color);
   expect(await textColor("Woche")).not.toBe(await textColor("Monat"));
+  await expect(views.getByRole("radio", { name: "Woche" })).toBeFocused();
+  await expectSystemFocusRing(page, views.getByRole("radio", { name: "Woche" }));
 });

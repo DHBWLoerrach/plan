@@ -1,6 +1,10 @@
 "use client";
 
+import { Field, FieldLabel } from "@ui-sdk/react/field";
+import { Input } from "@ui-sdk/react/input";
 import { useState } from "react";
+
+import { PasswordField } from "@/components/password-field";
 
 export function SignInForm() {
   const [error, setError] = useState<string | null>(null);
@@ -21,10 +25,11 @@ export function SignInForm() {
   }
 
   return <form action={signIn} className="sign-in-form">
-    <label htmlFor="email">Dienstliche E-Mail-Adresse</label>
-    <input id="email" name="email" type="email" autoComplete="username" required />
-    <label htmlFor="password">Passwort</label>
-    <input id="password" name="password" type="password" autoComplete="current-password" required />
+    <Field name="email">
+      <FieldLabel>Dienstliche E-Mail-Adresse</FieldLabel>
+      <Input type="email" autoComplete="username" required />
+    </Field>
+    <PasswordField id="password-field" name="password" label="Passwort" autoComplete="current-password" />
     {error ? <p role="alert">{error}</p> : null}
     <button className="button" type="submit">Anmelden</button>
   </form>;

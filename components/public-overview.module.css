@@ -121,6 +121,7 @@
 .emptyActions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: .3rem; }
 
 @media (forced-colors: active) {
-  /* Forced colors drop the indicator's fill, so the chosen item marks itself in the system's selection colors. */
-  .segment[data-checked], .segments:has(.segmentIndicator:not([style*="--segmented-control-indicator-width"])) .segment[data-checked] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+  /* Forced colors drop the indicator's fill, so the chosen item marks itself in the system's selection colors. Opting
+     out of forced colors keeps the fixed focus ring too, so it takes the system's text color. */
+  .segment[data-checked], .segments:has(.segmentIndicator:not([style*="--segmented-control-indicator-width"])) .segment[data-checked] { forced-color-adjust: none; background: Highlight; color: HighlightText; outline-color: CanvasText; }
 }
