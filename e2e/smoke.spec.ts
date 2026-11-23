@@ -391,6 +391,17 @@ test("opens on the own areas and keeps foreign courses read-only, confirming wit
   await expect(page).toHaveURL(/vergleich=jahrgang/u);
   await expect(foreignColumn.first()).toBeVisible();
   await expect(page.getByRole("checkbox", { name: /FRM26E2E/u })).toBeChecked();
+  // The edited course refuses to be hidden, stays ticked and says why, again on a second attempt. An earlier test
+  // renames it, so it is found by being the one that refuses.
+  const ownCourse = page.locator(".course-filter").getByRole("checkbox", { name: /^TIF26/u }).and(page.locator("[aria-disabled=true]"));
+  // Playwright treats aria-disabled as disabled and would wait for it to clear; the checkbox is meant to be pressed.
+  await ownCourse.click({ force: true });
+  await expect(ownCourse).toBeChecked();
+  await ownCourse.press("Space");
+  await ownCourse.press("Space");
+  await expect(ownCourse).toBeChecked();
+  await expect(ownCourse).toBeFocused();
+  await expect(page.getByText(/^TIF26\w+ bleibt sichtbar: Der bearbeitete Kurs wird in der Planmatrix immer angezeigt\.$/u)).toBeAttached();
   await page.goto("/intern/kurse/e2e-course");
 
   /* A server action is a public endpoint: whoever holds its identifier reaches it without ever passing the page whose
@@ -626,8 +637,7 @@ test("keeps the typed course code against an answer that arrives late", async ({
    controls and heading follow the opened period immediately; if the request it triggers were dropped because an
    earlier one was still running, the entries beneath them would stay with the period that has just been left — and
    because both ends cut the entries down to the visible period, what stood there would mostly be nothing at all.
-   The day heads are where this is reached: they lead into another period and are not among the controls the loading
-   state disables, because they belong to the entries and not to the navigation. */
+   The day heads are one way this is reached; the controls stay usable while loading, so focus stays where it was. */
 test("takes up a calendar period opened while an earlier request is still running", async ({ page }) => {
   await signIn(page, "editor@test.invalid");
 
@@ -662,8 +672,11 @@ test("takes up a calendar period opened while an earlier request is still runnin
 
   // The next week, with its answer held back: from here on the calendar is loading and the week stays on screen.
   holdNext = true;
-  await page.getByRole("button", { name: "Nächste Woche" }).click();
+  const nextWeek = page.getByRole("button", { name: "Nächste Woche" });
+  await nextWeek.click();
   await expect.poll(() => hold !== null, { timeout: 5_000 }).toBe(true);
+  await expect(nextWeek).toBeEnabled();
+  await expect(nextWeek).toBeFocused();
 
   await page.getByRole("button", { name: /Listenansicht ab diesem Tag öffnen/u }).first().click();
   await expect(page).toHaveURL(/kalender=liste/u);
@@ -675,4 +688,19 @@ test("takes up a calendar period opened while an earlier request is still runnin
   expect(requested.at(-1)).toMatch(/^liste /u);
   await expect(page.getByRole("heading", { name: `Termin ${requested.at(-1)}` })).toBeVisible();
   await expect(page.getByRole("heading", { name: `Termin ${requested[1]}` })).toHaveCount(0);
+
+  // The views are one radio group: a press chooses one, the arrows move to the next and choose it as well.
+  const views = page.getByRole("radiogroup", { name: "Kalenderansicht" });
+  await expect(views.getByRole("radio", { name: "Liste" })).toBeChecked();
+  await views.getByRole("radio", { name: "Monat" }).click();
+  await expect(page).toHaveURL(/kalender=monat/u);
+  await page.keyboard.press("ArrowLeft");
+  await expect(views.getByRole("radio", { name: "Woche" })).toBeChecked();
+  await expect(views.getByRole("radio", { name: "Woche" })).toBeFocused();
+  await expect(page).toHaveURL(/kalender=woche/u);
+
+  // Forced colors drop the indicator's fill, so the chosen view has to stand out in the selection colors itself.
+  await page.emulateMedia({ forcedColors: "active" });
+  const textColor = (name: string) => views.getByRole("radio", { name }).evaluate((item) => getComputedStyle(item).color);
+  expect(await textColor("Woche")).not.toBe(await textColor("Monat"));
 });

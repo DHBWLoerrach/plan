@@ -1,6 +1,6 @@
 "use client";
 
-import { announce, createUndoStack, stackSpans } from "@ui-sdk/core";
+import { announce, createUndoStack, prepareAnnouncements, stackSpans } from "@ui-sdk/core";
 import { Dialog, DialogBackdrop, DialogClose, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from "@ui-sdk/react/dialog";
 import { createParts } from "@ui-sdk/react/primitive";
 import { SegmentedControl, SegmentedControlIndicator, SegmentedControlItem } from "@ui-sdk/react/segmented-control";
@@ -341,6 +341,8 @@ export function PlanningBoard({ course, parallels, phases, events, today }: {
   const viewport = useRef<HTMLDivElement>(null);
   const width = useWidth(viewport);
   const hintId = useId();
+  // Some screen readers only notice a live region that existed before its text changed.
+  useEffect(() => prepareAnnouncements(document), []);
   // The slider and the spans report a commit after the move that caused it has rendered, so the ref holds that plan.
   const latest = useRef(plan);
   const recorded = useRef(saved);

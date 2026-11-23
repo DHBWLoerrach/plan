@@ -1,6 +1,7 @@
 "use client";
 
-import { Fragment, useId, useState, type MouseEvent, type ReactNode } from "react";
+import { announce, prepareAnnouncements } from "@ui-sdk/core";
+import { Fragment, useEffect, useId, useState, type MouseEvent, type ReactNode } from "react";
 
 import { PlanTimeline } from "@/components/plan-timeline";
 import { formatCalendarPeriod, formatPeriodDuration } from "@/lib/domain/calendar-format";
@@ -89,7 +90,8 @@ export function PlanMatrix({ courses, phases, primaryCourseId, unpublishedCourse
   const [shown, setShown] = useState(() => ({ courseKey, ids: new Set(courses.map((course) => course.id)) }));
   if (shown.courseKey !== courseKey) setShown({ courseKey, ids: new Set(courses.map((course) => course.id)) });
   const visibleCourseIds = shown.ids;
-  const [status, setStatus] = useState({ message: "", announcement: 0 });
+  // Some screen readers only notice a live region that existed before its text changed.
+  useEffect(() => prepareAnnouncements(document), []);
   const matrixHeadingId = useId();
   const filterLabelId = useId();
   const filterHintId = useId();
@@ -111,15 +113,6 @@ export function PlanMatrix({ courses, phases, primaryCourseId, unpublishedCourse
   const legendRows = Array.from({ length: semesters }, (_, index) => buildSemesterMatrix(courses, phases, index + 1));
   const shownCells = new Set(legendRows.flatMap((rows) => (rows.length ? rows.flatMap((row) => row.cells) : [noPhaseLabel])));
   const legend = [phaseTypeLabel("THEORY"), phaseTypeLabel("PRACTICE"), noPhaseLabel].filter((cell) => shownCells.has(cell));
-
-  /**
-   * Every announcement is counted, because the same sentence twice in a row would leave the text of the live region
-   * unchanged and would therefore be read out only the first time. Refusing to hide the last course is exactly that
-   * case: it says the same thing however often it happens, and has to be heard every time.
-   */
-  function announce(message: string) {
-    setStatus((previous) => ({ message, announcement: previous.announcement + 1 }));
-  }
 
   function toggleCourse(course: CoursePlan) {
     const next = new Set(visibleCourseIds);
@@ -204,10 +197,6 @@ export function PlanMatrix({ courses, phases, primaryCourseId, unpublishedCourse
                 : "Mindestens ein Kurs muss sichtbar bleiben."}</p>
             </div>
           </div>
-          {/* A zero width space alternates with every announcement, so a repeated message still changes the text of
-              the region. It is the smallest change that carries no meaning of its own: screen readers pass over it,
-              while a counter or a suffix would be read out along with the sentence. */}
-          <p className="sr-only" role="status">{status.message}{status.announcement % 2 ? "\u200b" : ""}</p>
           {/* Table and scrollable region are named by the heading of the block; a title of their own would say
               „Studienverlauf“ a third time, under a section and a heading that both say it already. */}
           <div className="matrix-wrap" role="region" aria-labelledby={matrixHeadingId} tabIndex={0}>

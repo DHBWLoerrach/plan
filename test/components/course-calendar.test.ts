@@ -70,7 +70,6 @@ describe("CourseCalendar", () => {
     expect(markup).toContain('role="group"');
     expect(markup).toContain('aria-label="Kalenderzeitraum"');
     expect(markup).toContain('aria-label="Kalenderansicht"');
-    expect(markup).toContain('aria-pressed="true">Woche');
   });
 
   it("renders a weekly time grid with parallel teaching events", () => {

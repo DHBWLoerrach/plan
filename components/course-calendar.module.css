@@ -1,10 +1,21 @@
 .calendar { margin-top: 1.5rem; }
 .explanation { max-width: 54rem; margin: 0 0 1rem; color: var(--gray-strong); }
-.viewControls { display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: 1rem; }
-.viewControls button, .navigation button { min-height: 2.5rem; padding: .45rem .75rem; border: 1px solid var(--field-border); background: #fff; color: var(--ink); font: inherit; font-weight: 700; cursor: pointer; }
-.viewControls button:hover, .navigation button:hover { background: var(--surface); }
-.viewControls button[aria-pressed="true"] { border-color: var(--red); background: var(--red); color: #fff; }
-.viewControls button:disabled, .navigation button:disabled { color: var(--gray); cursor: wait; }
+.viewControls { position: relative; isolation: isolate; display: inline-flex; flex-wrap: wrap; gap: 3px; margin-bottom: 1rem; padding: 3px; border: 1px solid var(--field-border); background: #fff; }
+.viewIndicator {
+  position: absolute; z-index: -1; background: var(--red);
+  top: var(--segmented-control-indicator-top); left: var(--segmented-control-indicator-left);
+  width: var(--segmented-control-indicator-width); height: var(--segmented-control-indicator-height);
+  transition: left .15s ease, top .15s ease, width .15s ease;
+}
+.viewIndicator[data-activation-direction="none"] { transition: none; }
+.viewItem { min-height: 2.5rem; padding: .45rem .75rem; border: 0; background: none; color: var(--ink); font: inherit; font-weight: 700; cursor: pointer; }
+.viewItem[data-checked] { color: #fff; }
+.viewItem[data-unchecked]:hover { background: var(--surface); }
+/* Until the indicator is measured in the browser it has no size, so the chosen item carries the fill itself. */
+.viewControls:has(.viewIndicator:not([style*="--segmented-control-indicator-width"])) .viewItem[data-checked] { background: var(--red); }
+.viewItem:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.navigation button { min-height: 2.5rem; padding: .45rem .75rem; border: 1px solid var(--field-border); background: #fff; color: var(--ink); font: inherit; font-weight: 700; cursor: pointer; }
+.navigation button:hover { background: var(--surface); }
 .calendarHead { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: .75rem 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--line); }
 .calendarHead h2 { margin: 0; font-size: clamp(1.35rem, 2.5vw, 1.7rem); }
 .calendarHead p { margin: .25rem 0 0; color: var(--gray); }
@@ -82,14 +93,16 @@
 @media (max-width: 36rem) {
   .event { grid-template-columns: minmax(0, 1fr); }
   .time, .eventMain { grid-column: 1; grid-row: auto; }
-  .viewControls { width: 100%; }
-  .viewControls button { flex: 1 1 0; }
+  .viewControls { display: flex; width: 100%; }
+  .viewItem { flex: 1 1 0; }
   .navigation { width: 100%; }
   .navigation button { flex: 1 1 auto; }
   .calendarScroller { margin-inline: -.25rem; }
 }
 
 @media (forced-colors: active) {
-  .viewControls button[aria-pressed="true"], .weekEvent, .monthEvent, .allDayEvent { border-width: .2rem; }
+  .weekEvent, .monthEvent, .allDayEvent { border-width: .2rem; }
+  /* Forced colors drop the indicator's fill, so the chosen item marks itself in the system's selection colors. */
+  .viewItem[data-checked], .viewControls:has(.viewIndicator:not([style*="--segmented-control-indicator-width"])) .viewItem[data-checked] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
   .weekDay.today .weekDayHeading, .monthDay.today { outline: .2rem solid CanvasText; outline-offset: -.2rem; }
 }

@@ -119,3 +119,8 @@
 .secondaryAction { display: inline-flex; align-items: center; min-height: 2.75rem; padding: .6rem 1.15rem; border: 1.5px solid var(--red); color: var(--red-dark); font-weight: 700; text-decoration: none; }
 .secondaryAction:hover { background: var(--theory); }
 .emptyActions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: .3rem; }
+
+@media (forced-colors: active) {
+  /* Forced colors drop the indicator's fill, so the chosen item marks itself in the system's selection colors. */
+  .segment[data-checked], .segments:has(.segmentIndicator:not([style*="--segmented-control-indicator-width"])) .segment[data-checked] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+}

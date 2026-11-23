@@ -1,5 +1,6 @@
 "use client";
 
+import { SegmentedControl, SegmentedControlIndicator, SegmentedControlItem } from "@ui-sdk/react/segmented-control";
 import { Fragment, type CSSProperties, useCallback, useEffect, useRef, useState } from "react";
 
 import { berlinCalendarDay, plusDays, plusMonths } from "@/lib/domain/calendar-day";
@@ -25,7 +26,6 @@ type CalendarResult =
 type CalendarNavigation = {
   anchor: string;
   view: CourseCalendarView;
-  loading: boolean;
   onNavigate: (anchor: string, view: CourseCalendarView) => void;
 };
 
@@ -290,7 +290,7 @@ function calendarLabel(anchor: string, view: CourseCalendarView): string {
   return `${sameMonth ? `${start.getUTCDate()}.` : dayMonthFormatter.format(start)}–${dayMonthYearFormatter.format(end)}`;
 }
 
-function CalendarControls({ anchor, view, loading, onNavigate }: CalendarNavigation) {
+function CalendarControls({ anchor, view, onNavigate }: CalendarNavigation) {
   const viewOptions: Array<{ view: CourseCalendarView; label: string }> = [
     { view: "week", label: "Woche" },
     { view: "month", label: "Monat" },
@@ -302,18 +302,20 @@ function CalendarControls({ anchor, view, loading, onNavigate }: CalendarNavigat
   const nextLabel = view === "month" ? "Nächster Monat" : view === "week" ? "Nächste Woche" : "7 Tage weiter";
 
   return <>
-    <div className={styles.viewControls} role="group" aria-label="Kalenderansicht">
-      {viewOptions.map((option) => <button key={option.view} type="button" aria-pressed={view === option.view} disabled={loading} onClick={() => onNavigate(anchor, option.view)}>{option.label}</button>)}
-    </div>
+    <SegmentedControl className={styles.viewControls} aria-label="Kalenderansicht" value={view}
+      onValueChange={(value) => { if (value) onNavigate(anchor, value as CourseCalendarView); }}>
+      <SegmentedControlIndicator className={styles.viewIndicator} />
+      {viewOptions.map((option) => <SegmentedControlItem key={option.view} className={styles.viewItem} value={option.view}>{option.label}</SegmentedControlItem>)}
+    </SegmentedControl>
     <div className={styles.calendarHead}>
       <div>
         <h2 id="course-calendar-heading">Vorlesungskalender</h2>
         <p>{calendarLabel(anchor, view)}</p>
       </div>
       <div className={styles.navigation} role="group" aria-label="Kalenderzeitraum">
-        <button type="button" disabled={loading} onClick={() => onNavigate(previous, view)}>{previousLabel}</button>
-        <button type="button" disabled={loading} onClick={() => onNavigate(berlinCalendarDay(), view)}>Heute</button>
-        <button type="button" disabled={loading} onClick={() => onNavigate(next, view)}>{nextLabel}</button>
+        <button type="button" onClick={() => onNavigate(previous, view)}>{previousLabel}</button>
+        <button type="button" onClick={() => onNavigate(berlinCalendarDay(), view)}>Heute</button>
+        <button type="button" onClick={() => onNavigate(next, view)}>{nextLabel}</button>
       </div>
     </div>
   </>;
@@ -419,7 +421,7 @@ export function CourseCalendar({
   const today = berlinCalendarDay();
   return <section className={styles.calendar} aria-labelledby="course-calendar-heading" aria-busy={loading}>
     <p className={styles.explanation}>Die Einträge werden aktuell aus dem DHBW-Kalendersystem gelesen. Sie gehören nicht zum gespeicherten Planungsstand dieses Kurses.</p>
-    <CalendarControls anchor={anchor} view={view} loading={loading} onNavigate={navigate} />
+    <CalendarControls anchor={anchor} view={view} onNavigate={navigate} />
     <p className={styles.status} role="status" aria-live="polite">{announcement}</p>
     {result.kind === "available"
       ? view === "week"
@@ -429,7 +431,7 @@ export function CourseCalendar({
           : <CalendarEventList events={result.events} anchor={anchor} onOpenWeek={(day) => navigate(day, "week")} />
       : <div className={styles.error} role="alert">
         <p>{errorMessage(result)}</p>
-        <button className={styles.retry} type="button" disabled={loading} onClick={() => void refresh(anchor, view)}>Erneut laden</button>
+        <button className={styles.retry} type="button" onClick={() => void refresh(anchor, view)}>Erneut laden</button>
       </div>}
   </section>;
 }
