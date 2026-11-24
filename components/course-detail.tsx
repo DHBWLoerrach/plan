@@ -57,10 +57,12 @@ export function CourseDetailView({ detail }: { detail: CourseDetail }) {
           <Link href={parallel.href}>{parallel.code}</Link>, {parallel.note}
         </li>)}</ul>
       </div> : null}
-      <nav className={styles.comparisons} aria-label="Vergleich mit anderen Kursen">
-        <span>Mit anderen Kursen des Jahrgangs {detail.year} vergleichen:</span>
-        <ul>{detail.comparisons.map((comparison) => <li key={comparison.href}><Link href={comparison.href}>{comparison.label}</Link></li>)}</ul>
-      </nav>
+      {detail.comparison ? <p className={styles.compare}>
+        <Link href={detail.comparison.href}>
+          {detail.comparison.label}
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+        </Link>
+      </p> : null}
       <div className={styles.actions}>
         <CopyLinkButton path={publicCutPath({ kind: "course", code: detail.code })} />
       </div>

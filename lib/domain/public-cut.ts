@@ -90,21 +90,7 @@ export function programCut(year: string, abbreviation: string): YearCut | null {
 /** A cut of a year, as opposed to a single course, which has a page of its own. */
 export type YearCut = Exclude<PublicCut, { kind: "course" }>;
 
-/**
- * The cuts a shown cut leads on to: from one course to its year, its program and its area, and from a program or
- * area back to the whole year. They are the way from one course to its parallel courses and back.
- */
-export function relatedCuts(cut: PublicCut, course: { program: string; programAbbreviation: string; area: string; year: number }): PublicCut[] {
-  switch (cut.kind) {
-    case "course":
-      return [
-        { kind: "year", year: course.year },
-        { kind: "program", year: course.year, abbreviation: course.programAbbreviation, name: course.program },
-        { kind: "area", year: course.year, name: course.area },
-      ];
-    case "year":
-      return [];
-    default:
-      return [{ kind: "year", year: cut.year }];
-  }
+/** The cuts a program or area leads on to: back to the whole year. */
+export function relatedCuts(cut: YearCut): PublicCut[] {
+  return cut.kind === "year" ? [] : [{ kind: "year", year: cut.year }];
 }

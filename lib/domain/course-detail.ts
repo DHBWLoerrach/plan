@@ -6,7 +6,7 @@ import { formatCalendarDay, formatCalendarPeriod, formatCompactDuration, formatP
 import { comparableEventKey, describeDeviations, type CourseDeviation } from "@/lib/domain/plan-comparison";
 import { eventCategoryLabel } from "@/lib/domain/event-category";
 import { phasePlaceLabel, type PhaseType } from "@/lib/domain/phase-type";
-import { publicCutKindLabel, publicCutPath, relatedCuts, type PublicCut } from "@/lib/domain/public-cut";
+import { publicCutPath } from "@/lib/domain/public-cut";
 import { deriveEventSemester, type CourseEvent, type CoursePhase, type CoursePlan } from "@/lib/domain/publication";
 
 export type DetailCourse = CoursePlan & { program: string; programAbbreviation: string; area: string; year: number };
@@ -74,8 +74,9 @@ export interface CourseDetail {
   duration: string;
   stand: string;
   parallels: DetailParallel[];
-  // The views that set the course beside the other courses of its program, its area or its whole year.
-  comparisons: Array<{ label: string; href: string }>;
+  // The course beside its parallel courses in the plan matrix of its program, when it has any. Partners compare the
+  // courses their students may be in; the year and the area are views of the university and too wide for them.
+  comparison: { label: string; href: string } | null;
   standing: [StandingCard, StandingCard, StandingCard];
   timeline: CourseTimeline;
   phaseYears: PhaseYear[];
@@ -117,22 +118,10 @@ function eventDate(event: Pick<CourseEvent, "startDate" | "endDate">): string {
   return formatCalendarPeriod(event.startDate, event.endDate ?? event.startDate, { weekday: true });
 }
 
-// Semesters as a list in words, like „1., 2. und 5.“
-function semesterList(semesters: number[]): string {
-  const ordinals = semesters.map((semester) => `${semester}.`);
-  return ordinals.length > 1 ? `${ordinals.slice(0, -1).join(", ")} und ${ordinals.at(-1)}` : ordinals[0];
-}
+// A list in words, like „1., 2. und 5.“ or „WIN24A und WIN24B“.
+const listInWords = new Intl.ListFormat("de-DE", { type: "conjunction" });
 
-// From the narrowest view to the widest.
-const comparisonOrder: PublicCut["kind"][] = ["program", "area", "year"];
-
-function comparisonLabel(cut: PublicCut): string {
-  switch (cut.kind) {
-    case "program": return `${publicCutKindLabel(cut.kind)} ${cut.name ?? cut.abbreviation}`;
-    case "area": return `${publicCutKindLabel(cut.kind)} ${cut.name}`;
-    default: return "ganzer Jahrgang";
-  }
-}
+const codeOrder = new Intl.Collator("de-DE", { sensitivity: "base" });
 
 // The dates of a course with their descriptions, which the comparison of dates leaves out, in a comparable order.
 function describedEvents(events: CourseEvent[], courseId: string): string {
@@ -148,7 +137,7 @@ function parallelNote(deviation: CourseDeviation, comparedSemesters: number, oth
     return dates ? "gleicher Kursverlauf und gleiche Termine, andere Terminbeschreibungen" : "gleicher Plan";
   }
   const semesters = deviation.semesters.map((entry) => entry.semester);
-  const where = semesters.length >= comparedSemesters ? "durchgehend abweichend" : `im ${semesterList(semesters)} Semester abweichend`;
+  const where = semesters.length >= comparedSemesters ? "durchgehend abweichend" : `im ${listInWords.format(semesters.map((semester) => `${semester}.`))} Semester abweichend`;
   return `Kursverlauf ${where}${dates ? `, ${dates}` : ""}`;
 }
 
@@ -370,11 +359,10 @@ export function buildCourseDetail({ course, parallels, phases, events, updatedAt
           describedEvents(events, course.id) !== describedEvents(events, other.id)),
       };
     }),
-    comparisons: relatedCuts({ kind: "course", code: course.code }, course)
-      .toSorted((left, right) => comparisonOrder.indexOf(left.kind) - comparisonOrder.indexOf(right.kind)).map((cut) => ({
-      label: comparisonLabel(cut),
-      href: publicCutPath(cut),
-    })),
+    comparison: parallels.length ? {
+      label: `${listInWords.format([course, ...parallels].map((entry) => entry.code).toSorted(codeOrder.compare))} vergleichen`,
+      href: publicCutPath({ kind: "program", year: course.year, abbreviation: course.programAbbreviation }),
+    } : null,
     standing: buildStanding(course, ownPhases, ownEvents, today),
     timeline: buildTimeline(course, ownPhases, ownEvents, today, years),
     phaseYears: buildPhaseYears(course, ownPhases, today, years),

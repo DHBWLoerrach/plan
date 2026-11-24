@@ -18,7 +18,7 @@ Vor Go-live wird mit der zuständigen DHBW-Stelle geklärt, ob Erklärung zur Ba
 
 ## Öffentliche Kursseite
 
-Ein einzelner Kurs hat eine eigene Seite statt der Planmatrix; Jahrgang, Studiengang und Bereich zeigen weiterhin die Planmatrix. Die Kursseite verlinkt diese Ansichten und die Parallelkurse ausdrücklich, sodass der Weg zur Gegenüberstellung erhalten bleibt.
+Ein einzelner Kurs hat eine eigene Seite statt der Planmatrix; Jahrgang, Studiengang und Bereich zeigen weiterhin die Planmatrix. Hat ein Kurs Parallelkurse, verlinkt die Kursseite jeden von ihnen und ihre Gegenüberstellung im Studiengang; der Link nennt alle beteiligten Kurskennungen („WIN24A und WIN24B vergleichen“), sodass vor dem Folgen klar ist, was die Planmatrix zeigen wird. Jahrgang und Bereich bleiben unter ihren Adressen erreichbar, werden von der Kursseite aber nicht angeboten: Für Duale Partner, die die Kurse ihrer Studierenden vergleichen, sind sie zu breit.
 
 - Jeder Abschnitt trägt eine Überschrift und ist über sie benannt. Ein waagerecht scrollbarer Bereich darin ist tastaturfokussierbar und trägt einen eigenen Namen („Zeitleiste, seitlich scrollbar“), damit nicht zwei ineinanderliegende Bereiche gleich heißen.
 - Wo die Studierenden gerade sind, steht in Worten („An der DHBW“, „Im Unternehmen“, „Noch nicht begonnen“); Fläche und Randfarbe der Karte ergänzen den Phasentyp nur. Ist der nächste Termin vorläufig, sagt die Karte das direkt hinter seinem Datum, wie die Termintabelle.

@@ -167,12 +167,14 @@ describe("buildCourseDetail", () => {
     expect(rows[2].marks.map((mark) => [mark.id, mark.level])).toEqual([["bar", 0], ["end", 1]]);
   });
 
-  it("leads on to the program, the area and the whole year for comparison", () => {
-    expect(detail().comparisons).toEqual([
-      { label: "Studiengang Wirtschaftsinformatik – Application Management", href: "/jahrgang/2025/studiengang/WWI" },
-      { label: "Bereich Wirtschaft", href: "/jahrgang/2025/bereich/Wirtschaft" },
-      { label: "ganzer Jahrgang", href: "/jahrgang/2025" },
-    ]);
+  it("offers the comparison with the parallel courses, named by all their codes, and nothing wider", () => {
+    const parallel = (id: string, code: string): CoursePlan => ({ id, code, studyStart: course.studyStart, studyEnd: course.studyEnd, semesters: 6 });
+
+    expect(detail({ parallels: [parallel("wwi25c", "WWI25C"), parallel("wwi25a", "WWI25A")] }).comparison).toEqual({
+      label: "WWI25A, WWI25B und WWI25C vergleichen",
+      href: "/jahrgang/2025/studiengang/WWI",
+    });
+    expect(detail().comparison).toBeNull();
   });
 
   it("lists the phases per study year, the semester once over its rows", () => {

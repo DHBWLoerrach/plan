@@ -49,23 +49,13 @@ describe("cuts read from an address", () => {
 });
 
 describe("relatedCuts", () => {
-  const course = { program: "Informatik", programAbbreviation: "TIF", area: "Technik", year: 2024 };
-
-  it("leads from one course to its year, its program and its area", () => {
-    expect(relatedCuts({ kind: "course", code: "TIF24A" }, course)).toEqual([
-      { kind: "year", year: 2024 },
-      { kind: "program", year: 2024, abbreviation: "TIF", name: "Informatik" },
-      { kind: "area", year: 2024, name: "Technik" },
-    ]);
-  });
-
   it("leads from a program or an area back to the whole year", () => {
-    expect(relatedCuts({ kind: "program", year: 2024, abbreviation: "TIF", name: "Informatik" }, course)).toEqual([{ kind: "year", year: 2024 }]);
-    expect(relatedCuts({ kind: "area", year: 2024, name: "Technik" }, course)).toEqual([{ kind: "year", year: 2024 }]);
+    expect(relatedCuts({ kind: "program", year: 2024, abbreviation: "TIF", name: "Informatik" })).toEqual([{ kind: "year", year: 2024 }]);
+    expect(relatedCuts({ kind: "area", year: 2024, name: "Technik" })).toEqual([{ kind: "year", year: 2024 }]);
   });
 
   it("leads nowhere further from a whole year", () => {
-    expect(relatedCuts({ kind: "year", year: 2024 }, course)).toEqual([]);
+    expect(relatedCuts({ kind: "year", year: 2024 })).toEqual([]);
   });
 });
 

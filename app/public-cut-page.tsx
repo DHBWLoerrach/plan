@@ -41,7 +41,7 @@ export async function PublicCutPage({ cut }: { cut: YearCut | null }) {
   const detail = publicCutData(cut);
   if (!detail) notFound();
   const title = publicCutTitle(detail.cut);
-  const links = relatedCuts(cut, detail.courses[0]);
+  const links = relatedCuts(cut);
 
   return <SiteShell><article className="plan-detail">
     <h1>{title}</h1>
