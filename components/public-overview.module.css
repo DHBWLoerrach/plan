@@ -21,7 +21,7 @@
 .groupLabel { padding: .7rem 1.1rem .3rem; color: var(--gray-strong); font-size: .8rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .suggestion { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .1rem .75rem; margin: 0 .35rem; padding: .6rem .75rem; color: var(--ink); font-size: 1.05rem; text-decoration: none; cursor: pointer; }
 /* The tint alone would not hold 3:1 against the list; the red edge does, for the pointer as well as the keys. */
-.suggestion[data-highlighted] { background: var(--theory); box-shadow: inset 3px 0 0 var(--red); }
+.suggestion[data-highlighted] { background: var(--red-tint); box-shadow: inset 3px 0 0 var(--red); }
 .suggestions[data-modality="keyboard"] .suggestion[data-highlighted] { outline: 2px solid var(--ink); outline-offset: -2px; }
 .suggestion strong { font-weight: 700; }
 .suggestion > span { min-width: 0; overflow-wrap: anywhere; }
@@ -94,8 +94,8 @@
 .chipCode { justify-self: start; color: var(--red-dark); font-weight: 700; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .2rem; }
 .chip:hover .chipCode { text-decoration-thickness: 2px; }
 .chipStatus { display: flex; align-items: center; gap: .4rem; color: var(--gray-strong); font-size: .82rem; }
-/* The patch of the detail page's legend: the phase's fill inside its contour. */
-.chipStatus::before { content: ""; width: .85rem; height: .65rem; flex: none; background: var(--theory); border: 1px solid var(--theory-outline); print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+/* The patch of the detail page's legend: theory in its full colour, practice in light grey inside its grey contour. */
+.chipStatus::before { content: ""; width: .85rem; height: .65rem; flex: none; background: var(--theory); border: 1px solid var(--theory); print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 .chipStatus[data-phase="practice"]::before { background: var(--practice); border-color: var(--practice-edge); }
 .none { color: var(--gray); }
 
@@ -119,7 +119,7 @@
 .empty h3 { margin: 0; overflow-wrap: anywhere; font-size: 1.45rem; font-weight: 800; }
 .empty p { max-width: 42rem; margin: 0; color: var(--gray-strong); font-size: 1.05rem; }
 .secondaryAction { display: inline-flex; align-items: center; min-height: 2.75rem; padding: .6rem 1.15rem; border: 1.5px solid var(--red); color: var(--red-dark); font-weight: 700; text-decoration: none; }
-.secondaryAction:hover { background: var(--theory); }
+.secondaryAction:hover { background: var(--red-tint); }
 .emptyActions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: .3rem; }
 
 @media (forced-colors: active) {

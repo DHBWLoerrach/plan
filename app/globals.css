@@ -10,17 +10,19 @@
   /* Secondary text that has to hold its own next to body text: darker than --gray without levelling the two. */
   --gray-strong: #4a555d;
   --warning: #8a6d3b; --warning-bg: #fcf8e3; --warning-border: #c29227;
-  /* Phase fills from the DHBW palette: theory (the university) red, practice (the company) grey, both lightened far
-     and edged in the full colour. A period without a phase is hatched instead of filled. */
-  /* The practice edge steps back: in full grey it weighs as much as the red theory edge, yet occurs more often and
-     would take over the table. The value still holds 3:1 against white. */
-  --theory: #f9eeef; --theory-edge: var(--red); --practice: #eceff1; --practice-edge: #8b979d;
-  /* The outline the timeline draws around a theory bar. In full red it reads as a selected or clickable element next
-     to the red controls of the page, so it keeps the hue and gives up the saturation; it holds 3.98:1 against white. */
-  --theory-outline: #cf5965;
-  --theory-fill: linear-gradient(to right, var(--theory-edge) 0 4px, var(--theory) 4px);
-  --practice-fill: linear-gradient(to right, var(--practice-edge) 0 4px, var(--practice) 4px);
+  /* Phase colours. Theory (the university) is the hue of the DHBW red at a third of its saturation: calm beside the red
+     controls, which keep the full red for „you can act here“, yet as dark as that red. Practice (the company) stays a
+     light grey. The two therefore differ in lightness, not only in hue: 4.45:1 in grey scale and print, 4.06:1 without
+     green vision. White on theory holds 5.14:1. A phase drawn as an area — a bar, a matrix cell, a patch — takes the
+     full theory colour; an entry that describes a phase in running text and controls takes the tint, edged in the
+     full colour. A period without a phase is hatched instead of filled. */
+  /* The practice edge steps back: in full grey it would weigh as much as the theory area, yet practice occurs more
+     often and would take over the table. The value still holds 3:1 against white. */
+  --theory: #a8545c; --theory-text: #fff; --theory-tint: color-mix(in srgb, var(--theory) 10%, #fff);
+  --practice: #eceff1; --practice-edge: #8b979d;
   --no-phase-fill: repeating-linear-gradient(45deg, #fff 0 6px, #e8e8e8 6px 12px);
+  /* The light ground of a red control under the pointer or the keyboard, like a highlighted suggestion. */
+  --red-tint: #f9eeef;
   color-scheme: light;
 }
 * { box-sizing: border-box; }
@@ -272,10 +274,14 @@ p[role="status"] { margin: 0; color: var(--success); }
 .timeline-flags span { position: absolute; top: calc(var(--flag-row) * 1.15rem + .5rem); transform: translateX(-50%); color: var(--gray-strong); font-size: var(--timeline-label); white-space: nowrap; }
 .timeline-flags span::before { content: ""; position: absolute; left: 50%; bottom: 100%; height: calc(var(--flag-row) * 1.15rem + .5rem); border-left: 1px solid var(--practice-edge); }
 .timeline-legend { margin: 1rem 0 0; color: var(--gray-strong); font-size: .85rem; }
-/* The same fills as in the matrix, and the same outline all around: a phase type is drawn once for the page, not once
-   per view, and the legend above the section names both. The outlines hold 3:1 against white (WCAG 1.4.11). */
+/* The same areas as in the matrix: a phase type is drawn once for the page, not once per view, and the legend above the
+   section names both. Theory holds 4.45:1 against the practice fill, the practice outline 3:1 against white. */
 .timeline [data-phase] { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-.timeline [data-phase="theory"] { background: var(--theory); border: 1px solid var(--theory-outline); }
+/* A theory bar is edged in its own colour, which only shows in forced colours, where the area is dropped and the edge
+   alone still tells where a phase begins and ends. Two theory bars in a row would melt into one area, so the second
+   starts with a white seam. */
+.timeline [data-phase="theory"] { background: var(--theory); border: 1px solid var(--theory); color: var(--theory-text); }
+.timeline [data-phase="theory"] + [data-phase="theory"] { border-left-color: #fff; }
 .timeline [data-phase="practice"] { background: var(--practice); border: 1px solid var(--practice-edge); }
 /* Below this width a bar carries neither a label nor a recognizable length. The threshold is set in rem, so it also
    catches a page whose text has been enlarged. The whole block goes, heading and note included, because the matrix
@@ -392,20 +398,22 @@ p[role="status"] { margin: 0; color: var(--success); }
 /* A phase covering several rows is one merged cell, so its content sits centred over the rows it spans. Abbreviation
    and duration are one unit and are set tightly, or the two would drift apart within the centred block. */
 .matrix td[data-phase] { position: relative; text-align: center; vertical-align: middle; line-height: 1.25; }
-.matrix td[data-phase="theory"] { background: var(--theory); }
+.matrix td[data-phase="theory"] { background: var(--theory); color: var(--theory-text); }
+.matrix td[data-phase="theory"] .matrix-block-duration { color: var(--theory-text); }
 .matrix td[data-phase="practice"] { background: var(--practice); }
 .matrix td[data-phase="none"], .phase-legend [data-phase="none"] { background: var(--no-phase-fill); }
-.phase-legend [data-phase="theory"] { background: var(--theory); }
+.phase-legend [data-phase="theory"] { background: var(--theory); color: var(--theory-text); }
 .phase-legend [data-phase="practice"] { background: var(--practice); }
-/* A phase is a filled area with a thin contour all around, the same language the overview above draws its bars in, so
-   the page states twice what a phase type looks like and never differently. The contour is an element of its own
-   rather than a border of the cell: cell borders collapse with those of their neighbours, and one would lose its
-   colour to the table line wherever two phases meet. A cell merged over several rows carries one contour around the
-   whole phase, just as a bar of the overview does. */
+/* A phase is a filled area, the same language the overview above draws its bars in, so the page states twice what a
+   phase type looks like and never differently. Practice is edged in grey, theory in its own colour: that edge only
+   shows in forced colours, where the fill is dropped and the edge alone still tells where a phase begins and ends.
+   The contour is an element of its own rather than a border of the cell: cell borders collapse with those of their
+   neighbours, and one would lose its colour to the table line wherever two phases meet. A cell merged over several
+   rows carries one contour around the whole phase, just as a bar of the overview does. */
 .matrix td[data-phase="theory"]::before, .matrix td[data-phase="practice"]::before {
   content: ""; position: absolute; inset: 0; border: 1px solid;
 }
-.matrix td[data-phase="theory"]::before { border-color: var(--theory-outline); }
+.matrix td[data-phase="theory"]::before { border-color: var(--theory); }
 .matrix td[data-phase="practice"]::before { border-color: var(--practice-edge); }
 /* The duration inside a cell may wrap: kept on one line it would claim a minimum width and widen its own column past
    the others, and the merged cell it sits in has the height to spare. */
@@ -683,10 +691,10 @@ p[role="status"] { margin: 0; color: var(--success); }
 .plan-preview { display: grid; gap: .4rem; margin: .8rem 0 0; padding: 0; list-style: none; }
 .plan-preview__item { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); gap: .75rem; align-items: start; }
 .plan-preview__semester { margin: 0; padding-top: .7rem; color: var(--gray); font-size: .85rem; font-weight: 700; text-align: right; }
-/* The fill states the phase type a second time, in the same language as matrix and timeline, and the contour carries
-   it where colours are replaced. */
+/* The colour states the phase type a second time, in the hue of matrix and timeline but as a tint, because the entry
+   carries text and controls; the contour carries it where colours are replaced. */
 .plan-preview__phase { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .2rem .75rem; padding: .6rem .75rem; border: 1px solid var(--line); print-color-adjust: exact; }
-.plan-preview__phase[data-phase="theory"] { background: var(--theory); border-color: var(--theory-outline); }
+.plan-preview__phase[data-phase="theory"] { background: var(--theory-tint); border-color: var(--theory); }
 .plan-preview__phase[data-phase="practice"] { background: var(--practice); border-color: var(--practice-edge); }
 .plan-preview__title { grid-column: 1; margin: 0; font-size: .95rem; }
 .plan-preview__title span { color: var(--gray-strong); font-size: .85rem; }
@@ -770,13 +778,14 @@ p[role="status"] { margin: 0; color: var(--success); }
 .plan-semester h3 { margin: 0 0 .5rem; font-size: 1.15rem; font-weight: 800; letter-spacing: -.01em; }
 .plan-deviation { margin: 0 0 .5rem; color: var(--gray-strong); font-size: .9rem; }
 .plan-entries, .plan-events { margin: 0; padding: 0; list-style: none; }
-/* A phase is a block in the fill and contour the diagram above draws it in, so the page states once what a phase type
-   looks like. Its type is written out in every block: the fill only supports the word (BARRIEREFREIHEIT.md). */
+/* A phase is a block in the colour the diagram above draws it in — as a tint, because the block carries text and
+   controls, edged in the full colour. Its type is written out in every block: the colour only supports the word
+   (BARRIEREFREIHEIT.md). */
 .plan-phase { border: 1px solid var(--line); border-left: 4px solid; background: #fff; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-.plan-phase[data-phase="theory"] { border-left-color: var(--theory-edge); }
+.plan-phase[data-phase="theory"] { border-left-color: var(--theory); }
 .plan-phase[data-phase="practice"] { border-left-color: var(--practice-edge); }
 .plan-phase > .plan-line { min-height: 2.75rem; padding: .35rem 1rem; }
-.plan-phase[data-phase="theory"] > .plan-line { background: var(--theory); }
+.plan-phase[data-phase="theory"] > .plan-line { background: var(--theory-tint); }
 .plan-phase[data-phase="practice"] > .plan-line { background: var(--practice); }
 /* One line of the plan: when and what. The first column keeps one width down the whole list, so periods and days
    stand under each other. */

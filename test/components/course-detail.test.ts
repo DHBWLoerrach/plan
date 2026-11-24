@@ -42,7 +42,7 @@ describe("CourseDetailView", () => {
   it("marks the card of today with the same „jetzt“ as the current phase", () => {
     render(createElement(CourseDetailView, { detail: detail() }));
 
-    const label = screen.getByText((_, element) => element?.tagName === "P" && element.textContent === "jetztDo 15.01.2026");
+    const label = screen.getByText((_, element) => element?.tagName === "P" && element.textContent === "jetzt Do 15.01.2026");
     expect(label.querySelector("span")?.textContent).toBe("jetzt");
   });
 
@@ -65,7 +65,7 @@ describe("CourseDetailView", () => {
     expect(rows.map((row) => row.textContent)).toEqual([
       "DatumTermin",
       "Mo 03.11.2025 (vorbei)Abgabe ProjektarbeitAbgabe · 1. Semestermit Reflexionsbericht",
-      "Mo 16.03.2026 – Fr 20.03.2026nächster TerminVorläufigKlausurwochePrüfung · 1. Semester",
+      "Mo 16.03.2026 – Fr 20.03.2026 nächster TerminVorläufigKlausurwochePrüfung · 1. Semester",
     ]);
   });
 

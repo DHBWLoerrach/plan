@@ -12,7 +12,8 @@ const at = (left: number): CSSProperties => ({ left: `${left}%` });
 function Track({ row, selected }: { row: TimelineRow; selected: string | undefined }) {
   return <div className={styles.track} data-marks={row.marks.length ? "" : undefined} data-today={row.today === null ? undefined : ""} style={{ "--levels": row.levels } as CSSProperties}>
     <div className={styles.trackGround} aria-hidden="true" />
-    {row.marks.length ? <div className={styles.lane} aria-hidden="true" /> : null}
+    {row.marks.length ? Array.from({ length: row.levels }, (_, level) => <div key={level} className={styles.lane} aria-hidden="true"
+      style={{ "--level": level } as CSSProperties} />) : null}
     {row.segments.map((segment) => <div key={segment.key} className={styles.segment} data-phase={segment.phase} title={segment.title} aria-hidden="true"
       style={{ ...at(segment.left), width: `${segment.width}%` }}>{segment.label}</div>)}
     {row.semesterStarts.map((start) => <span key={start.semester} aria-hidden="true">

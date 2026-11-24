@@ -12,7 +12,7 @@ const pastNote = <span className="sr-only"> (vorbei)</span>;
 function PhaseTableRow({ row }: { row: PhaseRow }) {
   return <tr data-timing={row.timing}>
     {row.semesterRows ? <th scope="row" rowSpan={row.semesterRows > 1 ? row.semesterRows : undefined}>{row.semester}. Semester</th> : null}
-    <td>{row.period}{row.timing === "now" ? <span className={styles.badge}>jetzt</span> : row.timing === "past" ? pastNote : null}</td>
+    <td>{row.period}{row.timing === "now" ? <> <span className={styles.badge}>jetzt</span></> : row.timing === "past" ? pastNote : null}</td>
     <td><span className={styles.place}><span className={styles.swatch} data-phase={row.phase} aria-hidden="true" />{row.place}</span></td>
     <td>{row.duration}</td>
   </tr>;
@@ -22,7 +22,7 @@ function EventTableRow({ event }: { event: EventRow }) {
   return <tr data-timing={event.timing}>
     <td><span className={styles.dateCell}>
       {event.date}
-      {event.timing === "next" ? <span className={styles.badge}>nächster Termin</span> : event.timing === "past" ? pastNote : null}
+      {event.timing === "next" ? <> <span className={styles.badge}>nächster Termin</span></> : event.timing === "past" ? pastNote : null}
       {event.provisional ? <span className="provisional">Vorläufig</span> : null}
     </span></td>
     <td>
@@ -73,7 +73,8 @@ export function CourseDetailView({ detail }: { detail: CourseDetail }) {
       <h2 id="standing-heading">Wo stehen die Studierenden gerade?</h2>
       <div className={styles.cards}>{detail.standing.map((card, index) => <div key={card.label} className={styles.card}
         data-current={index === 0 ? "" : undefined} data-phase={card.phase ?? undefined}>
-        <p className={styles.cardLabel}>{index === 0 ? <span className={styles.badge}>jetzt</span> : null}{card.label}</p>
+        {/* A real space between badge and day, so that copying and screen readers keep the two words apart. */}
+        <p className={styles.cardLabel}>{index === 0 ? <><span className={styles.badge}>jetzt</span> </> : null}{card.label}</p>
         <p className={styles.cardMain}>{card.main}</p>
         {card.detail ? <p className={styles.cardDetail}>{card.detail}</p> : null}
       </div>)}</div>

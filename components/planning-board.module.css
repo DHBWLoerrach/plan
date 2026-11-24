@@ -15,10 +15,10 @@
 .zoomItem[aria-checked="true"] { color: #fff; }
 /* Until the indicator is measured in the browser it has no size, so the chosen item carries the fill itself. */
 .zoom:has(.zoomIndicator:not([style*="--segmented-control-indicator-width"])) .zoomItem[aria-checked="true"] { background: var(--ink); }
-.zoomItem:focus-visible { outline: 3px solid var(--red); outline-offset: 2px; }
+.zoomItem:focus-visible { outline: 3px solid #1a1a1a; outline-offset: 2px; }
 
 .viewport { position: relative; overflow-x: auto; border: 1px solid var(--line); background: #fff; }
-.viewport:focus-visible { outline: 3px solid var(--red); outline-offset: 2px; }
+.viewport:focus-visible { outline: 3px solid #1a1a1a; outline-offset: 2px; }
 .canvas { position: relative; min-width: 100%; padding: 0 0 .75rem; }
 
 .band, .months { position: relative; height: 1.6rem; border-bottom: 1px solid var(--line); font-size: .78rem; color: var(--gray-strong); }
@@ -26,8 +26,10 @@
 .months { height: 1.2rem; font-size: .7rem; }
 .months span { position: absolute; top: 0; bottom: 0; padding-left: .2rem; border-left: 1px solid #eee; }
 
-.today { position: absolute; top: 0; bottom: 0; z-index: 3; width: 0; border-left: 2px solid var(--red); pointer-events: none; }
-.today span { position: absolute; top: 0; left: 3px; padding: 0 .25rem; background: var(--red); color: #fff; font-size: .7rem; font-weight: 700; }
+/* Today is dark, as on the public course page, with a white seam: in red it would vanish on the theory bars. The line
+   is a border, which forced colours and printing without backgrounds both keep; the seam is only an addition. */
+.today { position: absolute; top: 0; bottom: 0; z-index: 3; width: 0; margin-left: -1px; border-left: 2px solid var(--ink); box-shadow: 0 0 0 1px #fff; pointer-events: none; }
+.today span { position: absolute; top: 0; left: 4px; padding: 0 .25rem; background: var(--ink); color: #fff; font-size: .7rem; font-weight: 700; }
 
 .lane { position: relative; padding: .4rem 0 .2rem; border-bottom: 1px solid var(--line); }
 .lane[data-edited] { background: #fffafa; }
@@ -35,12 +37,20 @@
 
 .phaseTrack { position: relative; height: 2.4rem; }
 .phase { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; overflow: hidden; border: 1px solid; font-size: .74rem; white-space: nowrap; }
-.phase[data-phase="theory"] { background: var(--theory); border-color: var(--theory-outline); }
+.phase[data-phase="theory"] { background: var(--theory); border-color: var(--theory); color: var(--theory-text); }
+/* Two theory bars in a row would melt into one area, so the second starts with a white seam. */
+.phase[data-phase="theory"] + .phase[data-phase="theory"] { border-left-color: #fff; }
 .phase[data-phase="practice"] { background: var(--practice); border-color: var(--practice-edge); }
-.phase[data-differs] { outline: 2px dashed var(--warning-border); outline-offset: -4px; }
+/* Dark rather than ochre, which would vanish on the theory bars (1.8:1); it holds 3.4:1 there and far more on grey.
+   It is drawn inside the bar rather than as its outline, so the focus ring does not replace it. */
+.phase[data-differs]::after { content: ""; position: absolute; inset: 5px; border: 2px dashed #1a1a1a; pointer-events: none; }
+/* The mark reaches 7px into the bar, where the label would begin; a little more room keeps them apart. */
+.phase[data-differs] .phaseLabel { padding-inline: .6rem; }
 .phaseLabel { padding: 0 .45rem; overflow: hidden; text-overflow: ellipsis; }
 button.phase { padding: 0; color: var(--ink); font: inherit; font-size: .74rem; text-align: left; cursor: default; }
-button.phase:focus-visible { z-index: 5; outline: 3px solid var(--red); outline-offset: -3px; }
+/* The focus ring of the whole app, not a red one: red on the theory bars holds 1:1, the dark ring 3.4:1. It runs along
+   the edge, outside the dashed differs mark, so a focused phase that differs shows both. */
+button.phase:focus-visible { z-index: 5; outline: 3px solid #1a1a1a; outline-offset: -3px; }
 
 .junctions { position: absolute; top: 0; bottom: 0; pointer-events: none; }
 .junctionGesture { display: contents; }
@@ -49,7 +59,7 @@ button.phase:focus-visible { z-index: 5; outline: 3px solid var(--red); outline-
 .junctionThumb { width: 14px; height: calc(100% + 10px); pointer-events: auto; cursor: ew-resize; touch-action: none; }
 .junctionThumb::before { content: ""; position: absolute; inset: 0 4px; background: var(--ink); border-radius: 3px; box-shadow: 0 0 0 2px #fff; }
 .junctionThumb:hover::before, .junctionThumb[data-dragging]::before { background: var(--red); inset: 0 3px; }
-.junctionThumb:has(:focus-visible) { outline: 3px solid var(--red); outline-offset: 2px; }
+.junctionThumb:has(:focus-visible) { outline: 3px solid #1a1a1a; outline-offset: 2px; }
 
 .eventsRoot { position: relative; }
 .eventTrack { position: relative; margin-top: .3rem; }
@@ -61,7 +71,7 @@ button.phase:focus-visible { z-index: 5; outline: 3px solid var(--red); outline-
 .event[data-provisional] { border-style: dashed; }
 .event[data-readonly] { cursor: default; opacity: .85; touch-action: auto; }
 .event[data-dragging], .event[data-resizing] { z-index: 5; box-shadow: 0 2px 8px rgb(0 0 0 / .25); cursor: grabbing; }
-.event:focus-visible { z-index: 5; outline: 3px solid var(--red); outline-offset: 2px; }
+.event:focus-visible { z-index: 5; outline: 3px solid #1a1a1a; outline-offset: 2px; }
 .eventTitle { min-width: 0; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
 .eventEdge { position: absolute; top: 0; right: 0; bottom: 0; width: 6px; cursor: ew-resize; }
 .event[data-selected] { z-index: 4; overflow: visible; border-width: 2px; }
@@ -69,14 +79,14 @@ button.phase:focus-visible { z-index: 5; outline: 3px solid var(--red); outline-
 .event[data-selected] .eventEdge { top: calc(100% - 2px); right: auto; bottom: auto; left: calc(var(--span-end) - 8px); width: 12px; height: 11px; border-radius: 0 0 3px 3px; background: var(--ink); box-shadow: 0 0 0 2px #fff; }
 .endField { display: flex; align-items: center; gap: .5rem; }
 .endField input { min-height: 2.1rem; padding: .2rem .4rem; border: 1px solid var(--field-border); font: inherit; }
-.endField input:focus-visible { outline: 3px solid var(--red); outline-offset: 2px; }
+.endField input:focus-visible { outline: 3px solid #1a1a1a; outline-offset: 2px; }
 
 .legend { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .5rem; margin: 0; color: var(--gray-strong); font-size: .8rem; }
 .legend span { display: inline-block; width: 1.1rem; height: .8rem; border: 1px solid; margin-left: .5rem; }
 .legend span:first-child { margin-left: 0; }
-.legend [data-phase="theory"] { background: var(--theory); border-color: var(--theory-outline); }
+.legend [data-phase="theory"] { background: var(--theory); border-color: var(--theory); }
 .legend [data-phase="practice"] { background: var(--practice); border-color: var(--practice-edge); }
-.legend [data-differs] { border: 2px dashed var(--warning-border); }
+.legend [data-differs] { border: 2px dashed #1a1a1a; }
 .legend [data-provisional] { border-style: dashed; border-color: var(--gray-strong); }
 
 .panels { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 1rem; align-items: start; }
