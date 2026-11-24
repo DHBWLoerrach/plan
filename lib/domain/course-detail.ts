@@ -153,7 +153,8 @@ function stays(phases: CoursePhase[]): Array<{ type: PhaseType; startDate: strin
 }
 
 function buildStanding(course: CoursePlan, phases: CoursePhase[], events: CourseEvent[], today: string): CourseDetail["standing"] {
-  const label = `Jetzt · ${weekdayDay(today)}`;
+  // The page marks this card „jetzt“ as it marks the current phase and today, so its label is the day alone.
+  const label = weekdayDay(today);
   const runs = stays(phases);
   let now: StandingCard;
   if (today < course.studyStart) now = { label, main: "Noch nicht begonnen", detail: `Studienbeginn ${weekdayDay(course.studyStart)}`, phase: null };

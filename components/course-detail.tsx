@@ -73,7 +73,7 @@ export function CourseDetailView({ detail }: { detail: CourseDetail }) {
       <h2 id="standing-heading">Wo stehen die Studierenden gerade?</h2>
       <div className={styles.cards}>{detail.standing.map((card, index) => <div key={card.label} className={styles.card}
         data-current={index === 0 ? "" : undefined} data-phase={card.phase ?? undefined}>
-        <p className={styles.cardLabel}>{card.label}</p>
+        <p className={styles.cardLabel}>{index === 0 ? <span className={styles.badge}>jetzt</span> : null}{card.label}</p>
         <p className={styles.cardMain}>{card.main}</p>
         {card.detail ? <p className={styles.cardDetail}>{card.detail}</p> : null}
       </div>)}</div>

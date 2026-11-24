@@ -58,7 +58,7 @@ describe("buildCourseDetail", () => {
 
   it("says where the students are, where they go next and which date comes", () => {
     expect(detail().standing).toEqual([
-      { label: "Jetzt · Fr 20.11.2026", main: "An der DHBW", detail: "seit Mo 28.09.2026 · 3. Semester", phase: "theory" },
+      { label: "Fr 20.11.2026", main: "An der DHBW", detail: "seit Mo 28.09.2026 · 3. Semester", phase: "theory" },
       { label: "Als Nächstes", main: "Im Unternehmen", detail: "ab Mo 21.12.2026 · in 4 Wochen", phase: "practice" },
       { label: "Nächster Termin", main: "Anmeldung 2. Projektarbeit", detail: "Mo 05.07.2027 · in 7 Monaten", phase: null },
     ]);
@@ -80,7 +80,7 @@ describe("buildCourseDetail", () => {
   it("names the study start before it and the study end without dates", () => {
     const standing = detail({ today: "2025-09-01", events: [] }).standing;
 
-    expect(standing[0]).toEqual({ label: "Jetzt · Mo 01.09.2025", main: "Noch nicht begonnen", detail: "Studienbeginn Mi 01.10.2025", phase: null });
+    expect(standing[0]).toEqual({ label: "Mo 01.09.2025", main: "Noch nicht begonnen", detail: "Studienbeginn Mi 01.10.2025", phase: null });
     expect(standing[2]).toEqual({ label: "Studienende", main: "Sa 30.09.2028", detail: "in 37 Monaten · keine Prüfungstermine im Plan", phase: null });
   });
 

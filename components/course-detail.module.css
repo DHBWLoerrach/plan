@@ -30,11 +30,13 @@ p.copied { margin: 0; color: var(--gray-strong); }
 .cardLabel { color: var(--gray-strong); font-size: .92rem; font-weight: 700; }
 .cardMain { font-size: 1.45rem; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
 .cardDetail { color: var(--gray-strong); }
-/* The current stay carries the fill of its phase, as the timeline and the overview's status patches draw it. */
-.card[data-current] { padding-left: 1.6rem; box-shadow: inset 6px 0 0 var(--gray); }
-.card[data-current][data-phase="theory"] { background: var(--theory); border-color: var(--theory-outline); box-shadow: inset 6px 0 0 var(--theory-edge); }
-.card[data-current][data-phase="practice"] { background: var(--practice); border-color: var(--practice-edge); box-shadow: inset 6px 0 0 var(--practice-edge); }
+/* „Now“ is dark everywhere on the page: the bar and badge here, the row of the current phase, the mark of today. Red and
+   grey stay with the place, so the card carries the fill of its phase as the timeline draws it. */
+.card[data-current] { padding-left: 1.6rem; box-shadow: inset 6px 0 0 var(--ink); }
+.card[data-current][data-phase="theory"] { background: var(--theory); border-color: var(--theory-outline); }
+.card[data-current][data-phase="practice"] { background: var(--practice); border-color: var(--practice-edge); }
 .card[data-current] .cardLabel { color: var(--ink); }
+.cardLabel .badge { margin: 0 .5rem 0 0; }
 
 .legend { display: flex; flex-wrap: wrap; gap: .4rem 1.4rem; margin: 0; padding: 0; color: var(--gray-strong); font-size: .92rem; list-style: none; }
 .legend li { display: flex; align-items: center; gap: .45rem; }
@@ -55,13 +57,15 @@ p.copied { margin: 0; color: var(--gray-strong); }
 .rowLabel { display: grid; align-content: start; margin: 0; padding-top: 1.4rem; border-top: 1px solid var(--line); }
 .rowLabel span:first-child { font-size: .95rem; font-weight: 700; }
 .rowLabel span:last-child { color: var(--gray-strong); font-size: .85rem; }
-.track { --label-top: 0rem; --bar-top: 1.4rem; --bar-height: 2.1rem; --lane-top: calc(var(--bar-top) + var(--bar-height) + .3rem); --lane-pitch: 1.5rem; position: relative; height: calc(var(--bar-top) + var(--bar-height) + .5rem); border-top: 1px solid var(--line); }
+.track { --label-top: 0rem; --bar-top: 1.4rem; --bar-height: 2.1rem; --lane-top: calc(var(--bar-top) + var(--bar-height) + .3rem); --lane-pitch: 1.75rem; position: relative; height: calc(var(--bar-top) + var(--bar-height) + .5rem); border-top: 1px solid var(--line); }
 .track[data-marks] { height: calc(var(--lane-top) + var(--levels) * var(--lane-pitch) + .5rem); }
 /* The row of today gives the badge a line of its own above the semester labels, so that neither covers the other. */
 .track[data-today] { --label-top: 1.3rem; --bar-top: 2.7rem; }
 .rowLabel[data-today] { padding-top: 2.7rem; }
 .trackGround { position: absolute; inset: var(--bar-top) 0 auto; height: var(--bar-height); background: var(--surface); }
-.lane { position: absolute; left: 0; right: 0; top: var(--lane-top); height: calc(var(--levels) * var(--lane-pitch)); border: 1px solid var(--line); background: #fafafa; }
+/* Dates whose targets would overlap take the next lane down; a line between the lanes shows that the step is one of
+   lanes and not of time. */
+.lane { position: absolute; left: 0; right: 0; top: var(--lane-top); height: calc(var(--levels) * var(--lane-pitch)); border: 1px solid var(--line); background: linear-gradient(to bottom, transparent calc(var(--lane-pitch) - 1px), var(--line) 0) 0 -1px / 100% var(--lane-pitch) #fafafa; }
 .segment { position: absolute; z-index: 1; top: var(--bar-top); display: flex; align-items: center; justify-content: center; height: var(--bar-height); padding: 0 .4rem; overflow: hidden; color: var(--ink); font-size: .85rem; font-weight: 600; white-space: nowrap; }
 .semesterStart { position: absolute; z-index: 2; top: calc(var(--label-top) + .2rem); width: 2px; height: calc(var(--bar-top) + var(--bar-height) - var(--label-top) - .2rem); margin-left: -1px; background: var(--gray-strong); }
 .semesterLabel { position: absolute; z-index: 4; top: calc(var(--label-top) + .1rem); margin-left: 1px; padding: 0 .25rem 0 calc(.35rem - 1px); background: #fff; color: var(--ink); font-size: .85rem; font-weight: 700; line-height: 1rem; white-space: nowrap; }
@@ -78,7 +82,7 @@ p.copied { margin: 0; color: var(--gray-strong); }
 .track .mark[data-selected] { outline: 2px solid var(--red); outline-offset: 2px; }
 .track .mark[data-selected]:not([data-span]) { width: 1rem; height: 1rem; }
 .track .mark[data-selected][data-span] { height: .7rem; }
-/* At least 28 by 24 pixels, wider over a long date; never beyond the track. */
+/* At least 28 by 28 pixels, wider over a long date; never beyond the track. */
 .markButton { --width: max(1.75rem, var(--span)); position: absolute; z-index: 4; top: calc(var(--lane-top) + var(--level) * var(--lane-pitch)); left: clamp(0px, calc(var(--center) - var(--width) / 2), calc(100% - var(--width))); width: var(--width); height: var(--lane-pitch); padding: 0; border: 0; background: transparent; cursor: pointer; }
 .markButton:hover { background: rgb(0 0 0 / .06); }
 .markButton:focus-visible { outline: 3px solid var(--ink); outline-offset: -3px; }

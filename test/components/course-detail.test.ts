@@ -39,6 +39,13 @@ describe("CourseDetailView", () => {
     expect(markup).toContain("<h1>Informatik</h1>");
   });
 
+  it("marks the card of today with the same „jetzt“ as the current phase", () => {
+    render(createElement(CourseDetailView, { detail: detail() }));
+
+    const label = screen.getByText((_, element) => element?.tagName === "P" && element.textContent === "jetztDo 15.01.2026");
+    expect(label.querySelector("span")?.textContent).toBe("jetzt");
+  });
+
   it("lists every phase with its semester as row heading and marks the current one in words", () => {
     render(createElement(CourseDetailView, { detail: detail() }));
 
