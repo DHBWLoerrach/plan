@@ -96,6 +96,7 @@ describe("buildCourseDetail", () => {
     expect(rows.map((row) => row.today === null)).toEqual([true, false, true]);
     expect(rows[1].semesterStarts.map((start) => start.semester)).toEqual([3, 4]);
     expect(rows[0].segments[0]).toMatchObject({ phase: "practice", label: "14 Wo." });
+    expect(rows[0].segments[1]).toMatchObject({ phase: "theory", label: "ca. 12 Wo.", title: "07.01.2026 – 29.03.2026 · An der DHBW · 11 Wochen, 5 Tage" });
     expect(rows[0].segments[2]).toMatchObject({ phase: "practice", label: null, title: "30.03.2026 – 12.04.2026 · Im Unternehmen · 2 Wochen" });
     const last = rows[2].segments.at(-1)!;
     expect(last.left + last.width).toBeLessThanOrEqual(100);

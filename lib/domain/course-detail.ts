@@ -2,7 +2,7 @@
 // per semester, and its examination-relevant dates. Everything is reckoned from the Berlin calendar day the request is
 // served on, so the page needs no clock of its own in the browser.
 import { berlinCalendarDay, inclusiveDays, plusDays, plusMonths } from "@/lib/domain/calendar-day";
-import { formatCalendarDay, formatCalendarPeriod, formatCompactDuration, formatPeriodDuration } from "@/lib/domain/calendar-format";
+import { formatApproximateWeeks, formatCalendarDay, formatCalendarPeriod, formatPeriodDuration } from "@/lib/domain/calendar-format";
 import { comparableEventKey, describeDeviations, type CourseDeviation } from "@/lib/domain/plan-comparison";
 import { eventCategoryLabel } from "@/lib/domain/event-category";
 import { phasePlaceLabel, type PhaseType } from "@/lib/domain/phase-type";
@@ -271,7 +271,7 @@ function buildTimeline(course: CoursePlan, phases: CoursePhase[], events: Course
       segments: rowPhases.map((phase) => {
         const left = position(phase.startDate, row);
         const width = round(position(plusDays(phase.endDate, 1), row) - left);
-        const label = formatCompactDuration(phase.startDate, phase.endDate);
+        const label = formatApproximateWeeks(phase.startDate, phase.endDate);
         return {
           key: `${phase.semester}-${phase.startDate}`,
           phase: phaseOf(phase.type),

@@ -62,6 +62,19 @@ export function formatCompactDuration(startDate: string, endDate: string): strin
   return parts.join(" + ");
 }
 
+/**
+ * The same length rounded to whole weeks and marked as such, for readers who plan with weeks rather than check days:
+ * the public course page draws it on its bars, while its table and the internal views keep the exact length. A
+ * remainder of days mostly stems from a study start or end that falls inside a week, not from the planning. A period
+ * shorter than a week keeps its days, which rounding would turn into none.
+ */
+export function formatApproximateWeeks(startDate: string, endDate: string): string {
+  const total = inclusiveDays(startDate, endDate);
+  if (total < 7) return total === 1 ? "1 T." : `${total} T.`;
+  const weeks = Math.round(total / 7);
+  return total % 7 ? `ca. ${weeks} Wo.` : `${weeks} Wo.`;
+}
+
 /** An inclusive period; a period of a single day collapses to that day. */
 export function formatCalendarPeriod(startDate: string, endDate: string, options?: { weekday?: boolean }): string {
   const start = formatCalendarDay(startDate, options);

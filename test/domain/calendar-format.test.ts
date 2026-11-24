@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatCalendarDay, formatCalendarPeriod, formatCompactDuration, formatLongCalendarDay, formatPeriodDuration, weekdayName } from "@/lib/domain/calendar-format";
+import { formatApproximateWeeks, formatCalendarDay, formatCalendarPeriod, formatCompactDuration, formatLongCalendarDay, formatPeriodDuration, weekdayName } from "@/lib/domain/calendar-format";
 
 describe("formatCalendarDay", () => {
   it("formats a calendar day in German notation", () => {
@@ -58,6 +58,20 @@ describe("formatCompactDuration", () => {
     ["2026-10-05", "2026-10-05", "1 T."],
   ])("abbreviates the length of %s to %s as %s", (startDate, endDate, expected) => {
     expect(formatCompactDuration(startDate, endDate)).toBe(expected);
+  });
+});
+
+describe("formatApproximateWeeks", () => {
+  it.each([
+    ["2027-04-19", "2027-07-11", "12 Wo."],
+    ["2024-10-01", "2024-12-22", "ca. 12 Wo."],
+    ["2027-04-05", "2027-09-30", "ca. 26 Wo."],
+    ["2026-10-05", "2026-10-15", "ca. 2 Wo."],
+    ["2026-10-05", "2026-10-14", "ca. 1 Wo."],
+    ["2026-10-05", "2026-10-09", "5 T."],
+    ["2026-10-05", "2026-10-05", "1 T."],
+  ])("rounds the length of %s to %s to %s", (startDate, endDate, expected) => {
+    expect(formatApproximateWeeks(startDate, endDate)).toBe(expected);
   });
 });
 
