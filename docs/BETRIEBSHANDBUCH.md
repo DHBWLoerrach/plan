@@ -17,17 +17,16 @@ mit `docker exec <container>` gilt dasselbe.
 | --- | --- |
 | `DATABASE_URL` | Pfad der SQLite-Datei auf dem persistenten Volume. |
 | `BETTER_AUTH_URL` | Exakt `https://plan.apps.szi.dhbw-loerrach.de`. Die produktive Basis-URL ist zugleich die einzige Origin, der Better Auth vertraut. |
-| `BETTER_AUTH_SECRET` | Mindestens 32 Zeichen. |
+| `BETTER_AUTH_SECRET` | Eigener Zufallsschlüssel für die Produktion mit mindestens 32 Zeichen. |
 | `TRUSTED_PROXY_IPS` | Nur nötig, wenn Traefik `X-Forwarded-For` anhängt statt überschreibt: kommagetrennte Adressen oder CIDR-Bereiche der Proxys, so eng wie möglich. |
 
 Im Produktivbetrieb liest Docker Compose `BETTER_AUTH_SECRET` und die optionale Variable
 `TRUSTED_PROXY_IPS` über `env_file` aus der nicht versionierten Datei `.env.local` im Verzeichnis
-der Compose-Datei:
-
-```dotenv
-BETTER_AUTH_SECRET=<zufälliges Geheimnis mit mindestens 32 Zeichen>
-# TRUSTED_PROXY_IPS=10.0.0.7
-```
+der Compose-Datei. Bei der Ersteinrichtung auf dem Produktionshost mit `openssl rand -hex 32`
+einen Schlüssel erzeugen und die Ausgabe hinter `BETTER_AUTH_SECRET=` in diese Datei eintragen.
+Bei regulären Deployments den vorhandenen Schlüssel beibehalten. Nach einem Schlüsselwechsel verlieren
+bisherige Sitzungscookies ihre Gültigkeit und angemeldete Personen müssen sich erneut anmelden.
+Bei Bedarf die Proxy-Adressen in derselben Datei ergänzen, etwa mit `TRUSTED_PROXY_IPS=10.0.0.7`.
 
 Die Datei wird auf dem Host mit restriktiven Rechten bereitgestellt und weder in das Image kopiert
 noch in die Versionsverwaltung aufgenommen:

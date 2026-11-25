@@ -65,9 +65,19 @@ Themen später ohne Bruch an ihm andocken können.
 
 ## Entwicklung
 
+Für die erste Einrichtung die Vorlage kopieren und die lokale Konfiguration nur für das eigene Konto lesbar machen.
+
 ```bash
 npm install
-cp env.example .env.local
+cp -n env.example .env.local
+chmod 600 .env.local
+```
+
+Ist `BETTER_AUTH_SECRET=` noch leer, mit `openssl rand -hex 32` einen Schlüssel erzeugen und die
+Ausgabe in `.env.local` hinter dem Gleichheitszeichen eintragen. Den Schlüssel für weitere Starts
+beibehalten. Auch die lokalen Betriebsbefehle lesen diese Datei. Die Produktion erhält einen eigenen Schlüssel.
+
+```bash
 npm run dev    # http://localhost:3000
 npm run build
 npm run lint
@@ -77,18 +87,8 @@ Der erste Start legt `data/dhbw-mgmt.sqlite` an, spielt die Migrationen ein und
 schreibt die Bereiche und Studiengänge aus [`docs/SEED-DATEN.md`](docs/SEED-DATEN.md).
 Der Seed läuft bei jedem Start idempotent mit; einen gesonderten Befehl gibt es nicht.
 
-Für die Kommandozeilenbefehle wird eine `.env.local` benötigt; im Betrieb kommen
-dieselben Variablen aus der Container-Umgebung:
-
-```
-DATABASE_URL=./data/dhbw-mgmt.sqlite
-BETTER_AUTH_URL=http://localhost:3000
-BETTER_AUTH_SECRET=development-only-secret-change-before-production
-DHBW_CALENDAR_URL_TEMPLATE=https://webmail.dhbw-loerrach.de/owa/calendar/kal-{course}@dhbw-loerrach.de/Kalender/calendar.ics
-```
-
 `DHBW_CALENDAR_URL_TEMPLATE` ist optional und muss genau den Platzhalter `{course}`
-enthalten. Ohne Angabe verwendet die Anwendung die oben gezeigte Adresse. Eine Angabe
+enthalten. Ohne Angabe verwendet die Anwendung die Adresse aus [`env.example`](env.example). Eine Angabe
 ohne diesen Platzhalter wird beim Start abgewiesen und nicht als vorübergehend nicht
 erreichbarer Kalender ausgegeben. Der
 Vorlesungskalender ist nur für interne Konten mit systemweiter Kurseinsicht erreichbar;

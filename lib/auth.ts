@@ -12,7 +12,7 @@ const isProductionBuild = process.env.NEXT_PHASE === "phase-production-build";
 const secret = process.env.BETTER_AUTH_SECRET ?? (process.env.NODE_ENV === "production" && !isProductionBuild ? undefined : "development-only-secret-change-before-production");
 
 if (!secret) {
-  throw new Error("BETTER_AUTH_SECRET must be configured in production.");
+  throw new Error("BETTER_AUTH_SECRET fehlt oder ist leer. Erzeugen Sie mit `openssl rand -hex 32` einen Schlüssel und tragen Sie ihn in .env.local ein.");
 }
 
 export const auth = betterAuth({

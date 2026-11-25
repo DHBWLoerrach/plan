@@ -20,7 +20,18 @@ git config --local user.email "behrends@users.noreply.github.com"
 run_step "Installing npm dependencies" npm ci
 
 if [[ ! -f .env.local ]]; then
-  run_step "Creating .env.local" cp -- env.example .env.local
+  run_step "Creating .env.local" node --input-type=module -e '
+    import { randomBytes } from "node:crypto";
+    import { readFileSync, writeFileSync } from "node:fs";
+
+    const template = readFileSync("env.example", "utf8");
+    const secret = randomBytes(32).toString("hex");
+    const config = template.replace(/^BETTER_AUTH_SECRET=$/m, "BETTER_AUTH_SECRET=" + secret);
+    if (config === template) {
+      throw new Error("In env.example fehlt die erwartete Zeile BETTER_AUTH_SECRET= ohne Wert oder Kommentar.");
+    }
+    writeFileSync(".env.local", config, { flag: "wx", mode: 0o600 });
+  '
 else
   printf '==> Keeping existing .env.local\n'
 fi
