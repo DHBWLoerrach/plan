@@ -62,6 +62,9 @@ try {
     [3, "THEORY", "2027-10-01", "2028-03-31"], [4, "PRACTICE", "2028-04-01", "2028-09-30"],
     [5, "THEORY", "2028-10-01", "2029-03-31"], [6, "PRACTICE", "2029-04-01", "2029-09-30"],
   ].forEach(([semester, type, startDate, endDate]) => addPhase.run(`phase-${semester}`, semester, type, startDate, endDate));
+  sqlite.prepare(`INSERT INTO course_events
+    (id, course_id, title, description, category, start_date, end_date, provisional)
+    VALUES ('event-end', 'e2e-course', 'Bachelorprüfung', NULL, 'EXAM', '2029-09-25', '2029-09-30', 0)`).run();
 } finally {
   sqlite.close();
 }
