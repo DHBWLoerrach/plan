@@ -58,17 +58,20 @@ try {
   const addPhase = sqlite.prepare(`INSERT INTO course_phases
     (id, course_id, semester, phase_type, start_date, end_date) VALUES (?, 'e2e-course', ?, ?, ?, ?)`);
   [
-    [1, "THEORY", "2026-10-01", "2027-03-31"], [2, "PRACTICE", "2027-04-01", "2027-09-30"],
+    [1, "THEORY", "2026-10-01", "2027-03-31"], [2, "PRACTICE", "2027-04-01", "2027-09-24"],
+    [2, "THEORY", "2027-09-25", "2027-09-30"],
     [3, "THEORY", "2027-10-01", "2028-03-31"], [4, "PRACTICE", "2028-04-01", "2028-09-30"],
     [5, "THEORY", "2028-10-01", "2029-03-31"], [6, "PRACTICE", "2029-04-01", "2029-09-30"],
-  ].forEach(([semester, type, startDate, endDate]) => addPhase.run(`phase-${semester}`, semester, type, startDate, endDate));
+  ].forEach(([semester, type, startDate, endDate]) => addPhase.run(`phase-${startDate}`, semester, type, startDate, endDate));
   const addEvent = sqlite.prepare(`INSERT INTO course_events
     (id, course_id, title, description, category, start_date, end_date, provisional)
-    VALUES (?, 'e2e-course', ?, NULL, ?, ?, ?, 0)`);
+    VALUES (?, 'e2e-course', ?, NULL, ?, ?, ?, ?)`);
   [
-    ["event-end-day", "Abschlussabgabe", "SUBMISSION", "2027-09-30", null],
-    ["event-end-long", "Prüfungsphase", "EXAM", "2028-09-01", "2028-09-30"],
-    ["event-end", "Bachelorprüfung", "EXAM", "2029-09-25", "2029-09-30"],
+    ["event-end-day", "Abschlussabgabe", "SUBMISSION", "2027-09-30", null, 1],
+    ["event-august", "Augusttermin", "EXAM", "2028-08-02", "2028-08-31", 0],
+    ["event-end-long", "Prüfungsphase", "EXAM", "2028-09-01", "2028-09-30", 0],
+    ["event-end", "Bachelorprüfung", "EXAM", "2029-09-25", "2029-09-30", 1],
+    ["event-final-day", "Abschlussgespräch", "EXAM", "2029-09-30", null, 0],
   ].forEach((row) => addEvent.run(...row));
 } finally {
   sqlite.close();

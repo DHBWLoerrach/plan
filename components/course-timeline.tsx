@@ -29,7 +29,9 @@ function Track({ row, selected }: { row: TimelineRow; selected: string | undefin
       return <span key={mark.key}>
         {mark.target ? <Toggle value={mark.id} aria-label={mark.text} title={mark.text} className={styles.markButton} style={place} /> : null}
         <span className={styles.mark} aria-hidden="true" style={place} data-span={mark.span ? "" : undefined}
-          data-provisional={mark.provisional ? "" : undefined} data-selected={mark.id === selected ? "" : undefined} />
+          data-provisional={mark.provisional ? "" : undefined}>
+          {mark.id === selected ? <span className={styles.selectionPointer} /> : null}
+        </span>
       </span>;
     })}
   </div>;

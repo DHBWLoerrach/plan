@@ -97,6 +97,66 @@ function disclosure(page: Page, summary: string): Locator {
   return page.locator("summary").filter({ hasText: summary });
 }
 
+async function checkTimelineEdgeMarks(page: Page, expectedPointerColor?: string) {
+  const bounds = (toggle: Locator) => toggle.evaluate((button) => {
+    const track = button.closest("[data-marks]")!;
+    const mark = button.nextElementSibling!;
+    const rect = mark.getBoundingClientRect();
+    const lane = button.getBoundingClientRect();
+    const phases = track.querySelectorAll("[data-phase]");
+    const trackRect = track.getBoundingClientRect();
+    const pointer = mark.firstElementChild;
+    const pointerRect = pointer?.getBoundingClientRect();
+    const style = getComputedStyle(mark);
+    const outline = style.outlineStyle === "none" ? 0 : parseFloat(style.outlineWidth);
+    const outset = outline ? Math.max(0, outline + parseFloat(style.outlineOffset)) : 0;
+    return {
+      appearance: {
+        fill: style.backgroundColor, stroke: style.borderTopColor, outline: style.outlineStyle,
+        width: rect.width, height: rect.height,
+      },
+      pointerColor: pointer ? getComputedStyle(pointer).backgroundColor : null,
+      pointerGap: pointerRect ? rect.top - pointerRect.bottom : null,
+      phaseOffset: rect.left + rect.width / 2 - phases[phases.length - 1].getBoundingClientRect().left,
+      leftGap: Math.min(rect.left - outset, pointerRect?.left ?? rect.left) - trackRect.left,
+      rightGap: trackRect.right - Math.max(rect.right + outset, pointerRect?.right ?? rect.right),
+      topGap: Math.min(rect.top - outset, pointerRect?.top ?? rect.top) - lane.top,
+      bottomGap: lane.bottom - rect.bottom - outset,
+      left: rect.left,
+      middleY: rect.top + rect.height / 2,
+    };
+  });
+
+  for (const name of ["Abschlussabgabe", "Prüfungsphase", "Bachelorprüfung", "Abschlussgespräch"]) {
+    const toggle = page.getByRole("button", { name });
+    await toggle.scrollIntoViewIfNeeded();
+    const before = await bounds(toggle);
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-pressed", "true");
+    const selected = await bounds(toggle);
+
+    expect(before.pointerGap).toBeNull();
+    expect(selected.pointerGap).toBeGreaterThan(0);
+    if (expectedPointerColor !== undefined) expect(selected.pointerColor).toBe(expectedPointerColor);
+    expect(selected.appearance).toEqual(before.appearance);
+    const provisional = (await toggle.getAttribute("aria-label"))!.includes("vorläufig");
+    expect(selected.appearance.fill === selected.appearance.stroke).toBe(!provisional);
+    for (const mark of [before, selected]) {
+      expect(mark.leftGap).toBeGreaterThanOrEqual(-0.5);
+      expect(Math.abs(mark.rightGap)).toBeLessThanOrEqual(0.5);
+      expect(mark.topGap).toBeGreaterThanOrEqual(-0.5);
+      expect(mark.bottomGap).toBeGreaterThanOrEqual(-0.5);
+    }
+    expect(Math.abs(selected.phaseOffset - before.phaseOffset)).toBeLessThanOrEqual(0.5);
+    if (name === "Abschlussabgabe") expect(selected.phaseOffset).toBeGreaterThan(0);
+
+    // Click the visible edge to catch a mismatch with the hit target, including where August meets September.
+    await page.mouse.click(selected.left + 1, selected.middleY);
+    await expect(toggle).toHaveAttribute("aria-pressed", "false");
+    await expect(page.getByRole("status").filter({ hasText: "Wählen Sie einen Termin" })).toBeVisible();
+  }
+}
+
 test("edits, publishes and publicly reads a course", async ({ page }) => {
   await signIn(page, "admin@test.invalid");
   const area = page.getByRole("combobox", { name: "Bereich", exact: true });
@@ -182,41 +242,15 @@ test("edits, publishes and publicly reads a course", async ({ page }) => {
   await expect(page).toHaveURL(/\/TIF26EDIT$/u);
   await expect(page.getByText("Kurs TIF26EDIT")).toBeVisible();
 
-  // Dates ending on the last day of a study year — a single day, a short span and a 30-day span — sit flush at the right
-  // edge of the track rather than shifting inward to the wider hit target, and keep their selection ring inside the lane.
-  const markBounds = (toggle: Locator) => toggle.evaluate((button) => {
-    const track = button.closest("[data-marks]")!;
-    const mark = button.parentElement!.querySelector("[aria-hidden]")!;
-    const trackRect = track.getBoundingClientRect();
-    const buttonRect = button.getBoundingClientRect();
-    const markRect = mark.getBoundingClientRect();
-    const style = getComputedStyle(mark);
-    const ring = style.outlineStyle === "none" ? 0 : Number.parseFloat(style.outlineWidth) + Number.parseFloat(style.outlineOffset);
-    return {
-      ring,
-      laneLeft: trackRect.left, laneRight: trackRect.right,
-      laneTop: buttonRect.top, laneBottom: buttonRect.bottom,
-      markLeft: markRect.left - ring, markRight: markRect.right + ring,
-      markTop: markRect.top - ring, markBottom: markRect.bottom + ring,
-    };
-  });
-  const expectInsideLane = async (toggle: Locator, selected: boolean) => {
-    const bounds = await markBounds(toggle);
-    if (selected) expect(bounds.ring).toBeGreaterThan(0);
-    else expect(bounds.ring).toBe(0);
-    expect(bounds.markLeft).toBeGreaterThanOrEqual(bounds.laneLeft - 0.5);
-    expect(bounds.markRight).toBeLessThanOrEqual(bounds.laneRight + 0.5);
-    expect(bounds.laneRight - bounds.markRight).toBeLessThanOrEqual(0.5);
-    expect(bounds.markTop).toBeGreaterThanOrEqual(bounds.laneTop - 0.5);
-    expect(bounds.markBottom).toBeLessThanOrEqual(bounds.laneBottom + 0.5);
-  };
-  for (const name of [/Abschlussabgabe/u, /Prüfungsphase/u, /Bachelorprüfung/u]) {
-    const toggle = page.getByRole("button", { name });
-    await expectInsideLane(toggle, false);
-    await toggle.click();
-    await expect(toggle).toHaveAttribute("aria-pressed", "true");
-    await expectInsideLane(toggle, true);
+  const viewport = page.viewportSize()!;
+  for (const width of [390, viewport.width]) {
+    await page.setViewportSize({ ...viewport, width });
+    await checkTimelineEdgeMarks(page);
   }
+
+  await page.emulateMedia({ forcedColors: "active", colorScheme: "dark" });
+  await checkTimelineEdgeMarks(page, await canvasTextColor(page));
+  await page.emulateMedia({ forcedColors: null, colorScheme: null });
 
   // Back from the plan, the overview shows the search it left, not the one it was first loaded with.
   await page.goBack();
