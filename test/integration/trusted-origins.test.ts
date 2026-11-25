@@ -19,7 +19,7 @@ const temporaryDirectories: string[] = [];
 
 /** The application behind Traefik, wired to a throwaway database: only the request origin differs. */
 function createAuth() {
-  const directory = mkdtempSync(path.join(os.tmpdir(), "dhbw-mgmt-trusted-origins-"));
+  const directory = mkdtempSync(path.join(os.tmpdir(), "plan-trusted-origins-"));
   temporaryDirectories.push(directory);
   const sqlite = new Database(path.join(directory, "database.sqlite"));
   applySchema(sqlite);

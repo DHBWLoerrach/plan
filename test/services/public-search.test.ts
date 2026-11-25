@@ -157,7 +157,7 @@ describe("readPublicCourse", () => {
   });
 
   it("keeps reading one snapshot when another connection withdraws the course between its reads", () => {
-    const directory = mkdtempSync(path.join(os.tmpdir(), "dhbw-mgmt-public-course-"));
+    const directory = mkdtempSync(path.join(os.tmpdir(), "plan-public-course-"));
     const file = path.join(directory, "app.sqlite");
     const setup = new Database(file);
     setup.pragma("journal_mode = WAL");

@@ -1,7 +1,7 @@
 services:
   app:
     image: ghcr.io/dhbwloerrach/dhbw-mgmt:${APP_VERSION:?APP_VERSION ist nicht gesetzt}
-    container_name: dhbw-mgmt
+    container_name: plan
     restart: unless-stopped
     init: true
     stop_grace_period: 30s
@@ -44,13 +44,13 @@ services:
     labels:
       - 'traefik.enable=true'
       - 'traefik.docker.network=network_szi'
-      - 'traefik.http.routers.dhbw-mgmt.rule=Host(`plan.apps.szi.dhbw-loerrach.de`)'
-      - 'traefik.http.routers.dhbw-mgmt.entrypoints=websecure'
-      - 'traefik.http.routers.dhbw-mgmt.tls.certresolver=letsencrypt'
-      - 'traefik.http.routers.dhbw-mgmt.middlewares=dhbw-mgmt-ratelimit'
-      - 'traefik.http.middlewares.dhbw-mgmt-ratelimit.ratelimit.average=30'
-      - 'traefik.http.middlewares.dhbw-mgmt-ratelimit.ratelimit.burst=60'
-      - 'traefik.http.services.dhbw-mgmt.loadbalancer.server.port=3000'
+      - 'traefik.http.routers.plan.rule=Host(`plan.apps.szi.dhbw-loerrach.de`)'
+      - 'traefik.http.routers.plan.entrypoints=websecure'
+      - 'traefik.http.routers.plan.tls.certresolver=letsencrypt'
+      - 'traefik.http.routers.plan.middlewares=plan-ratelimit'
+      - 'traefik.http.middlewares.plan-ratelimit.ratelimit.average=30'
+      - 'traefik.http.middlewares.plan-ratelimit.ratelimit.burst=60'
+      - 'traefik.http.services.plan.loadbalancer.server.port=3000'
 
 networks:
   network_szi:

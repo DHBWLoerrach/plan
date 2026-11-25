@@ -19,7 +19,7 @@ const temporaryDirectories: string[] = [];
 
 /** The application behind Traefik, wired to a throwaway database: only the forwarded headers differ per request. */
 function createAuth() {
-  const directory = mkdtempSync(path.join(os.tmpdir(), "dhbw-mgmt-rate-limit-"));
+  const directory = mkdtempSync(path.join(os.tmpdir(), "plan-rate-limit-"));
   temporaryDirectories.push(directory);
   const sqlite = new Database(path.join(directory, "database.sqlite"));
   applySchema(sqlite);

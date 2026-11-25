@@ -19,7 +19,7 @@ const productionPasswordLinkPattern = /^https:\/\/plan\.apps\.szi\.dhbw-loerrach
 type AccountSeed = { email?: string; systemAdmin?: number; status?: string };
 
 function createDatabase({ email = "admin@dhbw-loerrach.de", systemAdmin = 1, status = "ACTIVE" }: AccountSeed = {}) {
-  const directory = mkdtempSync(path.join(os.tmpdir(), "dhbw-mgmt-emergency-reset-"));
+  const directory = mkdtempSync(path.join(os.tmpdir(), "plan-emergency-reset-"));
   temporaryDirectories.push(directory);
   const databasePath = path.join(directory, "database.sqlite");
   const sqlite = new Database(databasePath);

@@ -66,7 +66,7 @@ function withWriteAfterFirstRead(sqlite: Database.Database, other: Database.Data
 }
 
 it("saves while another connection writes during the save, instead of failing with a locked database", () => {
-  const directory = mkdtempSync(path.join(os.tmpdir(), "dhbw-mgmt-concurrent-"));
+  const directory = mkdtempSync(path.join(os.tmpdir(), "plan-concurrent-"));
   directories.push(directory);
   const file = path.join(directory, "app.sqlite");
   const sqlite = open(file, 5000);

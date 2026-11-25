@@ -59,7 +59,7 @@ afterEach(() => {
 });
 
 function databaseFile() {
-  const directory = mkdtempSync(path.join(os.tmpdir(), "dhbw-mgmt-migrations-"));
+  const directory = mkdtempSync(path.join(os.tmpdir(), "plan-migrations-"));
   directories.push(directory);
   return path.join(directory, "app.sqlite");
 }

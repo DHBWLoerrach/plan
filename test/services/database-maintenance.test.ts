@@ -13,7 +13,7 @@ import { applySchema, migrationIds } from "@/test/schema";
 const temporaryDirectories: string[] = [];
 
 function createDirectory() {
-  const directory = mkdtempSync(path.join(os.tmpdir(), "dhbw-mgmt-maintenance-"));
+  const directory = mkdtempSync(path.join(os.tmpdir(), "plan-maintenance-"));
   temporaryDirectories.push(directory);
   return directory;
 }

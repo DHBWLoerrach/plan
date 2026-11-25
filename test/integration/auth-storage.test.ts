@@ -30,7 +30,7 @@ afterEach(() => {
  */
 describe("Better Auth storage", () => {
   it("stores shared authentication timestamps as epoch-millisecond integers", async () => {
-    const directory = mkdtempSync(path.join(os.tmpdir(), "dhbw-mgmt-auth-storage-"));
+    const directory = mkdtempSync(path.join(os.tmpdir(), "plan-auth-storage-"));
     temporaryDirectories.push(directory);
     vi.stubEnv("DATABASE_URL", path.join(directory, "database.sqlite"));
     vi.stubEnv("BETTER_AUTH_URL", baseUrl);

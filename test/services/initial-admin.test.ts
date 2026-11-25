@@ -16,7 +16,7 @@ const temporaryDirectories: string[] = [];
 const productionPasswordLinkPattern = /^https:\/\/plan\.apps\.szi\.dhbw-loerrach\.de\/intern\/passwort-vergeben#[A-Za-z0-9_-]+\n$/;
 
 function createDatabase({ migrated = true }: { migrated?: boolean } = {}) {
-  const directory = mkdtempSync(path.join(os.tmpdir(), "dhbw-mgmt-initial-admin-"));
+  const directory = mkdtempSync(path.join(os.tmpdir(), "plan-initial-admin-"));
   temporaryDirectories.push(directory);
   const databasePath = path.join(directory, "database.sqlite");
   const sqlite = new Database(databasePath);

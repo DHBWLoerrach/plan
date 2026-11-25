@@ -61,7 +61,7 @@ Anwendung, prüft ihn mit `PRAGMA integrity_check` und `PRAGMA foreign_key_check
 Migrationsstand. Er überschreibt niemals eine vorhandene Zieldatei.
 
 ```bash
-docker compose exec app npm run backup:db -- --to /backup/dhbw-mgmt-$(date +%F).sqlite
+docker compose exec app npm run backup:db -- --to /backup/plan-$(date +%F).sqlite
 ```
 
 Schlägt die Prüfung fehl, bricht der Befehl mit Exit-Code 1 ab; die unbrauchbare Zieldatei bleibt
@@ -71,7 +71,7 @@ Ein Host-Cron oder systemd-Timer ruft den Befehl täglich auf — die Anwendung 
 Scheduler. Beispiel für einen Host-Cron:
 
 ```cron
-30 2 * * * cd /srv/dhbw-mgmt && docker compose exec -T app npm run backup:db -- --to /backup/dhbw-mgmt-$(date +\%F).sqlite >> /var/log/dhbw-mgmt-backup.log 2>&1
+30 2 * * * cd /srv/plan && docker compose exec -T app npm run backup:db -- --to /backup/plan-$(date +\%F).sqlite >> /var/log/plan-backup.log 2>&1
 ```
 
 Der geprüfte Snapshot wird anschließend an das Backupziel übertragen; Verschlüsselung, Ziel und
