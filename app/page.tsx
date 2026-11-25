@@ -3,7 +3,7 @@ import { connection } from "next/server";
 import { ExternalLinkText } from "@/components/external-link-text";
 import { PublicOverview } from "@/components/public-overview";
 import { SiteShell } from "@/components/site-shell";
-import { programContactsUrl } from "@/lib/product";
+import { programContactsUrl, universityWebsiteUrl } from "@/lib/product";
 
 import { publicOverviewData, searchParam } from "./data";
 
@@ -16,7 +16,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   return <SiteShell>
     <section className="search-hero">
       <h1>Blockpläne</h1>
-      <p className="search-hero__lead">Wann sind die Studierenden im Unternehmen, wann an der DHBW? Hier finden Sie die Pläne aller laufenden Jahrgänge – immer im aktuellen, freigegebenen Stand. Sie heißen auch Studienzeitplan, Semesterplan oder Studienverlauf.</p>
+      <p className="search-hero__lead">Wann sind die Studierenden im Unternehmen, wann an der Hochschule? Hier finden Sie die Blockpläne aller laufenden Jahrgänge der <a href={universityWebsiteUrl}><ExternalLinkText>DHBW Lörrach</ExternalLinkText></a> – immer im aktuellen, freigegebenen Stand. Sie heißen auch Studienzeitplan, Semesterplan oder Studienverlauf.</p>
     </section>
 
     <PublicOverview overview={overview} initialQuery={query} initialYear={searchParam(raw, "year") ?? ""} />

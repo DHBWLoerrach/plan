@@ -3,8 +3,9 @@ import type { ReactNode } from "react";
 
 import { AccountMenu } from "@/components/account-menu";
 import { DhbwMark } from "@/components/dhbw-mark";
+import { ExternalLinkText } from "@/components/external-link-text";
 import { getActiveAccount } from "@/lib/internal-auth";
-import { productName } from "@/lib/product";
+import { productName, universityWebsiteUrl } from "@/lib/product";
 
 /**
  * The page frame. A section navigation belongs in `nav` rather than in the content, because the skip
@@ -39,6 +40,6 @@ export async function SiteShell({ nav, children }: { nav?: ReactNode; children: 
     </header>
     {nav}
     <main id="inhalt" className="site-main">{children}</main>
-    <footer className="site-footer"><div><strong>DHBW Lörrach</strong><span>Plan</span></div><nav aria-label="Rechtliche Informationen"><a href="https://www.dhbw.de/impressum/">Impressum</a><a href="https://www.dhbw.de/datenschutz/">Datenschutz</a><Link href="/barrierefreiheit">Barrierefreiheit</Link></nav></footer>
+    <footer className="site-footer"><div className="site-footer__brand"><strong>DHBW Lörrach</strong><span className="site-footer__separator" aria-hidden="true">·</span><a href={universityWebsiteUrl}><ExternalLinkText>dhbw-loerrach.de</ExternalLinkText></a></div><nav aria-label="Rechtliche Informationen"><a href="https://www.dhbw.de/impressum/">Impressum</a><a href="https://www.dhbw.de/datenschutz/">Datenschutz</a><Link href="/barrierefreiheit">Barrierefreiheit</Link></nav></footer>
   </>;
 }
