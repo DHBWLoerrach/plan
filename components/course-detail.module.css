@@ -85,15 +85,15 @@ p.copied { margin: 0; color: var(--gray-strong); }
 .mark { position: absolute; display: block; width: .75rem; height: .75rem; border: 2px solid var(--ink); border-radius: 50%; background: var(--ink); }
 .mark[data-span] { width: 1.5rem; height: .45rem; border-width: 1.5px; border-radius: 0; background: var(--gray-strong); border-color: var(--gray-strong); }
 .mark[data-provisional] { background: #fff; }
-/* Visible mark and hit target share one clamped box of at least 28 pixels, so neither runs past the track nor drifts
-   apart at its edges. */
-.track .mark, .markButton { --target: max(1.75rem, var(--span)); }
-.track .mark { top: calc(var(--lane-top) + (var(--level) + .5) * var(--lane-pitch)); left: clamp(calc(var(--target) / 2), var(--center), calc(100% - var(--target) / 2)); transform: translate(-50%, -50%); }
-.track .mark[data-span] { width: max(1.25rem, var(--span)); }
-.track .mark[data-selected] { outline: 2px solid var(--ink); outline-offset: 2px; }
-.track .mark[data-selected]:not([data-span]) { width: 1rem; height: 1rem; }
+/* The visible mark stays inside the track by its own width plus any selection ring, instead of pulling inward to the
+   wider 28-pixel hit target. */
+.track .mark { --mark-width: .75rem; --mark-ring: 0px; --mark-reach: calc(var(--mark-width) / 2 + var(--mark-ring)); top: calc(var(--lane-top) + (var(--level) + .5) * var(--lane-pitch)); left: clamp(var(--mark-reach), var(--center), calc(100% - var(--mark-reach))); width: var(--mark-width); transform: translate(-50%, -50%); }
+.track .mark[data-span] { --mark-width: clamp(1.25rem, var(--span), calc(100% - 2 * var(--mark-ring))); }
+.track .mark[data-selected] { --mark-ring: 4px; outline: 2px solid var(--ink); outline-offset: 2px; }
+.track .mark[data-selected]:not([data-span]) { --mark-width: 1rem; height: 1rem; }
 .track .mark[data-selected][data-span] { height: .7rem; }
-.markButton { position: absolute; z-index: 4; top: calc(var(--lane-top) + var(--level) * var(--lane-pitch)); left: clamp(0px, calc(var(--center) - var(--target) / 2), calc(100% - var(--target))); width: var(--target); height: var(--lane-pitch); padding: 0; border: 0; background: transparent; cursor: pointer; }
+/* At least 28 by 28 pixels, wider over a long date; never beyond the track. */
+.markButton { --target: max(1.75rem, var(--span)); position: absolute; z-index: 4; top: calc(var(--lane-top) + var(--level) * var(--lane-pitch)); left: clamp(0px, calc(var(--center) - var(--target) / 2), calc(100% - var(--target))); width: var(--target); height: var(--lane-pitch); padding: 0; border: 0; background: transparent; cursor: pointer; }
 .markButton:hover { background: rgb(0 0 0 / .06); }
 .markButton:focus-visible { outline: 3px solid var(--ink); outline-offset: -3px; }
 

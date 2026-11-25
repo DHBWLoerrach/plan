@@ -182,9 +182,9 @@ test("edits, publishes and publicly reads a course", async ({ page }) => {
   await expect(page).toHaveURL(/\/TIF26EDIT$/u);
   await expect(page.getByText("Kurs TIF26EDIT")).toBeVisible();
 
-  // A short multi-day date at the very end of the track stays inside its lane, unselected and with its selection ring.
-  const endDateToggle = page.getByRole("button", { name: /Bachelorprüfung/u });
-  const endDateBounds = () => endDateToggle.evaluate((button) => {
+  // Dates ending on the last day of a study year — a single day, a short span and a 30-day span — sit flush at the right
+  // edge of the track rather than shifting inward to the wider hit target, and keep their selection ring inside the lane.
+  const markBounds = (toggle: Locator) => toggle.evaluate((button) => {
     const track = button.closest("[data-marks]")!;
     const mark = button.parentElement!.querySelector("[aria-hidden]")!;
     const trackRect = track.getBoundingClientRect();
@@ -200,19 +200,23 @@ test("edits, publishes and publicly reads a course", async ({ page }) => {
       markTop: markRect.top - ring, markBottom: markRect.bottom + ring,
     };
   });
-  const expectInsideLane = async (selected: boolean) => {
-    const bounds = await endDateBounds();
+  const expectInsideLane = async (toggle: Locator, selected: boolean) => {
+    const bounds = await markBounds(toggle);
     if (selected) expect(bounds.ring).toBeGreaterThan(0);
     else expect(bounds.ring).toBe(0);
     expect(bounds.markLeft).toBeGreaterThanOrEqual(bounds.laneLeft - 0.5);
     expect(bounds.markRight).toBeLessThanOrEqual(bounds.laneRight + 0.5);
+    expect(bounds.laneRight - bounds.markRight).toBeLessThanOrEqual(0.5);
     expect(bounds.markTop).toBeGreaterThanOrEqual(bounds.laneTop - 0.5);
     expect(bounds.markBottom).toBeLessThanOrEqual(bounds.laneBottom + 0.5);
   };
-  await expectInsideLane(false);
-  await endDateToggle.click();
-  await expect(endDateToggle).toHaveAttribute("aria-pressed", "true");
-  await expectInsideLane(true);
+  for (const name of [/Abschlussabgabe/u, /Prüfungsphase/u, /Bachelorprüfung/u]) {
+    const toggle = page.getByRole("button", { name });
+    await expectInsideLane(toggle, false);
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-pressed", "true");
+    await expectInsideLane(toggle, true);
+  }
 
   // Back from the plan, the overview shows the search it left, not the one it was first loaded with.
   await page.goBack();
