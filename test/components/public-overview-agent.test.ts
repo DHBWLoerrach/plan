@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { createAgent } from "@ui-sdk/react/agent";
 import { createElement } from "react";
 import { afterEach, beforeAll, expect, it, vi } from "vitest";
@@ -55,13 +55,12 @@ it("lets a ui-sdk agent search for plans and filter by study start", async () =>
   const year = components.find((entry) => entry.label === yearLabel)?.items?.find((item) => item.label === "2025");
   if (!year) throw new Error("The agent cannot find study start 2025");
 
-  await act(async () => {
-    const result = await agent.act({ steps: [
-      { ref: searchLabel, action: "setValue", args: ["pers"] },
-      { ref: yearLabel, action: "setValue", args: [year.value] },
-    ] });
-    expect(result.ok, result.error?.message).toBe(true);
-  });
+  // Not wrapped in act(): the bridge waits for each value to render, which act() defers.
+  const picked = await agent.act({ steps: [
+    { ref: searchLabel, action: "setValue", args: ["pers"] },
+    { ref: yearLabel, action: "setValue", args: [year.value] },
+  ] });
+  expect(picked.ok, picked.error?.message).toBe(true);
 
   expect(screen.getByRole<HTMLInputElement>("combobox", { name: searchLabel }).value).toBe("pers");
   expect(screen.getByRole("radio", { name: year.label }).getAttribute("aria-checked")).toBe("true");
@@ -71,18 +70,14 @@ it("lets a ui-sdk agent search for plans and filter by study start", async () =>
   expect(results.queryByRole("link", { name: "WPM24A" })).toBeNull();
   expect(results.queryByRole("link", { name: "TIF25A" })).toBeNull();
 
-  await act(async () => {
-    const result = await agent.act({ steps: [{ ref: searchLabel, action: "setOpen", args: [true] }] });
-    expect(result.ok, result.error?.message).toBe(true);
-  });
+  const opened = await agent.act({ steps: [{ ref: searchLabel, action: "setOpen", args: [true] }] });
+  expect(opened.ok, opened.error?.message).toBe(true);
   const found = await agent.query({ within: searchLabel });
   if ("error" in found) throw new Error(found.error);
   expect(found[0].items?.map((item) => item.label)).toEqual(["BWL – Personalmanagement 2 Jahrgänge", "WPM25A Start Okt. 2025 · 2. Studienjahr"]);
 
-  await act(async () => {
-    const result = await agent.act({ steps: [{ ref: searchLabel, action: "clear" }] });
-    expect(result.ok, result.error?.message).toBe(true);
-  });
+  const reset = await agent.act({ steps: [{ ref: searchLabel, action: "clear" }] });
+  expect(reset.ok, reset.error?.message).toBe(true);
   expect(screen.getByRole<HTMLInputElement>("combobox", { name: searchLabel }).value).toBe("");
   const cleared = within(screen.getByRole("table"));
   expect(cleared.getByRole("link", { name: "TIF25A" })).toBeTruthy();

@@ -119,13 +119,12 @@ it("lets a ui-sdk agent pick a date on the timeline and copy the link", async ()
   }
   expect(components.map((entry) => entry.label)).toEqual(expect.arrayContaining(["Termine in der Zeitleiste", "Link kopieren"]));
 
-  await act(async () => {
-    const result = await agent.act({ steps: [
-      { ref: "Mo 03.11.2025: Abgabe Projektarbeit (Abgabe)", action: "setPressed", args: [true] },
-      { ref: "Link kopieren", action: "press" },
-    ] });
-    expect(result.ok, result.error?.message).toBe(true);
-  });
+  // Not wrapped in act(): the bridge waits for each value to render, which act() defers.
+  const result = await agent.act({ steps: [
+    { ref: "Mo 03.11.2025: Abgabe Projektarbeit (Abgabe)", action: "setPressed", args: [true] },
+    { ref: "Link kopieren", action: "press" },
+  ] });
+  expect(result.ok, result.error?.message).toBe(true);
 
   expect(screen.getByRole("button", { name: "Mo 03.11.2025: Abgabe Projektarbeit (Abgabe)" }).getAttribute("aria-pressed")).toBe("true");
   expect(screen.getByText("Link in die Zwischenablage kopiert.")).toBeTruthy();
