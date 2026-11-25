@@ -176,7 +176,7 @@ describe("calendarEventTimeOnDay", () => {
 
 describe("calendarDescriptionParts", () => {
   it("leaves a single short line as it is", () => {
-    expect(calendarDescriptionParts("  Herr Rapp  ")).toEqual({ firstLine: "Herr Rapp", rest: "", collapsible: false });
+    expect(calendarDescriptionParts("  Herr Schmidt  ")).toEqual({ firstLine: "Herr Schmidt", rest: "", collapsible: false });
   });
 
   it("splits a description of several lines after its first, dropping the blank lines around the rest", () => {
