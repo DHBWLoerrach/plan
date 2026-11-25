@@ -1,5 +1,5 @@
 services:
-  app:
+  plan:
     image: ghcr.io/dhbwloerrach/plan:${APP_VERSION:?APP_VERSION ist nicht gesetzt}
     container_name: plan
     restart: unless-stopped
