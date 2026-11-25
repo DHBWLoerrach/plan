@@ -43,7 +43,7 @@ Befehl. Ein Wechsel der Version — Aktualisierung wie Rückweg — ändert auss
 APP_VERSION=<Tag des freigegebenen Images>
 ```
 
-Das Image wird nicht auf dem VPS gebaut, sondern aus `ghcr.io/dhbwloerrach/dhbw-mgmt` bezogen.
+Das Image wird nicht auf dem VPS gebaut, sondern aus `ghcr.io/dhbwloerrach/plan` bezogen.
 
 Die Anwendung setzt Content-Security-Policy, `X-Content-Type-Options`, `Referrer-Policy` und
 `Permissions-Policy` selbst; am Proxy ist dafür nichts zu konfigurieren. Die Systemgrenze zu
