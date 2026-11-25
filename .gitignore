@@ -14,9 +14,6 @@
 /coverage
 /test-results/
 
-# Amp orb portals
-/.amp/portals/
-
 # next.js
 /.next*/
 /out/
