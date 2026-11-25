@@ -16,9 +16,9 @@ Die Blockplanung ist der erste Baustein einer breiter angelegten
 Anwendung für den Studienbetrieb.
 
 Die Anwendung trägt den Produktnamen **DHBW Lörrach Plan** und ist für den Betrieb
-unter `https://plan.apps.szi.dhbw-loerrach.de` vorgesehen. Das Repository heißt
-entsprechend `plan`; Container-Image und Datenbankdatei tragen weiterhin den früheren
-Namen `dhbw-mgmt`.
+unter `https://plan.apps.szi.dhbw-loerrach.de` vorgesehen. Repository und Container-Image
+heißen entsprechend `plan`; die Datenbankdatei trägt weiterhin den früheren Namen
+`dhbw-mgmt`.
 
 ## Stand
 

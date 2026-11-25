@@ -8,7 +8,7 @@ funktionieren, sichern die zugehörigen Skripte und Tests ab.
 Die Datei `docker-compose.yml` im Wurzelverzeichnis des Repositorys ist die ausführbare
 Produktionskonfiguration für den VPS. Die folgenden `docker compose`-Befehle werden auf dem VPS ausgeführt.
 
-Alle Befehle laufen im Anwendungscontainer. Die Beispiele verwenden `docker compose exec app`;
+Alle Befehle laufen im Anwendungscontainer. Die Beispiele verwenden `docker compose exec plan`;
 mit `docker exec <container>` gilt dasselbe.
 
 ## Umgebung
@@ -61,7 +61,7 @@ Anwendung, prüft ihn mit `PRAGMA integrity_check` und `PRAGMA foreign_key_check
 Migrationsstand. Er überschreibt niemals eine vorhandene Zieldatei.
 
 ```bash
-docker compose exec app npm run backup:db -- --to /backup/plan-$(date +%F).sqlite
+docker compose exec plan npm run backup:db -- --to /backup/plan-$(date +%F).sqlite
 ```
 
 Schlägt die Prüfung fehl, bricht der Befehl mit Exit-Code 1 ab; die unbrauchbare Zieldatei bleibt
@@ -71,7 +71,7 @@ Ein Host-Cron oder systemd-Timer ruft den Befehl täglich auf — die Anwendung 
 Scheduler. Beispiel für einen Host-Cron:
 
 ```cron
-30 2 * * * cd /srv/plan && docker compose exec -T app npm run backup:db -- --to /backup/plan-$(date +\%F).sqlite >> /var/log/plan-backup.log 2>&1
+30 2 * * * cd /srv/plan && docker compose exec -T plan npm run backup:db -- --to /backup/plan-$(date +\%F).sqlite >> /var/log/plan-backup.log 2>&1
 ```
 
 Der geprüfte Snapshot wird anschließend an das Backupziel übertragen; Verschlüsselung, Ziel und
@@ -83,34 +83,34 @@ Migrationen laufen nicht nebenbei: Die Anwendung wird dafür gestoppt.
 
 1. **Anwendung stoppen.**
    ```bash
-   docker compose stop app
+   docker compose stop plan
    ```
 2. **Sicherung erstellen** — mit demselben geprüften Verfahren wie täglich, datiert und getrennt
    abgelegt. Dazu die aktuelle Konfiguration sichern.
    ```bash
-   docker compose run --rm app npm run backup:db -- --to /backup/vor-migration-$(date +%F).sqlite
+   docker compose run --rm plan npm run backup:db -- --to /backup/vor-migration-$(date +%F).sqlite
    ```
 3. **Neues Image bereitstellen**, aber noch nicht starten. Die Migrationen liegen im Image; nur das
    neue Image kennt die neuen. Aus dem alten Image aufgerufen, meldet `migrate:db` „nichts zu tun"
    und der anschließende Start des neuen Images bricht mit den ausstehenden Migrationen ab.
    ```bash
    # in .env: APP_VERSION=<neue Version>
-   docker compose pull app
+   docker compose pull plan
    ```
 4. **Migrationen ausführen — aus dem neuen Image.** `docker compose run` verwendet das Image, das
    `APP_VERSION` nennt: Die Variable muss also bereits auf die neue Version zeigen. Der Befehl wendet
    jede noch nicht eingespielte Migration in ihrer Versionsreihenfolge an, jede in einer eigenen
    Transaktion, und nennt am Ende den erreichten Migrationsstand.
    ```bash
-   docker compose run --rm app npm run migrate:db
+   docker compose run --rm plan npm run migrate:db
    ```
 5. **Neues Image starten und verifizieren:** Container-Healthcheck, HTTP-Erreichbarkeit, eine
    erneute Sicherung als Datenbankprüfung sowie ein fachlicher Smoke-Test (öffentliche Suche öffnen,
    einen veröffentlichten Kurs aufrufen, intern anmelden). `up` erzeugt den Container aus dem
-   Image neu, das `APP_VERSION` nennt, und wartet auf den Healthcheck; `docker compose start app`
+   Image neu, das `APP_VERSION` nennt, und wartet auf den Healthcheck; `docker compose start plan`
    startete dagegen den vorhandenen Container mit seinem bisherigen Image.
    ```bash
-   docker compose up -d --wait app
+   docker compose up -d --wait plan
    ```
 6. **Dokumentieren:** Sicherungsdatei, Migrationsstand vor und nach dem Schritt, Prüfergebnis und ein
    gegebenenfalls ausgeführter Rückweg.
@@ -124,7 +124,7 @@ Schlägt die Migration oder eine Prüfung fehl, wird nicht mit der neuen Version
 
 1. **Anwendung stoppen** — die Wiederherstellung erfolgt ausschließlich bei gestoppter Anwendung.
    ```bash
-   docker compose stop app
+   docker compose stop plan
    ```
 2. **Snapshot einspielen.** Der Befehl prüft den Snapshot vor dem Einspielen und lehnt ihn ab, wenn
    er Migrationen enthält, die diese Anwendungsversion nicht kennt — sein Schema wäre dann neuer als
@@ -134,14 +134,14 @@ Schlägt die Migration oder eine Prüfung fehl, wird nicht mit der neuen Version
    Befehl nennt den Pfad. Scheitert eine der Verschiebungen, macht er die bereits erfolgten
    rückgängig und lässt die vorhandene Datenbank an ihrem Platz.
    ```bash
-   docker compose run --rm app npm run restore:db -- --from /backup/vor-migration-2026-07-27.sqlite
+   docker compose run --rm plan npm run restore:db -- --from /backup/vor-migration-2026-07-27.sqlite
    ```
 3. **Passende Konfiguration wiederherstellen und das vorherige Container-Image starten.** `APP_VERSION`
    in `.env` zeigt danach wieder auf die vorherige Version; deren Image liegt unter ihrem Tag weiterhin
    in der Registry.
    ```bash
    # in .env: APP_VERSION=<vorherige Version>
-   docker compose up -d --wait app
+   docker compose up -d --wait plan
    ```
 4. **Verifizieren** wie nach einer Migration.
 5. **Dokumentieren**, dass und warum der Rückweg gegangen wurde.
@@ -161,17 +161,17 @@ Die ersetzte Datenbank bleibt liegen und wird erst nach einem verifizierten Betr
 2. Migrationen ausführen — ohne sie startet die Anwendung nicht. Noch läuft kein Anwendungscontainer,
    deshalb `run` statt `exec`:
    ```bash
-   docker compose run --rm app npm run migrate:db
+   docker compose run --rm plan npm run migrate:db
    ```
 3. Anwendung starten. Bereiche und Studiengänge aus [`SEED-DATEN.md`](SEED-DATEN.md) legt der
    Anwendungsstart idempotent an.
    ```bash
-   docker compose up -d --wait app
+   docker compose up -d --wait plan
    ```
 4. Erstes Systemadministrationskonto anlegen — der Passwortlink erscheint einmalig auf der
    Standardausgabe und wird sofort kopiert und manuell weitergegeben:
    ```bash
-   docker compose exec app npm run bootstrap:admin -- --email <dienstliche-e-mail>
+   docker compose exec plan npm run bootstrap:admin -- --email <dienstliche-e-mail>
    ```
 
 ## Notfall: administrativer Zugang verloren
@@ -181,5 +181,5 @@ und gibt einen neuen Passwortlink im Terminal aus. Unbekannte Adressen, Konten o
 Systemadministration und gesperrte Konten weist der Befehl ab.
 
 ```bash
-docker compose exec app npm run reset:admin-password -- --email <dienstliche-e-mail>
+docker compose exec plan npm run reset:admin-password -- --email <dienstliche-e-mail>
 ```
